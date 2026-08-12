@@ -26,6 +26,12 @@ For a cloned checkout, replace the path with the local repository path. The
 catalog points to `./plugins/professional-growth-coach`, so the plugin remains portable
 when the repository is shared by Git.
 
+You can also register the public repository directly:
+
+```bash
+codex plugin marketplace add https://github.com/kerife/codex_marketplace.git
+```
+
 ## Validate locally
 
 ```bash
