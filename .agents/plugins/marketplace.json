@@ -1,0 +1,20 @@
+{
+  "name": "professional-growth-coach-local",
+  "interface": {
+    "displayName": "Professional Growth Coach Local"
+  },
+  "plugins": [
+    {
+      "name": "professional-growth-coach",
+      "source": {
+        "source": "local",
+        "path": "./plugins/professional-growth-coach"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
