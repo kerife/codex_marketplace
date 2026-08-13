@@ -111,6 +111,14 @@ class DarkModeAccessibilityTests(unittest.TestCase):
             r"a:focus-visible,\s*button:focus-visible,\s*summary:focus-visible,\s*main:focus-visible\s*\{[^}]*outline-color: Highlight;",
         )
 
+    def test_dossier_forced_colors_keeps_skip_link_system_colors(self) -> None:
+        css = (ASSETS / "executive-career-dossier-v1.css").read_text(encoding="utf-8")
+        forced = css[css.index("@media (forced-colors: active)"):]
+        self.assertRegex(
+            forced,
+            r"\.dossier-document \.skip-link\s*\{[^}]*background:\s*Canvas;[^}]*border-color:\s*CanvasText;[^}]*color:\s*CanvasText;",
+        )
+
     def test_dossier_prefers_contrast_strengthens_card_boundaries(self) -> None:
         css = (ASSETS / "executive-career-dossier-v1.css").read_text(encoding="utf-8")
         contrast_start = css.index("@media (prefers-contrast: more)")

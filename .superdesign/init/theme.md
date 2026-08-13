@@ -573,6 +573,7 @@ details summary {
 @media (forced-colors: active) {
   button { background: ButtonFace; color: ButtonText; border-color: ButtonText; }
   button:hover { background: Highlight; color: HighlightText; }
+  .dossier-document .skip-link { background: Canvas; border-color: CanvasText; color: CanvasText; }
   .dossier-document .card { border-color: CanvasText; }
   a:focus-visible,
   button:focus-visible,
