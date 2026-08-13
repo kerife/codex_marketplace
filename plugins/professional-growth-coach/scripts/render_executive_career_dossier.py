@@ -591,10 +591,10 @@ def _render_header(locale: str) -> str:
       <p class="eyebrow">{labels['eyebrow']}</p>
       <h1 class="report-title">{labels['report_title']}</h1>
     </div>
-    <nav class="utility-actions no-print" aria-label="{labels['private']}">
+    <div class="utility-actions no-print" role="group" aria-label="{labels['private']}">
       <span class="privacy-chip">{labels['private']}</span>
       <button type="button" data-print>{labels['print']}</button>
-    </nav>
+    </div>
   </header>"""
 
 
@@ -817,10 +817,11 @@ def _render_copy_blocks(dossier: Mapping[str, object], locale: str) -> str:
             else ""
         )
         described_by = f"{status_id} {confirmation_id}" if confirmation else status_id
+        copy_label = f"{labels['copy_button']}: {COPY_LABELS[locale][text(block['category'])]}"
         draft = (
             f'<p class="copy-text" id="{source_id}" data-copy-source>{text(block["copy"])}</p>'
             f'<button class="no-print" type="button" data-copy-target="{source_id}" '
-            f'data-copy-status="{status_id}" aria-describedby="{described_by}" '
+            f'data-copy-status="{status_id}" aria-label="{text(copy_label)}" aria-describedby="{described_by}" '
             f'data-copy-success="{labels["copied"]}" data-copy-failure="{labels["copy_failed"]}">{labels["copy_button"]}</button>'
             f'<span class="copy-status no-print" id="{status_id}" role="status" aria-live="polite" aria-atomic="true"></span>{confirmation}'
             if block["copy"] is not None

@@ -1851,6 +1851,47 @@ class ExecutiveCareerDossierRendererTests(unittest.TestCase):
         self.assertIn("No se pudo copiar; selecciona y copia el texto", rendered)
         self.assertIn("Necesita confirmación; conserva este texto como borrador privado.", rendered)
 
+    def test_copy_controls_have_contextual_accessible_names(self) -> None:
+        expectations = (
+            (
+                self.es_dossier,
+                [
+                    "Copiar borrador: Titular",
+                    "Copiar borrador: Apertura de Acerca de",
+                    "Copiar borrador: Bullet de experiencia",
+                ],
+            ),
+            (
+                self.en_dossier,
+                ["Copy draft: Headline", "Copy draft: About opening"],
+            ),
+        )
+        for dossier, expected_labels in expectations:
+            with self.subTest(locale=dossier["locale"]):
+                rendered = self.renderer.render_dossier_html(dossier)
+                buttons = re.findall(
+                    r'<button[^>]*data-copy-target="[^"]+"[^>]*aria-label="([^"]+)"[^>]*aria-describedby="([^"]+)"[^>]*>(.*?)</button>',
+                    rendered,
+                )
+                self.assertEqual([label for label, _, _ in buttons], expected_labels)
+                self.assertEqual(len(set(label for label, _, _ in buttons)), len(buttons))
+                expected_visible = "Copiar borrador" if dossier["locale"] == "es" else "Copy draft"
+                self.assertTrue(all(label == expected_visible for _, _, label in buttons))
+                self.assertTrue(all("-status" in described for _, described, _ in buttons))
+                if dossier["locale"] == "en":
+                    self.assertNotIn('data-copy-target="copy-source-3"', rendered)
+
+    def test_utility_actions_are_an_action_group(self) -> None:
+        for dossier in (self.es_dossier, self.en_dossier):
+            with self.subTest(locale=dossier["locale"]):
+                rendered = self.renderer.render_dossier_html(dossier)
+                self.assertRegex(
+                    rendered,
+                    r'<div class="utility-actions no-print" role="group" aria-label="[^"]+">',
+                )
+                self.assertNotIn('<nav class="utility-actions no-print"', rendered)
+                self.assertIn("data-print", rendered)
+
     def test_confirmation_boundary_is_localized_and_associated_only_when_needed(self) -> None:
         for dossier, expected, absent in (
             (self.es_dossier, "Necesita confirmación; conserva este texto como borrador privado.", "Needs confirmation; keep this text as a private draft."),
@@ -1882,7 +1923,7 @@ class ExecutiveCareerDossierRendererTests(unittest.TestCase):
             '<a class="skip-link" href="#main-content">Saltar al contenido principal</a>',
             rendered,
         )
-        for landmark in ("<header", "<nav", '<main id="main-content"', "<aside", "<footer"):
+        for landmark in ("<header", '<div class="utility-actions no-print" role="group"', '<main id="main-content"', "<aside", "<footer"):
             with self.subTest(landmark=landmark):
                 self.assertIn(landmark, rendered)
         self.assertEqual(rendered.count('<main id="main-content" class="shell" tabindex="-1">'), 1)

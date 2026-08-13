@@ -25,21 +25,22 @@ The outcomes CSV CLI now uses the shared descriptor-anchored 256 KiB input
 boundary and rejects symlinked, non-regular, oversized, and invalid UTF-8
 inputs before parsing.
 
+The dossier now exposes localized, card-specific accessible names for copy
+buttons while preserving their visible labels and live status targets. Its
+private utility controls are an explicit action group rather than a misleading
+navigation landmark; no visual browser QA is claimed.
+
 1. Run real browser QA for keyboard skip navigation, 320px/200% reflow,
    dark mode, forced colors, reduced motion, and print pagination. The current
    evidence is source/render-contract based; no browser screenshot is claimed.
    The forced-colors surface mappings landed in this release, but still need
    OS-level visual confirmation.
-2. Decide whether the dossier utility action group needs a visual browser pass
-   after its navigation-landmark correction; keep it an action group, not a
-   navigation landmark, unless it gains actual links.
-3. Consider a separate full-suite harness pass for the few long-running root
+2. Consider a separate full-suite harness pass for the few long-running root
    tests that time out under broad discovery; the focused plugin, static,
    privacy, and installed-release gates are green for this release.
-4. Add contextual accessible labels to the dossier copy buttons so screen
-   reader users can distinguish the three cards.
-5. Correct the dossier utility action group from a misleading navigation
-   landmark to an explicit action group, then run the visual browser pass.
+3. Redact arbitrary dates, booleans, and application identifiers in
+   `summarize_outcomes.py` diagnostics; valid input and the CSV boundary are
+   already protected, but malformed values can still be echoed.
 
 The public repository must keep the release gates green before each follow-up:
 plugin tests, static checks, privacy scan, Superdesign parity, and installed
