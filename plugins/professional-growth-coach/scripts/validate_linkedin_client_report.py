@@ -2238,10 +2238,7 @@ def _validate_report_priorities(
             errors.append(f"priority {priority.rank} has invalid localized section")
         for code in (priority.diagnosed_gap, priority.action_type):
             if _is_generic_priority_code(code):
-                errors.append(
-                    "generic priority code is not allowed: "
-                    f"{_escape_diagnostic_controls(code)}"
-                )
+                errors.append("generic priority code is not allowed")
         for evidence_id in _duplicates(priority.evidence_ids):
             errors.append(
                 f"priority {priority.rank} has duplicate evidence "

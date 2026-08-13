@@ -17,8 +17,9 @@ contrast against both white and paper surfaces; browser and print confirmation
 remain deferred.
 
 LinkedIn validator diagnostics now escape control characters in untrusted field
-paths, priority codes, and unexpected copy headings. The remaining visual and
-accessibility follow-ups stay separate.
+paths, priority codes, and unexpected copy headings. Generic priority rejection
+messages also use a fixed diagnostic and no longer echo arbitrary report text.
+The remaining visual and accessibility follow-ups stay separate.
 
 1. Run real browser QA for keyboard skip navigation, 320px/200% reflow,
    dark mode, forced colors, reduced motion, and print pagination. The current
@@ -28,13 +29,10 @@ accessibility follow-ups stay separate.
 2. Decide whether the dossier utility action group needs a visual browser pass
    after its navigation-landmark correction; keep it an action group, not a
    navigation landmark, unless it gains actual links.
-3. Consider redacting arbitrary generic priority prose in LinkedIn report
-   diagnostics; control characters are escaped, but ordinary malformed prose
-   may still be echoed in one rejection message.
-4. Consider a separate full-suite harness pass for the few long-running root
+3. Consider a separate full-suite harness pass for the few long-running root
    tests that time out under broad discovery; the focused plugin, static,
    privacy, and installed-release gates are green for this release.
-5. Add contextual accessible labels to the dossier copy buttons so screen
+4. Add contextual accessible labels to the dossier copy buttons so screen
    reader users can distinguish the three cards.
 
 The public repository must keep the release gates green before each follow-up:

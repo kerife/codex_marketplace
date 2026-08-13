@@ -1001,16 +1001,20 @@ class LinkedInClientReportDecisionTests(unittest.TestCase):
 
     def test_generic_priority_codes_are_rejected_even_with_metadata(self) -> None:
         report = self.report("scenario-a-es.md")
-        cases = (
-            ("GAP-A-PRIMARY", "improve_profile"),
+        sentinel = "improve_profile_ALICE@example.com"
+        mutant = self.replace_once(report, "GAP-A-PRIMARY", sentinel)
+        errors = validator.validate_client_report(mutant, self.bundle("scenario-a.json"))
+        self.assertIn("generic priority code is not allowed", errors)
+        self.assertNotIn(sentinel, "\n".join(errors))
+
+        for old, generic in (
             ("ACTION-A-HEADLINE", "add_keywords"),
             ("ACTION-A-HEADLINE", "create_content"),
-        )
-        for old, generic in cases:
+        ):
             with self.subTest(code=generic):
                 mutant = self.replace_once(report, old, generic)
                 self.assertIn(
-                    f"generic priority code is not allowed: {generic}",
+                    "generic priority code is not allowed",
                     validator.validate_client_report(mutant, self.bundle("scenario-a.json")),
                 )
 
@@ -3871,6 +3875,21 @@ class LinkedInClientReportCliTests(unittest.TestCase):
         self.assertNotIn("\x1b", result.stderr)
         self.assertIn(r"ordinary\u001b[31mINJECTED\u000aLINE", result.stderr)
         self.assertTrue(all("\n" not in line for line in result.stderr.splitlines()))
+
+    def test_cli_redacts_generic_priority_code_diagnostics(self) -> None:
+        sentinel = "improve_profile_ALICE@example.com"
+        report = self.REPORT_A.read_text(encoding="utf-8").replace(
+            "GAP-A-PRIMARY", sentinel, 1
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "report.md"
+            path.write_text(report, encoding="utf-8")
+            result = self.run_cli(str(path), str(self.BUNDLE_A))
+        self.assertEqual(2, result.returncode)
+        self.assertEqual("", result.stdout)
+        self.assertIn("generic priority code is not allowed", result.stderr)
+        self.assertNotIn(sentinel, result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
 
     def test_cli_has_no_advisory_override_interface(self) -> None:
         result = self.run_cli(
