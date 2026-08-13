@@ -1,7 +1,7 @@
 {
-  "name": "professional-growth-coach-local",
+  "name": "codex-marketplace-public",
   "interface": {
-    "displayName": "Professional Growth Coach Local"
+    "displayName": "Codex Marketplace Public"
   },
   "plugins": [
     {
