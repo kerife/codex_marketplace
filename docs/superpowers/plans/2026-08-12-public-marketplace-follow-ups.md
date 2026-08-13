@@ -21,6 +21,8 @@ paths, priority codes, and unexpected copy headings. Generic priority rejection
 messages also use a fixed diagnostic and no longer echo arbitrary report text.
 Invalid official `source_category` values now use a stable diagnostic and never
 echo submitted email-like, path-like, or control-character text.
+The JSON schema subset validator now redacts sensitive unsupported-field names
+and escapes diagnostic controls; ordinary field names remain visible.
 The remaining visual and accessibility follow-ups stay separate.
 
 The outcomes CSV CLI now uses the shared descriptor-anchored 256 KiB input
@@ -35,6 +37,10 @@ navigation landmark; no visual browser QA is claimed.
 Repeated dossier priority, scorecard, visual-review, and copy articles now
 reference their visible headings with deterministic `aria-labelledby` IDs.
 
+The dossier and recruiter triage, practice, checkpoint, and conversion
+validators now reject deeply nested or cyclic direct-API mappings with stable
+nesting-limit errors instead of propagating `RecursionError`.
+
 1. Run real browser QA for keyboard skip navigation, 320px/200% reflow,
    dark mode, forced colors, reduced motion, and print pagination. The current
    evidence is source/render-contract based; no browser screenshot is claimed.
@@ -43,10 +49,8 @@ reference their visible headings with deterministic `aria-labelledby` IDs.
 2. Consider a separate full-suite harness pass for the few long-running root
    tests that time out under broad discovery; the focused plugin, static,
    privacy, and installed-release gates are green for this release.
-3. Extend the direct-API depth guard to the remaining recruiter validators
-   (triage, practice, checkpoint, and conversion). Dossier validation now
-   returns a deterministic depth error for deeply nested or cyclic mappings;
-   sibling validators still need the same bounded public-API contract.
+3. Extend bounded-depth and cycle checks to any future public validator APIs;
+   the current dossier and recruiter validators are covered.
 
 The public repository must keep the release gates green before each follow-up:
 plugin tests, static checks, privacy scan, Superdesign parity, and installed
