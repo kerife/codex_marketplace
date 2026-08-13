@@ -132,6 +132,19 @@ class DarkModeAccessibilityTests(unittest.TestCase):
                     r"\.skip-link\s*\{[^}]*background:\s*Canvas;[^}]*border-color:\s*CanvasText;[^}]*color:\s*CanvasText;",
                 )
 
+    def test_compact_receipts_forced_colors_keep_skip_link_focus_explicit(self) -> None:
+        for filename in (
+            "private-recruiter-conversion-outcome-v1.css",
+            "private-recruiter-followthrough-checkpoint-v1.css",
+        ):
+            with self.subTest(filename=filename):
+                css = (ASSETS / filename).read_text(encoding="utf-8")
+                forced = css[css.index("@media (forced-colors: active)"):]
+                self.assertRegex(
+                    forced,
+                    r"\.skip-link:focus-visible\s*\{[^}]*outline:\s*2px solid Highlight;[^}]*outline-offset:\s*2px;",
+                )
+
     def test_compact_receipt_footers_preserve_continuity_boundaries(self) -> None:
         for filename, selector in (
             ("private-recruiter-conversion-outcome-v1.css", ".outcome-footer"),
