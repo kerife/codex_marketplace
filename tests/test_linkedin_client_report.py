@@ -1896,6 +1896,25 @@ class LinkedInClientReportSafetyTests(unittest.TestCase):
 
                 self.assertIn(expected, validator.validate_fixture_bundle(bundle))
 
+    def test_fixture_diagnostic_redacts_absolute_path_field_names(self) -> None:
+        for sentinel in (
+            r"D:\work\candidate\profile.json",
+            r"\\server\share\profile.json",
+            "/opt/data/profile.json",
+        ):
+            with self.subTest(sentinel=sentinel):
+                bundle = self.bundle("scenario-a.json")
+                bundle[sentinel] = "synthetic"
+                errors = validator.validate_fixture_bundle(bundle)
+                self.assertIn("fixture has unsupported field: <redacted-field>", errors)
+                self.assertNotIn(sentinel, "\n".join(errors))
+
+        relative = r"relative\profile.json"
+        bundle = self.bundle("scenario-a.json")
+        bundle[relative] = "synthetic"
+        errors = validator.validate_fixture_bundle(bundle)
+        self.assertIn(f"fixture has unsupported field: {relative}", errors)
+
     def test_identifier_grammar_requires_the_reserved_jsc_discriminator(self) -> None:
         cases = (
             ("fixture_id", "FIXTURE-B2B-TECHNICAL", "FIXTURE-JSC2-TECHNICAL"),
@@ -3924,6 +3943,23 @@ class LinkedInClientReportCliTests(unittest.TestCase):
         )
         self.assertNotIn(sentinel, result.stderr)
         self.assertNotIn("Traceback", result.stderr)
+
+    def test_cli_redacts_absolute_path_field_names(self) -> None:
+        for sentinel in (
+            r"D:\work\candidate\profile.json",
+            r"\\server\share\profile.json",
+            "/opt/data/profile.json",
+        ):
+            with self.subTest(sentinel=sentinel):
+                bundle = json.loads(self.BUNDLE_A.read_text(encoding="utf-8"))
+                bundle[sentinel] = "synthetic"
+                with tempfile.TemporaryDirectory() as directory:
+                    path = Path(directory) / "bundle.json"
+                    path.write_text(json.dumps(bundle), encoding="utf-8")
+                    result = self.run_cli(str(self.REPORT_A), str(path))
+                self.assertEqual(2, result.returncode)
+                self.assertIn("fixture has unsupported field: <redacted-field>", result.stderr)
+                self.assertNotIn(sentinel, result.stderr)
 
     def test_cli_has_no_advisory_override_interface(self) -> None:
         result = self.run_cli(
