@@ -1072,7 +1072,10 @@ def parse_copy_blocks(parsed: ParsedClientReport) -> tuple[ReportCopyBlock, ...]
     allowed_headings = COPY_SECTION_LABELS[parsed.locale]
     for heading, _body in blocks:
         if heading not in allowed_headings:
-            raise ValueError(f"copy section has unexpected H3: {heading}")
+            raise ValueError(
+                "copy section has unexpected H3: "
+                f"{_escape_diagnostic_controls(heading)}"
+            )
     copies: list[ReportCopyBlock] = []
     for heading, body in blocks:
         section = allowed_headings[heading]
@@ -2235,7 +2238,10 @@ def _validate_report_priorities(
             errors.append(f"priority {priority.rank} has invalid localized section")
         for code in (priority.diagnosed_gap, priority.action_type):
             if _is_generic_priority_code(code):
-                errors.append(f"generic priority code is not allowed: {code}")
+                errors.append(
+                    "generic priority code is not allowed: "
+                    f"{_escape_diagnostic_controls(code)}"
+                )
         for evidence_id in _duplicates(priority.evidence_ids):
             errors.append(
                 f"priority {priority.rank} has duplicate evidence "
@@ -3596,7 +3602,8 @@ def _scan_privacy(value: object, path: str = "") -> list[str]:
     errors: list[str] = []
     if isinstance(value, Mapping):
         for key, nested in value.items():
-            child_path = f"{path}.{key}" if path else str(key)
+            safe_key = _safe_diagnostic_field_name(key)
+            child_path = f"{path}.{safe_key}" if path else safe_key
             errors.extend(_scan_privacy(nested, child_path))
     elif isinstance(value, list):
         for index, nested in enumerate(value):

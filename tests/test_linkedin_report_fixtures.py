@@ -166,6 +166,17 @@ class LinkedInReportFixtureTests(unittest.TestCase):
         errors = validator.validate_fixture_bundle(bundle)
         self.assertIn("blocked_claims has invalid value: FACT-JSC1-READY", errors)
 
+    def test_privacy_diagnostics_escape_control_characters_in_field_paths(self) -> None:
+        key = "ordinary\x1b[31mINJECTED\nLINE"
+        bundle = self.fixture("scenario-a.json")
+        bundle[key] = "person@example.invalid"
+
+        rendered = "\n".join(validator.validate_fixture_bundle(bundle))
+
+        self.assertNotIn("\x1b", rendered)
+        self.assertNotIn("INJECTED\nLINE", rendered)
+        self.assertIn(r"ordinary\u001b[31mINJECTED\u000aLINE", rendered)
+
     def test_load_bundle_rejects_intermediate_parent_symlink(self) -> None:
         source = (FIXTURE_ROOT / "scenario-a.json").read_bytes()
         with tempfile.TemporaryDirectory() as temporary:

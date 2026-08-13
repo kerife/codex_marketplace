@@ -1014,6 +1014,22 @@ class LinkedInClientReportDecisionTests(unittest.TestCase):
                     validator.validate_client_report(mutant, self.bundle("scenario-a.json")),
                 )
 
+    def test_untrusted_priority_code_and_heading_escape_controls(self) -> None:
+        report = self.report("scenario-a-es.md")
+        priority_mutant = self.replace_once(report, "GAP-A-PRIMARY", "Profile\x1b[31m improve")
+        priority_errors = "\n".join(
+            validator.validate_client_report(priority_mutant, self.bundle("scenario-a.json"))
+        )
+        self.assertNotIn("\x1b", priority_errors)
+        self.assertIn(r"Profile\u001b[31m improve", priority_errors)
+
+        heading_mutant = self.replace_once(report, "### Titular", "### Profile\x1b[31msummary")
+        heading_errors = "\n".join(
+            validator.validate_client_report(heading_mutant, self.bundle("scenario-a.json"))
+        )
+        self.assertNotIn("\x1b", heading_errors)
+        self.assertIn(r"Profile\u001b[31msummary", heading_errors)
+
     def test_ready_copy_cannot_use_unconfirmed_fact(self) -> None:
         bundle = self.bundle("scenario-a.json")
         unknown_fact = next(
@@ -3843,6 +3859,18 @@ class LinkedInClientReportCliTests(unittest.TestCase):
         invalid_json = self.run_cli(str(self.REPORT_A), str(self.REPORT_A))
         self.assertEqual(2, invalid_json.returncode)
         self.assertNotIn("Traceback", invalid_json.stderr)
+
+    def test_cli_escapes_control_characters_in_untrusted_diagnostics(self) -> None:
+        bundle = json.loads(self.BUNDLE_A.read_text(encoding="utf-8"))
+        bundle["ordinary\x1b[31mINJECTED\nLINE"] = "person@example.invalid"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "bundle.json"
+            path.write_text(json.dumps(bundle), encoding="utf-8")
+            result = self.run_cli(str(self.REPORT_A), str(path))
+        self.assertEqual(2, result.returncode)
+        self.assertNotIn("\x1b", result.stderr)
+        self.assertIn(r"ordinary\u001b[31mINJECTED\u000aLINE", result.stderr)
+        self.assertTrue(all("\n" not in line for line in result.stderr.splitlines()))
 
     def test_cli_has_no_advisory_override_interface(self) -> None:
         result = self.run_cli(
