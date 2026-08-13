@@ -22,6 +22,7 @@ The plugin uses five offline CSS surfaces. There is no global web framework or r
   --forest: #173e30;
   --ink: #1a1a1a;
   --muted: #e2ddd6;
+  --progress-track: #7f9186;
   --coral: #d96c52;
   --gold: #be9338;
   --surface: #ffffff;
@@ -308,11 +309,11 @@ progress {
   margin-top: 0.75rem;
   border: 0;
   border-radius: 0;
-  background: var(--muted);
+  background: var(--progress-track);
   color: var(--forest);
 }
 
-progress::-webkit-progress-bar { background: var(--muted); }
+progress::-webkit-progress-bar { background: var(--progress-track); }
 progress::-webkit-progress-value { background: var(--forest); }
 progress::-moz-progress-bar { background: var(--forest); }
 

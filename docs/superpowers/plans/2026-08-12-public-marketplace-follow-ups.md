@@ -12,6 +12,10 @@ limit with a deterministic error instead of allowing an API-level recursion
 failure. The dossier progress-track contrast improvement and browser/print
 confirmation remain deferred below.
 
+The dossier light progress track now uses a dedicated token with at least 3:1
+contrast against both white and paper surfaces; browser and print confirmation
+remain deferred.
+
 1. Run real browser QA for keyboard skip navigation, 320px/200% reflow,
    dark mode, forced colors, reduced motion, and print pagination. The current
    evidence is source/render-contract based; no browser screenshot is claimed.

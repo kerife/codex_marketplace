@@ -176,3 +176,11 @@ class DarkModeAccessibilityTests(unittest.TestCase):
         self.assertIsNotNone(forest)
         self.assertIsNotNone(forest_soft)
         self.assertGreaterEqual(_contrast(forest.group(1), forest_soft.group(1)), 3.0)
+
+    def test_dossier_progress_track_has_light_non_text_contrast(self) -> None:
+        css = (ASSETS / "executive-career-dossier-v1.css").read_text(encoding="utf-8")
+        light_track = re.search(r"--progress-track:\s*(#[0-9a-fA-F]{6});", css)
+        self.assertIsNotNone(light_track)
+        self.assertGreaterEqual(_contrast(light_track.group(1), "#ffffff"), 3.0)
+        self.assertGreaterEqual(_contrast(light_track.group(1), "#f6f4ee"), 3.0)
+        self.assertIn("progress::-webkit-progress-bar { background: var(--progress-track); }", css)
