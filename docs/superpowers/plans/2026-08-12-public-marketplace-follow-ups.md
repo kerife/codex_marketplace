@@ -6,13 +6,14 @@ so they can be handled in a separate cycle without blocking publication.
 1. Run real browser QA for keyboard skip navigation, 320px/200% reflow,
    dark mode, forced colors, reduced motion, and print pagination. The current
    evidence is source/render-contract based; no browser screenshot is claimed.
+   The forced-colors surface mappings landed in this release, but still need
+   OS-level visual confirmation.
 2. Decide whether the dossier utility action group needs a visual browser pass
    after its navigation-landmark correction; keep it an action group, not a
    navigation landmark, unless it gains actual links.
-3. Extend forced-colors mappings to the practice and triage context, prompt,
-   rehearsal, evidence, and boundary surfaces. Current browser/mobile capture
-   confirms normal flow and ARIA references, but real OS high-contrast mode was
-   unavailable for this cycle.
+3. Redact arbitrary generic priority codes in LinkedIn report diagnostics.
+   Canonical IDs and controlled claim codes are now safe, but a malformed
+   report can still echo arbitrary priority prose in one rejection message.
 4. Consider a separate full-suite harness pass for the few long-running root
    tests that time out under broad discovery; the focused plugin, static,
    privacy, and installed-release gates are green for this release.
