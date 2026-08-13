@@ -23,6 +23,24 @@ class OutcomeContractTests(unittest.TestCase):
         self.assertEqual(result.stderr, 'outcome input is not valid JSON\n')
         self.assertNotIn('Traceback', result.stderr)
 
+    def test_direct_validator_rejects_deep_and_cyclic_mappings(self):
+        baseline = load_outcome(FIXTURES / 'reply-received-en.json')
+        deep = {}
+        cursor = deep
+        for _ in range(40):
+            nested = {}
+            cursor['nested'] = nested
+            cursor = nested
+        deep_value = copy.deepcopy(baseline)
+        deep_value['unsupported'] = deep
+        self.assertIn('nesting exceeds safe limit', '\n'.join(validate_outcome(deep_value)))
+
+        cyclic_value = copy.deepcopy(baseline)
+        cyclic = {}
+        cyclic['self'] = cyclic
+        cyclic_value['unsupported'] = cyclic
+        self.assertIn('nesting exceeds safe limit', '\n'.join(validate_outcome(cyclic_value)))
+
     def test_all_event_mappings_and_locales_are_valid(self):
         expected={'contact_received':'clarify_context_before_reply','reply_received':'clarify_context_before_reply','referral_received':'prepare_fact_checked_summary','screen_requested':'route_to_prepare-role-interviews','interview_requested':'route_to_prepare-role-interviews','stop_decision':'record_stop_decision'}
         seen={}

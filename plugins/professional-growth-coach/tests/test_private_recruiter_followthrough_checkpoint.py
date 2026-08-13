@@ -74,6 +74,29 @@ class FollowthroughCheckpointContractTests(unittest.TestCase):
         self.assertEqual(result.stderr, "checkpoint input is not valid JSON\n")
         self.assertNotIn("Traceback", result.stderr)
 
+    def test_direct_validator_rejects_deep_and_cyclic_mappings(self):
+        deep = {}
+        cursor = deep
+        for _ in range(40):
+            nested = {}
+            cursor["nested"] = nested
+            cursor = nested
+        deep_value = copy.deepcopy(self.valid)
+        deep_value["unsupported"] = deep
+        self.assertIn(
+            "nesting exceeds safe limit",
+            "\n".join(checkpoint.validate_checkpoint(deep_value, self.receipt, as_of=dt.date(2026, 8, 8))),
+        )
+
+        cyclic_value = copy.deepcopy(self.valid)
+        cyclic = {}
+        cyclic["self"] = cyclic
+        cyclic_value["unsupported"] = cyclic
+        self.assertIn(
+            "nesting exceeds safe limit",
+            "\n".join(checkpoint.validate_checkpoint(cyclic_value, self.receipt, as_of=dt.date(2026, 8, 8))),
+        )
+
     def test_valid_en_and_es_and_all_mapping_branches(self):
         for state, event, action in [
             ("accepted", "unknown", "manual_reenter_private_prep"),

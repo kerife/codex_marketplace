@@ -217,6 +217,10 @@ def _validate_prose_safety(value: Mapping[str, object], errors: list[str]) -> No
 def validate_triage(value: object) -> list[str]:
     """Return deterministic errors; an empty list means the triage is safe."""
 
+    try:
+        _assert_max_depth(value)
+    except TriageLoadError as error:
+        return [str(error)]
     errors: list[str] = []
     schema_version = value.get("schema_version") if isinstance(value, Mapping) else None
     fields = V2_TOP_LEVEL_FIELDS if schema_version == V2_SCHEMA_VERSION else TOP_LEVEL_FIELDS

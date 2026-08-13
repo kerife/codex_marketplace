@@ -171,6 +171,10 @@ def _expected_action(state: object, event: object) -> str | None:
 
 def validate_checkpoint(value: object, receipt: object, *, as_of: dt.date | None = None) -> list[str]:
     """Return sorted deterministic errors; empty means the checkpoint is valid."""
+    try:
+        _assert_max_depth(value)
+    except CheckpointLoadError as error:
+        return [str(error)]
     errors: list[str] = []
     if receipt is None or not isinstance(receipt, Mapping):
         errors.append("receipt is required and must be a valid outcome")

@@ -307,6 +307,10 @@ def _validate_prose_identifier(value: object, path: str, errors: list[str]) -> N
 def validate_session(value: object) -> list[str]:
     """Return deterministic errors; an empty list means the session is safe."""
 
+    try:
+        _assert_max_depth(value)
+    except SessionLoadError as error:
+        return [str(error)]
     errors: list[str] = []
     if not isinstance(value, Mapping):
         errors.append("session must be an object")

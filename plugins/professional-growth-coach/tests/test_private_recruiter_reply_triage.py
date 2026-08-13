@@ -52,6 +52,24 @@ class PrivateRecruiterReplyTriageIdentityTests(unittest.TestCase):
         self.assertEqual(result.stderr, "triage input is not valid JSON\n")
         self.assertNotIn("Traceback", result.stderr)
 
+    def test_direct_validator_rejects_deep_and_cyclic_mappings(self):
+        baseline = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        deep = {}
+        cursor = deep
+        for _ in range(40):
+            nested = {}
+            cursor["nested"] = nested
+            cursor = nested
+        deep_triage = copy.deepcopy(baseline)
+        deep_triage["unsupported"] = deep
+        self.assertIn("nesting exceeds safe limit", "\n".join(validator.validate_triage(deep_triage)))
+
+        cyclic_triage = copy.deepcopy(baseline)
+        cyclic = {}
+        cyclic["self"] = cyclic
+        cyclic_triage["unsupported"] = cyclic
+        self.assertIn("nesting exceeds safe limit", "\n".join(validator.validate_triage(cyclic_triage)))
+
     def test_cli_caps_many_unknown_field_diagnostics(self):
         triage = json.loads(FIXTURE.read_text(encoding="utf-8"))
         triage.update({f"unknown_field_{index:04d}_long": True for index in range(1200)})

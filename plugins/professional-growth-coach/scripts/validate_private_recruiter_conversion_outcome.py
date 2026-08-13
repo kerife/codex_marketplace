@@ -66,6 +66,10 @@ def _strings(value):
     elif isinstance(value, list):
         for child in value: yield from _strings(child)
 def validate_outcome(value: object, *, today: dt.date | None = None, as_of: dt.date | None = None) -> list[str]:
+    try:
+        _assert_max_depth(value)
+    except OutcomeLoadError as error:
+        return [str(error)]
     errors=[]; item=_closed(value, "outcome", TOP_LEVEL_FIELDS, errors)
     if item is None: return sorted(set(errors))
     if item.get("schema_version") != SCHEMA_VERSION: errors.append("schema_version has invalid value")

@@ -66,6 +66,29 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
         self.renderer = load_renderer()
         self.awaiting_session = load_fixture()
 
+    def test_direct_validator_rejects_deep_and_cyclic_mappings(self):
+        deep = {}
+        cursor = deep
+        for _ in range(40):
+            nested = {}
+            cursor["nested"] = nested
+            cursor = nested
+        deep_value = copy.deepcopy(self.awaiting_session)
+        deep_value["unsupported"] = deep
+        self.assertIn(
+            "nesting exceeds safe limit",
+            "\n".join(self.renderer.VALIDATOR.validate_session(deep_value)),
+        )
+
+        cyclic_value = copy.deepcopy(self.awaiting_session)
+        cyclic = {}
+        cyclic["self"] = cyclic
+        cyclic_value["unsupported"] = cyclic
+        self.assertIn(
+            "nesting exceeds safe limit",
+            "\n".join(self.renderer.VALIDATOR.validate_session(cyclic_value)),
+        )
+
     def feedback_session(self) -> dict[str, object]:
         session = copy.deepcopy(self.awaiting_session)
         session["state"] = "feedback_available"
