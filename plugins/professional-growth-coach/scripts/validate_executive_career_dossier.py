@@ -2213,6 +2213,10 @@ def _validate_structured_module_prose(value: Mapping[str, object]) -> list[str]:
 
 def validate_dossier(value: object) -> list[str]:
     """Return sorted, path-based errors for a runtime dossier without raw values."""
+    try:
+        _assert_max_depth(value, 12)
+    except DossierLoadError as error:
+        return [str(error)]
     errors: list[str] = []
     root = _closed(value, "dossier", TOP_FIELDS, errors)
     if root is None:

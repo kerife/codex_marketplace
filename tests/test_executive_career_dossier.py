@@ -165,6 +165,25 @@ class ExecutiveCareerDossierSchemaTests(unittest.TestCase):
         self.assertEqual(self.validate_dossier(self.es_dossier), [])
         self.assertEqual(self.validate_dossier(self.en_dossier), [])
 
+    def test_direct_validation_rejects_deep_or_cyclic_mappings(self) -> None:
+        deep: dict[str, object] = {}
+        cursor = deep
+        for _ in range(40):
+            nested: dict[str, object] = {}
+            cursor["nested"] = nested
+            cursor = nested
+        deep_dossier = copy.deepcopy(self.es_dossier)
+        deep_dossier["unsupported"] = deep
+        deep_errors = self.validate_dossier(deep_dossier)
+        self.assertIn("dossier exceeds maximum nesting depth", deep_errors)
+
+        cyclic_dossier = copy.deepcopy(self.es_dossier)
+        cyclic: dict[str, object] = {}
+        cyclic["self"] = cyclic
+        cyclic_dossier["unsupported"] = cyclic
+        cycle_errors = self.validate_dossier(cyclic_dossier)
+        self.assertIn("dossier exceeds maximum nesting depth", cycle_errors)
+
     def test_contract_is_closed_identity_free_and_single_candidate(self) -> None:
         forbidden_mutations = {
             "candidate identity": ("candidate_id", "candidate-synthetic"),
