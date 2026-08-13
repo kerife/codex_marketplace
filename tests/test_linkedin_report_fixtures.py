@@ -135,6 +135,67 @@ class LinkedInReportFixtureTests(unittest.TestCase):
                 validator.load_bundle(link)
         self.assertNotIn(str(target), str(raised.exception))
 
+    def test_diagnostics_redact_arbitrary_enum_and_identifier_values(self) -> None:
+        secret = "Authorization: Bearer abc.def.ghi"
+        cases = []
+
+        blocked_claims = self.fixture("scenario-a.json")
+        blocked_claims["blocked_claims"] = [secret]
+        cases.append(blocked_claims)
+
+        duplicate_reference = self.fixture("scenario-a.json")
+        duplicate_reference["copy_blocks"][0]["fact_ids"] = [secret, secret]
+        cases.append(duplicate_reference)
+
+        duplicate_source = self.fixture("scenario-a.json")
+        duplicate_source["source_catalog"][0]["source_id"] = secret
+        duplicate_source["source_catalog"][1]["source_id"] = secret
+        cases.append(duplicate_source)
+
+        for bundle in cases:
+            with self.subTest(case=bundle):
+                errors = validator.validate_fixture_bundle(bundle)
+                self.assertTrue(errors)
+                rendered = "\n".join(errors)
+                self.assertNotIn(secret, rendered)
+                self.assertIn("<redacted-value>", rendered)
+
+    def test_diagnostics_preserve_safe_synthetic_identifiers(self) -> None:
+        bundle = self.fixture("scenario-a.json")
+        bundle["blocked_claims"] = ["FACT-JSC1-READY"]
+        errors = validator.validate_fixture_bundle(bundle)
+        self.assertIn("blocked_claims has invalid value: FACT-JSC1-READY", errors)
+
+    def test_load_bundle_rejects_intermediate_parent_symlink(self) -> None:
+        source = (FIXTURE_ROOT / "scenario-a.json").read_bytes()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            external = root / "external"
+            external.mkdir()
+            (external / "bundle.json").write_bytes(source)
+            alias = root / "alias"
+            alias.symlink_to(external, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "unavailable"):
+                validator.load_bundle(alias / "bundle.json")
+
+    def test_cli_rejects_oversized_and_invalid_utf8_inputs_without_traceback(self) -> None:
+        report = FIXTURE_ROOT / "scenario-a-es.md"
+        bundle = FIXTURE_ROOT / "scenario-a.json"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            oversized = root / "oversized.json"
+            oversized.write_bytes(b" " * (256 * 1024 + 1))
+            invalid = root / "invalid.json"
+            invalid.write_bytes(b"\xff")
+            for candidate in (oversized, invalid):
+                stdout = io.StringIO()
+                stderr = io.StringIO()
+                with self.subTest(input=candidate.name), contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    result = validator._cli([str(report), str(candidate)])
+                self.assertEqual(2, result)
+                self.assertEqual("", stdout.getvalue())
+                self.assertNotIn("Traceback", stderr.getvalue())
+
     def test_cli_rejects_duplicate_bundle_without_echoing_hidden_value(self) -> None:
         source = (FIXTURE_ROOT / "scenario-a.json").read_text(encoding="utf-8")
         duplicate = source.replace(

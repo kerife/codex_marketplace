@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import ipaddress
 import json
 import math
@@ -15,6 +16,18 @@ from datetime import date
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, NamedTuple
+try:
+    from private_input_loader import PrivateInputError, read_bounded_bytes
+except ModuleNotFoundError:
+    _loader_spec = importlib.util.spec_from_file_location(
+        "_pgc_private_input_loader", Path(__file__).with_name("private_input_loader.py")
+    )
+    if _loader_spec is None or _loader_spec.loader is None:
+        raise
+    _loader_module = importlib.util.module_from_spec(_loader_spec)
+    _loader_spec.loader.exec_module(_loader_module)
+    PrivateInputError = _loader_module.PrivateInputError
+    read_bounded_bytes = _loader_module.read_bounded_bytes
 from urllib.parse import unquote, urlsplit
 
 
@@ -815,12 +828,17 @@ class LegacyAppendixSection(NamedTuple):
 
 def load_bundle(path: Path) -> dict[str, object]:
     """Load a fixture bundle and require a JSON object at the file boundary."""
-    if path.is_symlink():
-        raise ValueError("fixture bundle input must not be a symlink")
-    value = json.loads(
-        path.read_text(encoding="utf-8"),
-        object_pairs_hook=_unique_json_object,
-    )
+    try:
+        raw = read_bounded_bytes(path, 256 * 1024).decode("utf-8")
+    except PrivateInputError as error:
+        message = {
+            "symlink": "fixture bundle input must not be a symlink",
+            "too_large": "fixture bundle input exceeds safe size limit",
+        }.get(error.reason, "fixture bundle input is unavailable")
+        raise ValueError(message) from error
+    except UnicodeError as error:
+        raise ValueError("fixture bundle input is not valid UTF-8") from error
+    value = json.loads(raw, object_pairs_hook=_unique_json_object)
     if not isinstance(value, dict):
         raise ValueError("fixture must be a JSON object")
     return value
@@ -2136,6 +2154,13 @@ def _duplicates(values: tuple[str, ...] | list[str]) -> tuple[str, ...]:
     return tuple(duplicates)
 
 
+def _safe_diagnostic_identifier(value: object) -> str:
+    """Keep canonical synthetic IDs in diagnostics without echoing input values."""
+    if isinstance(value, str) and REPORT_IDENTIFIER.fullmatch(value) is not None:
+        return value
+    return "<redacted-value>"
+
+
 def _validate_decisions(parsed: ParsedClientReport, bundle: Mapping[str, object]) -> list[str]:
     priorities = parse_priority_blocks(parsed)
     copies = parse_copy_blocks(parsed)
@@ -2158,16 +2183,22 @@ def _validate_decisions(parsed: ParsedClientReport, bundle: Mapping[str, object]
     for priority in fixture_priorities:
         for evidence_id in _duplicates(priority["evidence_ids"]):
             errors.append(
-                f"fixture priority {priority['rank']} has duplicate evidence {evidence_id}"
+                "fixture priority "
+                f"{priority['rank']} has duplicate evidence "
+                f"{_safe_diagnostic_identifier(evidence_id)}"
             )
     for copy_block in fixture_copies:
         for fact_id in _duplicates(copy_block["fact_ids"]):
             errors.append(
-                f"fixture copy {copy_block['section']} has duplicate fact {fact_id}"
+                "fixture copy "
+                f"{copy_block['section']} has duplicate fact "
+                f"{_safe_diagnostic_identifier(fact_id)}"
             )
         for evidence_id in _duplicates(copy_block["evidence_ids"]):
             errors.append(
-                f"fixture copy {copy_block['section']} has duplicate evidence {evidence_id}"
+                "fixture copy "
+                f"{copy_block['section']} has duplicate evidence "
+                f"{_safe_diagnostic_identifier(evidence_id)}"
             )
     errors.extend(_validate_report_priorities(priorities, fixture_priorities, known_evidence))
     errors.extend(_validate_report_copies(copies, fixture_copies, facts, known_evidence, blocked_claims))
@@ -2776,7 +2807,9 @@ def _validate_enum_list(value: object, allowed: frozenset[str], label: str, erro
     items = _validate_string_list(value, label, errors)
     for item in items:
         if item not in allowed:
-            errors.append(f"{label} has invalid value: {item}")
+            errors.append(
+                f"{label} has invalid value: {_safe_diagnostic_identifier(item)}"
+            )
     return items
 
 
@@ -2796,7 +2829,10 @@ def _validate_structural_state(value: object, errors: list[str]) -> set[str]:
         evidence_id = observation["evidence_id"]
         if isinstance(evidence_id, str):
             if evidence_id in evidence_ids:
-                errors.append(f"structural_state_fixture has duplicate evidence_id: {evidence_id}")
+                errors.append(
+                    "structural_state_fixture has duplicate evidence_id: "
+                    f"{_safe_diagnostic_identifier(evidence_id)}"
+                )
             evidence_ids.add(evidence_id)
     return evidence_ids
 
@@ -2818,7 +2854,10 @@ def _validate_facts(value: object, errors: list[str]) -> set[str]:
         fact_id = fact["fact_id"]
         if isinstance(fact_id, str):
             if fact_id in fact_ids:
-                errors.append(f"synthetic_fact_catalog has duplicate fact_id: {fact_id}")
+                errors.append(
+                    "synthetic_fact_catalog has duplicate fact_id: "
+                    f"{_safe_diagnostic_identifier(fact_id)}"
+                )
             fact_ids.add(fact_id)
     return fact_ids
 
@@ -2857,7 +2896,10 @@ def _validate_score_ledger(value: object, evidence_mode: object, observation_ids
         domain_is_valid = isinstance(domain, str) and domain in DOMAIN_WEIGHTS
         if domain_is_valid:
             if domain in seen_domains:
-                errors.append(f"score_ledger has duplicate domain: {domain}")
+                errors.append(
+                    "score_ledger has duplicate domain: "
+                    f"{_safe_diagnostic_identifier(domain)}"
+                )
             seen_domains.add(domain)
         weight_is_valid = (
             domain_is_valid
@@ -3406,13 +3448,16 @@ def _validate_sources(
             }
             if state in {"stale", "unreachable"} and not fallback_is_safe:
                 errors.append(
-                    f"source {source['source_id']} resolved {state} and must degrade to "
+                    f"source {_safe_diagnostic_identifier(source['source_id'])} resolved {state} and must degrade to "
                     "COACH_HEURISTIC or BLOCK_CLAIM"
                 )
         source_id = source["source_id"]
         if isinstance(source_id, str):
             if source_id in source_ids:
-                errors.append(f"source_catalog has duplicate source_id: {source_id}")
+                errors.append(
+                    "source_catalog has duplicate source_id: "
+                    f"{_safe_diagnostic_identifier(source_id)}"
+                )
             source_ids.add(source_id)
     for category in sorted(SOURCE_CATEGORIES - official_categories):
         errors.append(f"source_catalog missing required official source category: {category}")
@@ -3496,7 +3541,10 @@ def _validate_references(
     if require_nonempty and not references:
         errors.append(f"{label}.{kind}s must contain at least one reference")
     for reference in _duplicates(references):
-        errors.append(f"{label}.{kind}s has duplicate {kind}: {reference}")
+        errors.append(
+            f"{label}.{kind}s has duplicate {kind}: "
+            f"{_safe_diagnostic_identifier(reference)}"
+        )
     for reference in references:
         if reference not in known:
             errors.append(f"{label} references unknown {kind}")
@@ -3568,24 +3616,28 @@ def _cli(argv: list[str] | None = None) -> int:
     arguments = parser.parse_args(argv)
 
     errors: list[str] = []
-    if arguments.report.is_symlink():
-        errors.append("report input must not be a symlink")
+    try:
+        markdown = read_bounded_bytes(arguments.report, 256 * 1024).decode("utf-8")
+    except PrivateInputError as error:
+        errors.append({
+            "symlink": "report input must not be a symlink",
+            "too_large": "report input exceeds safe size limit",
+        }.get(error.reason, "cannot read report file as UTF-8"))
         markdown = ""
-    else:
-        try:
-            markdown = arguments.report.read_text(encoding="utf-8")
-        except (OSError, UnicodeError):
-            errors.append("cannot read report file as UTF-8")
-            markdown = ""
-    if arguments.bundle.is_symlink():
-        errors.append("bundle input must not be a symlink")
+    except UnicodeError:
+        errors.append("report input is not valid UTF-8")
+        markdown = ""
+    try:
+        raw_bundle = read_bounded_bytes(arguments.bundle, 256 * 1024).decode("utf-8")
+    except PrivateInputError as error:
+        errors.append({
+            "symlink": "bundle input must not be a symlink",
+            "too_large": "bundle input exceeds safe size limit",
+        }.get(error.reason, "cannot read bundle file as UTF-8"))
         raw_bundle = ""
-    else:
-        try:
-            raw_bundle = arguments.bundle.read_text(encoding="utf-8")
-        except (OSError, UnicodeError):
-            errors.append("cannot read bundle file as UTF-8")
-            raw_bundle = ""
+    except UnicodeError:
+        errors.append("bundle input is not valid UTF-8")
+        raw_bundle = ""
     bundle: object = None
     if raw_bundle:
         try:
