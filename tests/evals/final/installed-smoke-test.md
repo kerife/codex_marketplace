@@ -12,19 +12,19 @@ real_profile_mapping: `none_created`
 
 attestation_state: `installed_green`
 
-plugin_identity: `professional-growth-coach@professional-growth-coach-local`
+plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
 release_timestamp: `2026-08-13T00:16:43-06:00`
 
-source_commit: `c7e7d34a967fcaad334d398f90f556ce566e53cc`
+source_commit: `a0c848be27c27c76fc044f6ff3da5a87ff48b35b`
 
 source_tree: `115efd5dc8e09427630893b70499fa273086b3d5`
 
-installed_cache_family: `professional-growth-coach-local/professional-growth-coach`
+installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `release_version_prefix + release_timestamp`
+installed_cache_version: `0.2.0+codex.20260813001643`
 
 installed_enabled: `true`
 
