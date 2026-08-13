@@ -268,6 +268,46 @@ class SummarizeOutcomesTests(unittest.TestCase):
             "--window must be a positive integer; got 'thirty'",
         )
 
+    def test_symlinked_csv_input_is_rejected_without_following_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            target = root / "outside.csv"
+            target.write_text("not a candidate CSV\n", encoding="utf-8")
+            direct_link = root / "direct.csv"
+            direct_link.symlink_to(target)
+            parent_target = root / "outside-dir"
+            parent_target.mkdir()
+            (parent_target / "outcomes.csv").write_text(
+                "not a candidate CSV\n", encoding="utf-8"
+            )
+            parent_link = root / "alias"
+            parent_link.symlink_to(parent_target, target_is_directory=True)
+
+            for path in (direct_link, parent_link / "outcomes.csv"):
+                with self.subTest(path=path):
+                    self.assert_invalid(
+                        run_path(path),
+                        "CSV input must not be a symlink",
+                    )
+
+    def test_oversized_csv_input_is_rejected_before_parsing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "oversized.csv"
+            path.write_bytes(b"application_id,candidate_id\n" + b"a,c\n" + b"x" * (256 * 1024))
+            self.assert_invalid(
+                run_path(path),
+                "CSV input exceeds safe size limit",
+            )
+
+    def test_invalid_utf8_csv_input_has_deterministic_error_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "invalid.csv"
+            path.write_bytes(b"\xff")
+            self.assert_invalid(
+                run_path(path),
+                "CSV input is not valid UTF-8",
+            )
+
     def test_windows_beyond_the_as_of_date_range_are_invalid_without_tracebacks(self) -> None:
         expected_error = (
             "--window exceeds valid range for --as-of 2026-08-06; maximum is 739834"

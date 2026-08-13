@@ -5,12 +5,27 @@ from __future__ import annotations
 
 import argparse
 import csv
+import io
+import importlib.util
 import json
 import sys
 from collections import Counter
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
+
+try:
+    from private_input_loader import PrivateInputError, read_bounded_bytes
+except ModuleNotFoundError:
+    _loader_spec = importlib.util.spec_from_file_location(
+        "_pgc_private_input_loader", Path(__file__).with_name("private_input_loader.py")
+    )
+    if _loader_spec is None or _loader_spec.loader is None:
+        raise
+    _loader_module = importlib.util.module_from_spec(_loader_spec)
+    _loader_spec.loader.exec_module(_loader_module)
+    PrivateInputError = _loader_module.PrivateInputError
+    read_bounded_bytes = _loader_module.read_bounded_bytes
 
 
 CSV_FIELDS = (
@@ -46,6 +61,7 @@ SUMMARY_FIELDS = (
     "days_to_first_interview",
     "warnings",
 )
+MAX_OUTCOME_INPUT_BYTES = 256 * 1024
 
 
 class InputError(ValueError):
@@ -135,12 +151,21 @@ def read_rows(
     candidate_id: str | None = None,
 ) -> list[dict[str, object]]:
     try:
-        handle = path.open(newline="", encoding="utf-8-sig")
-    except FileNotFoundError as error:
-        raise InputError(f"CSV file not found: {path}") from error
-    except OSError as error:
-        raise InputError(f"cannot read CSV file {path}: {error.strerror or error}") from error
+        raw = read_bounded_bytes(path, MAX_OUTCOME_INPUT_BYTES)
+    except PrivateInputError as error:
+        if error.reason == "symlink":
+            raise InputError("CSV input must not be a symlink") from error
+        if error.reason == "too_large":
+            raise InputError("CSV input exceeds safe size limit") from error
+        if not path.exists():
+            raise InputError(f"CSV file not found: {path}") from error
+        raise InputError("CSV input is unavailable") from error
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeError as error:
+        raise InputError("CSV input is not valid UTF-8") from error
 
+    handle = io.StringIO(text, newline="")
     try:
         with handle:
             reader = csv.DictReader(handle, strict=True)
@@ -222,8 +247,6 @@ def read_rows(
                 row.update(parsed_dates)
                 row.update(parsed_booleans)
                 rows.append(row)
-    except UnicodeError as error:
-        raise InputError(f"CSV file must be UTF-8: {path}") from error
     except csv.Error as error:
         raise InputError(f"malformed CSV: {error}") from error
 

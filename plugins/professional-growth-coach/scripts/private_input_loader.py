@@ -32,6 +32,7 @@ def _open_parent(path: Path, nofollow: int, directory_flag: int) -> tuple[int, s
     parent = Path(absolute).parent
     base_flags = os.O_RDONLY | directory_flag | getattr(os, "O_CLOEXEC", 0)
     descriptor = os.open(os.sep, base_flags)
+    walked = os.sep
     try:
         for component in parent.parts[1:]:
             if component in {"", ".", ".."}:
@@ -52,7 +53,10 @@ def _open_parent(path: Path, nofollow: int, directory_flag: int) -> tuple[int, s
             except ValueError as error:
                 raise PrivateInputError("unavailable") from error
             except OSError as error:
-                if error.errno == errno.ELOOP:
+                component_path = os.path.join(walked, component)
+                if error.errno == errno.ELOOP or (
+                    error.errno == errno.ENOTDIR and os.path.islink(component_path)
+                ):
                     raise PrivateInputError("symlink") from error
                 raise PrivateInputError("unavailable") from error
             finally:
@@ -61,6 +65,7 @@ def _open_parent(path: Path, nofollow: int, directory_flag: int) -> tuple[int, s
                         os.close(next_descriptor)
                     except OSError:
                         pass
+            walked = os.path.join(walked, component)
         return descriptor, Path(absolute).name
     except BaseException:
         try:

@@ -21,6 +21,10 @@ paths, priority codes, and unexpected copy headings. Generic priority rejection
 messages also use a fixed diagnostic and no longer echo arbitrary report text.
 The remaining visual and accessibility follow-ups stay separate.
 
+The outcomes CSV CLI now uses the shared descriptor-anchored 256 KiB input
+boundary and rejects symlinked, non-regular, oversized, and invalid UTF-8
+inputs before parsing.
+
 1. Run real browser QA for keyboard skip navigation, 320px/200% reflow,
    dark mode, forced colors, reduced motion, and print pagination. The current
    evidence is source/render-contract based; no browser screenshot is claimed.
@@ -34,6 +38,8 @@ The remaining visual and accessibility follow-ups stay separate.
    privacy, and installed-release gates are green for this release.
 4. Add contextual accessible labels to the dossier copy buttons so screen
    reader users can distinguish the three cards.
+5. Correct the dossier utility action group from a misleading navigation
+   landmark to an explicit action group, then run the visual browser pass.
 
 The public repository must keep the release gates green before each follow-up:
 plugin tests, static checks, privacy scan, Superdesign parity, and installed

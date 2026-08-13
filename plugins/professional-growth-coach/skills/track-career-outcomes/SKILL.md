@@ -45,6 +45,10 @@ For deterministic counts, run:
 python3 plugins/professional-growth-coach/scripts/summarize_outcomes.py OUTCOMES.csv --window 30 --as-of YYYY-MM-DD
 ```
 
+The CLI reads candidate-supplied CSVs through a descriptor-anchored 256 KiB
+boundary. It rejects symlinked, non-regular, oversized, and non-UTF-8 inputs
+with exit `2` and a deterministic JSON error before parsing.
+
 For a file containing multiple candidates without unanimous in-window benchmark consent, the aggregate command returns the zero-count safety summary. Produce isolated outputs with one command per candidate:
 
 ```bash
