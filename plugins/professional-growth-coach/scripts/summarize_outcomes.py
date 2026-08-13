@@ -82,11 +82,9 @@ def parse_iso_date(value: str, *, label: str) -> date | None:
     try:
         parsed = date.fromisoformat(cleaned)
     except ValueError as error:
-        raise InputError(
-            f"{label} must be empty or YYYY-MM-DD; got {cleaned!r}"
-        ) from error
+        raise InputError(f"{label} must be empty or YYYY-MM-DD") from error
     if parsed.isoformat() != cleaned:
-        raise InputError(f"{label} must be empty or YYYY-MM-DD; got {cleaned!r}")
+        raise InputError(f"{label} must be empty or YYYY-MM-DD")
     return parsed
 
 
@@ -97,7 +95,7 @@ def parse_boolean(value: str, *, row_number: int, field: str) -> bool:
     if cleaned == "true":
         return True
     raise InputError(
-        f"row {row_number}: {field} must be true, false, or empty; got {value.strip()!r}"
+        f"row {row_number}: {field} must be true, false, or empty"
     )
 
 
@@ -203,7 +201,7 @@ def read_rows(
                 first_row = seen_application_ids.get(application_id)
                 if first_row is not None:
                     raise InputError(
-                        f"row {row_number}: duplicate application_id {application_id!r} "
+                        f"row {row_number}: duplicate application_id "
                         f"first seen on row {first_row}"
                     )
                 seen_application_ids[application_id] = row_number
@@ -267,7 +265,7 @@ def summarize(
     if candidate_id is not None:
         candidate_ids = distinct(rows, "candidate_id")
         if candidate_id not in candidate_ids:
-            raise InputError(f"candidate_id not found: {candidate_id!r}")
+            raise InputError("candidate_id not found")
         rows = [row for row in rows if row["candidate_id"] == candidate_id]
 
     missing_application_dates = sum(
@@ -426,10 +424,10 @@ def main(argv: list[str] | None = None) -> int:
             as_of = parse_iso_date(arguments.as_of, label="--as-of")
         except InputError as error:
             raise InputError(
-                f"--as-of must be YYYY-MM-DD; got {arguments.as_of!r}"
+                "--as-of must be YYYY-MM-DD"
             ) from error
         if as_of is None:
-            raise InputError(f"--as-of must be YYYY-MM-DD; got {arguments.as_of!r}")
+            raise InputError("--as-of must be YYYY-MM-DD")
         window = parse_window(arguments.window, as_of)
         candidate_id = arguments.candidate_id
         if candidate_id is not None:

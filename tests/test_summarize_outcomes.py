@@ -236,21 +236,61 @@ class SummarizeOutcomesTests(unittest.TestCase):
         cases = (
             (
                 run_summary([outcome_row(application_date="2026-02-30")]),
-                "row 2: application_date must be empty or YYYY-MM-DD; got '2026-02-30'",
+                "row 2: application_date must be empty or YYYY-MM-DD",
             ),
             (
                 run_summary([outcome_row(response_date="06/08/2026")]),
-                "row 2: response_date must be empty or YYYY-MM-DD; got '06/08/2026'",
+                "row 2: response_date must be empty or YYYY-MM-DD",
             ),
             (
                 run_summary([], as_of="2026-13-01"),
-                "--as-of must be YYYY-MM-DD; got '2026-13-01'",
+                "--as-of must be YYYY-MM-DD",
             ),
         )
 
         for result, expected_error in cases:
             with self.subTest(expected_error=expected_error):
                 self.assert_invalid(result, expected_error)
+
+    def test_invalid_values_are_not_echoed_in_diagnostics(self) -> None:
+        date_sentinel = "/Users/private-candidate/profile@example.invalid"
+        date_result = run_summary([outcome_row(response_date=date_sentinel)])
+        self.assert_invalid(
+            date_result,
+            "row 2: response_date must be empty or YYYY-MM-DD",
+        )
+        self.assertNotIn(date_sentinel, date_result.stderr)
+
+        boolean_sentinel = "Authorization: Bearer PRIVATE_VALUE"
+        boolean_result = run_summary(
+            [outcome_row(benchmark_consent=boolean_sentinel)]
+        )
+        self.assert_invalid(
+            boolean_result,
+            "row 2: benchmark_consent must be true, false, or empty",
+        )
+        self.assertNotIn(boolean_sentinel, boolean_result.stderr)
+
+        application_sentinel = "candidate@example.invalid"
+        duplicate_result = run_summary(
+            [
+                outcome_row(application_id=application_sentinel),
+                outcome_row(application_id=application_sentinel),
+            ]
+        )
+        self.assert_invalid(
+            duplicate_result,
+            "row 3: duplicate application_id first seen on row 2",
+        )
+        self.assertNotIn(application_sentinel, duplicate_result.stderr)
+
+        candidate_sentinel = "/private/candidate@example.invalid"
+        candidate_result = run_summary(
+            [outcome_row(candidate_id="candidate-a")],
+            candidate_id=candidate_sentinel,
+        )
+        self.assert_invalid(candidate_result, "candidate_id not found")
+        self.assertNotIn(candidate_sentinel, candidate_result.stderr)
 
     def test_missing_file_and_invalid_window_are_invalid_without_tracebacks(self) -> None:
         missing_path = Path("/tmp/task9-definitely-missing-outcomes.csv")
@@ -343,7 +383,7 @@ class SummarizeOutcomesTests(unittest.TestCase):
 
         self.assert_invalid(
             result,
-            "row 3: duplicate application_id 'stable-1' first seen on row 2",
+            "row 3: duplicate application_id first seen on row 2",
         )
 
     def test_chronology_and_future_dates_are_rejected(self) -> None:
@@ -683,7 +723,7 @@ class SummarizeOutcomesTests(unittest.TestCase):
     def test_unknown_candidate_selection_is_invalid_without_traceback(self) -> None:
         result = run_summary([outcome_row(candidate_id="c-1")], candidate_id="c-missing")
 
-        self.assert_invalid(result, "candidate_id not found: 'c-missing'")
+        self.assert_invalid(result, "candidate_id not found")
 
     def test_unknown_candidate_does_not_validate_or_reveal_other_candidates(self) -> None:
         private_b_values = (
@@ -705,7 +745,7 @@ class SummarizeOutcomesTests(unittest.TestCase):
         for result in (first, second):
             self.assert_invalid(
                 result,
-                "candidate_id not found: 'candidate-missing'",
+                "candidate_id not found",
             )
             combined_output = result.stdout + result.stderr
             for private_value in private_b_values:
@@ -747,7 +787,7 @@ class SummarizeOutcomesTests(unittest.TestCase):
                 result = run_summary([outcome_row(**{field: "maybe"})])
                 self.assert_invalid(
                     result,
-                    f"row 2: {field} must be true, false, or empty; got 'maybe'",
+                    f"row 2: {field} must be true, false, or empty",
                 )
 
     def test_bundled_asset_and_forward_fixtures_use_the_canonical_header(self) -> None:

@@ -38,9 +38,9 @@ navigation landmark; no visual browser QA is claimed.
 2. Consider a separate full-suite harness pass for the few long-running root
    tests that time out under broad discovery; the focused plugin, static,
    privacy, and installed-release gates are green for this release.
-3. Redact arbitrary dates, booleans, and application identifiers in
-   `summarize_outcomes.py` diagnostics; valid input and the CSV boundary are
-   already protected, but malformed values can still be echoed.
+3. Redact invalid `source_category` values in LinkedIn fixture diagnostics;
+   malformed categories can still echo arbitrary email-like, path-like, or
+   control-character text. Keep this as a separate validator cycle.
 
 The public repository must keep the release gates green before each follow-up:
 plugin tests, static checks, privacy scan, Superdesign parity, and installed
