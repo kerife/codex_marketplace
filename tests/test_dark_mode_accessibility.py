@@ -119,6 +119,19 @@ class DarkModeAccessibilityTests(unittest.TestCase):
             r"\.dossier-document \.skip-link\s*\{[^}]*background:\s*Canvas;[^}]*border-color:\s*CanvasText;[^}]*color:\s*CanvasText;",
         )
 
+    def test_compact_receipts_forced_colors_keep_skip_links_visible(self) -> None:
+        for filename in (
+            "private-recruiter-conversion-outcome-v1.css",
+            "private-recruiter-followthrough-checkpoint-v1.css",
+        ):
+            with self.subTest(filename=filename):
+                css = (ASSETS / filename).read_text(encoding="utf-8")
+                forced = css[css.index("@media (forced-colors: active)"):]
+                self.assertRegex(
+                    forced,
+                    r"\.skip-link\s*\{[^}]*background:\s*Canvas;[^}]*border-color:\s*CanvasText;[^}]*color:\s*CanvasText;",
+                )
+
     def test_dossier_prefers_contrast_strengthens_card_boundaries(self) -> None:
         css = (ASSETS / "executive-career-dossier-v1.css").read_text(encoding="utf-8")
         contrast_start = css.index("@media (prefers-contrast: more)")
