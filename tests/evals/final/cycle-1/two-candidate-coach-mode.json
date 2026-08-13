@@ -3,7 +3,7 @@
   "artifact_kind": "deterministic-regression-fixture",
   "cycle": 1,
   "case_id": "two-candidate-coach-mode",
-  "source_commit": "d7664bc3e0db1c4413e05564f5cb2cfc03fd4f35",
+  "source_commit": "f4e98c87797270f6494e82dbd61b2e6ca7044c4f",
   "source_tree": "115efd5dc8e09427630893b70499fa273086b3d5",
   "fork_turns": "none",
   "run_id": "JSC-RUN-C1-TWO-CANDIDATE-COACH-MODE",
