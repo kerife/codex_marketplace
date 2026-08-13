@@ -3000,6 +3000,24 @@ class LinkedInClientReportSafetyTests(unittest.TestCase):
             errors,
         )
 
+    def test_unregistered_source_category_diagnostic_never_echoes_submitted_value(self) -> None:
+        sentinels = (
+            "person@example.invalid",
+            "/private/candidate/profile.json",
+            "ordinary\x1b[31mINJECTED\nLINE",
+        )
+        for sentinel in sentinels:
+            with self.subTest(sentinel=sentinel):
+                bundle = self.bundle()
+                source = bundle["source_catalog"][0]
+                source["source_category"] = sentinel
+                errors = validator.validate_fixture_bundle(bundle)
+                self.assertIn(
+                    "source_catalog[0] official URL is not registered for source_category",
+                    errors,
+                )
+                self.assertNotIn(sentinel, "\n".join(errors))
+
     def test_genuine_secondary_source_is_allowed_but_never_counts_as_official(self) -> None:
         bundle = self.bundle()
         bundle["source_catalog"].append(self.secondary_source())
@@ -3888,6 +3906,22 @@ class LinkedInClientReportCliTests(unittest.TestCase):
         self.assertEqual(2, result.returncode)
         self.assertEqual("", result.stdout)
         self.assertIn("generic priority code is not allowed", result.stderr)
+        self.assertNotIn(sentinel, result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_cli_redacts_unregistered_source_category_diagnostic(self) -> None:
+        sentinel = "person@example.invalid"
+        bundle = json.loads(self.BUNDLE_A.read_text(encoding="utf-8"))
+        bundle["source_catalog"][0]["source_category"] = sentinel
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "bundle.json"
+            path.write_text(json.dumps(bundle), encoding="utf-8")
+            result = self.run_cli(str(self.REPORT_A), str(path))
+        self.assertEqual(2, result.returncode)
+        self.assertIn(
+            "source_catalog[0] official URL is not registered for source_category",
+            result.stderr,
+        )
         self.assertNotIn(sentinel, result.stderr)
         self.assertNotIn("Traceback", result.stderr)
 

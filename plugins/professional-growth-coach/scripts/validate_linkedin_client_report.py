@@ -3440,9 +3440,14 @@ def _validate_sources(
                     f"{label} official URL cannot include a sensitive query or fragment"
                 )
             if not registered_official_url and isinstance(source_category, str):
+                category_suffix = (
+                    f" {source_category}"
+                    if source_category in SOURCE_CATEGORIES
+                    else ""
+                )
                 errors.append(
-                    f"{label} official URL is not registered for source_category "
-                    f"{source_category}"
+                    f"{label} official URL is not registered for source_category"
+                    f"{category_suffix}"
                 )
         elif source_class == "secondary":
             secondary_url_error = _secondary_source_url_error(source["url"])
