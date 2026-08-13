@@ -573,6 +573,7 @@ details summary {
 @media (forced-colors: active) {
   button { background: ButtonFace; color: ButtonText; border-color: ButtonText; }
   button:hover { background: Highlight; color: HighlightText; }
+  .dossier-document .card { border-color: CanvasText; }
   a:focus-visible,
   button:focus-visible,
   summary:focus-visible,
@@ -592,12 +593,17 @@ details summary {
 }
 
 @media (prefers-contrast: more) {
+  .dossier-document .card { border-color: var(--ink); }
   .screen-preparation-question,
   .screen-preparation-handoff,
   .screen-preparation-manual-note { border-width: 2px; }
   .screen-preparation-question h3,
   .screen-preparation-handoff h3,
   .screen-preparation-manual-note h3 { text-decoration: underline; text-decoration-thickness: 0.12em; }
+}
+
+@media (forced-colors: active) and (prefers-contrast: more) {
+  .dossier-document .card { border-color: CanvasText; }
 }
 ```
 

@@ -111,6 +111,27 @@ class DarkModeAccessibilityTests(unittest.TestCase):
             r"a:focus-visible,\s*button:focus-visible,\s*summary:focus-visible,\s*main:focus-visible\s*\{[^}]*outline-color: Highlight;",
         )
 
+    def test_dossier_prefers_contrast_strengthens_card_boundaries(self) -> None:
+        css = (ASSETS / "executive-career-dossier-v1.css").read_text(encoding="utf-8")
+        contrast_start = css.index("@media (prefers-contrast: more)")
+        contrast = css[contrast_start:]
+        self.assertRegex(
+            contrast,
+            r"\.dossier-document \.card\s*\{[^}]*border-color:\s*var\(--ink\);",
+        )
+
+        forced_start = css.index("@media (forced-colors: active)")
+        forced = css[forced_start:contrast_start]
+        self.assertRegex(
+            forced,
+            r"\.dossier-document \.card\s*\{[^}]*border-color:\s*CanvasText;",
+        )
+        combined = css[css.index("@media (forced-colors: active) and (prefers-contrast: more)"):]
+        self.assertRegex(
+            combined,
+            r"\.dossier-document \.card\s*\{[^}]*border-color:\s*CanvasText;",
+        )
+
     def test_forced_colors_keeps_context_and_boundary_surfaces_distinguishable(self) -> None:
         surfaces = {
             "recruiter-practice-session-v1.css": (
