@@ -32,6 +32,9 @@ buttons while preserving their visible labels and live status targets. Its
 private utility controls are an explicit action group rather than a misleading
 navigation landmark; no visual browser QA is claimed.
 
+Repeated dossier priority, scorecard, visual-review, and copy articles now
+reference their visible headings with deterministic `aria-labelledby` IDs.
+
 1. Run real browser QA for keyboard skip navigation, 320px/200% reflow,
    dark mode, forced colors, reduced motion, and print pagination. The current
    evidence is source/render-contract based; no browser screenshot is claimed.

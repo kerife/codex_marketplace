@@ -1892,6 +1892,23 @@ class ExecutiveCareerDossierRendererTests(unittest.TestCase):
                 self.assertNotIn('<nav class="utility-actions no-print"', rendered)
                 self.assertIn("data-print", rendered)
 
+    def test_repeated_dossier_articles_have_resolvable_heading_names(self) -> None:
+        for dossier in (self.es_dossier, self.en_dossier):
+            with self.subTest(locale=dossier["locale"]):
+                rendered = self.renderer.render_dossier_html(dossier)
+                ids = set(re.findall(r'\bid="([^"]+)"', rendered))
+                articles = re.findall(
+                    r'<article[^>]*class="([^"]*\b(?:priority|dimension|visual|copy)-card\b[^"]*)"[^>]*aria-labelledby="([^"]+)"[^>]*>(.*?)</article>',
+                    rendered,
+                    re.S,
+                )
+                self.assertTrue(articles)
+                labels = [label for _, label, _ in articles]
+                self.assertEqual(len(labels), len(set(labels)))
+                for _, labelledby, body in articles:
+                    self.assertIn(labelledby, ids)
+                    self.assertRegex(body, rf'<h3[^>]*id="{re.escape(labelledby)}"[^>]*>')
+
     def test_confirmation_boundary_is_localized_and_associated_only_when_needed(self) -> None:
         for dossier, expected, absent in (
             (self.es_dossier, "Necesita confirmación; conserva este texto como borrador privado.", "Needs confirmation; keep this text as a private draft."),
