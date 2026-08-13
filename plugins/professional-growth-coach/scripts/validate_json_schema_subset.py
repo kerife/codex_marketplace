@@ -8,6 +8,10 @@ import unicodedata
 from collections.abc import Mapping
 
 
+MAX_SCHEMA_VALIDATION_DEPTH = 64
+SCHEMA_DEPTH_ERROR = "schema validation exceeds safe depth limit"
+
+
 _SUSPICIOUS_FIELD = re.compile(
     r"@|://|~[\\/]|[.]{1,2}[\\/]|"
     r"(?:^|[\\/])(?:users|private|tmp|home)[\\/] |"
@@ -82,10 +86,20 @@ def _validate(
     path: str,
     *,
     collect: bool = True,
+    _depth: int = 0,
 ) -> list[str]:
+    if _depth > MAX_SCHEMA_VALIDATION_DEPTH:
+        return [SCHEMA_DEPTH_ERROR]
     errors: list[str] = []
     if "$ref" in schema:
-        return _validate(value, _pointer(root, str(schema["$ref"])), root, path, collect=collect)
+        return _validate(
+            value,
+            _pointer(root, str(schema["$ref"])),
+            root,
+            path,
+            collect=collect,
+            _depth=_depth + 1,
+        )
     if "type" in schema and not _type_ok(value, schema["type"]):
         return [f"{path}: type mismatch"]
     if "const" in schema and not _json_equal(value, schema["const"]):
@@ -125,7 +139,11 @@ def _validate(
                 errors.append(f"{path}: missing required field {key}")
         for key, child_schema in properties.items():
             if key in value:
-                errors.extend(_validate(value[key], child_schema, root, f"{path}.{key}"))
+                errors.extend(
+                    _validate(
+                        value[key], child_schema, root, f"{path}.{key}", _depth=_depth + 1
+                    )
+                )
     if isinstance(value, list):
         if "minItems" in schema and len(value) < schema["minItems"]:
             errors.append(f"{path}: too few items")
@@ -135,28 +153,56 @@ def _validate(
             errors.append(f"{path}: duplicate items")
         if "items" in schema:
             for index, child in enumerate(value):
-                errors.extend(_validate(child, schema["items"], root, f"{path}[{index}]"))
+                errors.extend(
+                    _validate(
+                        child, schema["items"], root, f"{path}[{index}]", _depth=_depth + 1
+                    )
+                )
         if "contains" in schema and not any(
-            not _validate(child, schema["contains"], root, f"{path}[{index}]")
+            not _validate(
+                child,
+                schema["contains"],
+                root,
+                f"{path}[{index}]",
+                _depth=_depth + 1,
+            )
             for index, child in enumerate(value)
         ):
             errors.append(f"{path}: contains mismatch")
     for branch in schema.get("allOf", []):
-        errors.extend(_validate(value, branch, root, path))
+        errors.extend(_validate(value, branch, root, path, _depth=_depth + 1))
     if "oneOf" in schema:
-        matches = sum(not _validate(value, branch, root, path) for branch in schema["oneOf"])
+        matches = sum(
+            not _validate(value, branch, root, path, _depth=_depth + 1)
+            for branch in schema["oneOf"]
+        )
         if matches != 1:
             errors.append(f"{path}: oneOf mismatch")
     if "anyOf" in schema:
-        if not any(not _validate(value, branch, root, path) for branch in schema["anyOf"]):
+        if not any(
+            not _validate(value, branch, root, path, _depth=_depth + 1)
+            for branch in schema["anyOf"]
+        ):
             errors.append(f"{path}: anyOf mismatch")
-    if "not" in schema and not _validate(value, schema["not"], root, path):
+    if "not" in schema and not _validate(
+        value, schema["not"], root, path, _depth=_depth + 1
+    ):
         errors.append(f"{path}: not mismatch")
     if "if" in schema:
-        condition_matches = _validate(value, schema["if"], root, path, collect=False) == []
+        condition_matches = (
+            _validate(
+                value,
+                schema["if"],
+                root,
+                path,
+                collect=False,
+                _depth=_depth + 1,
+            )
+            == []
+        )
         branch = schema.get("then", {}) if condition_matches else schema.get("else", {})
         if branch:
-            errors.extend(_validate(value, branch, root, path))
+            errors.extend(_validate(value, branch, root, path, _depth=_depth + 1))
     return errors
 
 

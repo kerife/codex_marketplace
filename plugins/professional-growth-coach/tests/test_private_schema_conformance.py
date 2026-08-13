@@ -492,6 +492,26 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         ):
             self.assertTrue(any(expected in error for error in validate_schema_instance(value, schema)), (value, expected))
 
+    def test_dependency_free_checker_bounds_deep_values(self):
+        value: object = "leaf"
+        schema: object = {"type": "string"}
+        for _ in range(80):
+            value = {"nested": value}
+            schema = {"type": "object", "properties": {"nested": schema}}
+
+        self.assertEqual(
+            ["schema validation exceeds safe depth limit"],
+            validate_schema_instance(value, schema),
+        )
+
+    def test_dependency_free_checker_bounds_recursive_refs(self):
+        schema = {"$defs": {"node": {"$ref": "#/$defs/node"}}, "$ref": "#/$defs/node"}
+
+        self.assertEqual(
+            ["schema validation exceeds safe depth limit"],
+            validate_schema_instance("leaf", schema),
+        )
+
     def test_dependency_free_checker_enforces_numeric_and_array_bounds(self):
         schema = {
             "type": "object",
