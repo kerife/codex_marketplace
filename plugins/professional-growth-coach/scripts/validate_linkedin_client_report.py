@@ -38,6 +38,7 @@ REQUIRED_BUNDLE_FIELDS = frozenset({
     "score_ledger", "priorities", "copy_blocks", "blocked_claims",
     "source_catalog", "authorization_state", "eval_expectations",
 })
+MAX_BUNDLE_NESTING = 64
 STRUCTURAL_STATE_FIELDS = frozenset({"observations"})
 OBSERVATION_FIELDS = frozenset({"evidence_id", "section", "state"})
 FACT_FIELDS = frozenset({"fact_id", "evidence_state", "fact_type", "role_family", "capability_family", "scope_bucket", "claim_tokens"})
@@ -2643,10 +2644,25 @@ def validate_report_pair_differentiation(
     return _deduplicate(errors)
 
 
+def _exceeds_nesting_limit(value: object) -> bool:
+    pending: list[tuple[object, int]] = [(value, 0)]
+    while pending:
+        current, depth = pending.pop()
+        if depth > MAX_BUNDLE_NESTING:
+            return True
+        if isinstance(current, Mapping):
+            pending.extend((nested, depth + 1) for nested in current.values())
+        elif isinstance(current, list):
+            pending.extend((nested, depth + 1) for nested in current)
+    return False
+
+
 def validate_fixture_bundle(bundle: object) -> list[str]:
     """Return deterministic errors for a closed synthetic fixture bundle."""
     if not isinstance(bundle, Mapping):
         return ["fixture must be a JSON object"]
+    if _exceeds_nesting_limit(bundle):
+        return ["fixture nesting exceeds safe depth limit"]
 
     errors: list[str] = []
     _validate_fields(bundle, "fixture", REQUIRED_BUNDLE_FIELDS, errors)

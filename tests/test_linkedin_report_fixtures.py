@@ -178,6 +178,15 @@ class LinkedInReportFixtureTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "unavailable"):
                 validator.load_bundle(alias / "bundle.json")
 
+    def test_deeply_nested_bundle_returns_bounded_validation_error(self) -> None:
+        nested: object = "leaf"
+        for _ in range(1000):
+            nested = {"nested": nested}
+
+        errors = validator.validate_fixture_bundle(nested)
+
+        self.assertEqual(["fixture nesting exceeds safe depth limit"], errors)
+
     def test_cli_rejects_oversized_and_invalid_utf8_inputs_without_traceback(self) -> None:
         report = FIXTURE_ROOT / "scenario-a-es.md"
         bundle = FIXTURE_ROOT / "scenario-a.json"
