@@ -518,6 +518,20 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         ):
             self.assertTrue(any(expected in error for error in validate_schema_instance(value, schema)), (value, expected))
 
+    def test_schema_diagnostics_redact_sensitive_keys_and_escape_controls(self):
+        schema = {"type": "object", "properties": {}, "additionalProperties": False}
+        cases = (
+            ("person@example.invalid", "<redacted-field>"),
+            ("/Users/private-candidate/profile.json", "<redacted-field>"),
+            ("ordinary\nINJECTED\x1b[31m", r"ordinary\u000aINJECTED\u001b[31m"),
+            ("extra", "extra"),
+        )
+        for key, expected in cases:
+            with self.subTest(key=key):
+                errors = validate_schema_instance({key: "x"}, schema)
+                self.assertEqual([f"$: unsupported field {expected}"], errors)
+                self.assertNotIn("\nINJECTED", "\n".join(errors))
+
     def test_dependency_free_checker_enforces_strict_json_types_and_const(self):
         self.assertEqual(
             [], validate_schema_instance(1, {"type": "integer", "const": 1})

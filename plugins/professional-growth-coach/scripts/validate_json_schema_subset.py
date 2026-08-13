@@ -4,7 +4,33 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import unicodedata
 from collections.abc import Mapping
+
+
+_SUSPICIOUS_FIELD = re.compile(
+    r"@|://|~[\\/]|[.]{1,2}[\\/]|"
+    r"(?:^|[\\/])(?:users|private|tmp|home)[\\/] |"
+    r"(?:www\.|linkedin\.com/)|"
+    r"(?:token|secret|password|credential|api[_-]?key|access[_-]?key|auth|cookie|private)",
+    re.IGNORECASE | re.VERBOSE,
+)
+
+
+def _escape_diagnostic_controls(value: str) -> str:
+    return "".join(
+        f"\\u{ord(character):04x}"
+        if unicodedata.category(character) in {"Cc", "Cf", "Cs", "Zl", "Zp"}
+        else character
+        for character in value
+    )
+
+
+def _safe_diagnostic_field_name(value: object) -> str:
+    text = str(value)
+    if _SUSPICIOUS_FIELD.search(text):
+        return "<redacted-field>"
+    return _escape_diagnostic_controls(text)
 
 
 def _pointer(root: Mapping[str, object], reference: str) -> Mapping[str, object]:
@@ -90,7 +116,9 @@ def _validate(
         properties = schema.get("properties", {})
         if schema.get("additionalProperties") is False:
             errors.extend(
-                f"{path}: unsupported field {key}" for key in value if key not in properties
+                f"{path}: unsupported field {_safe_diagnostic_field_name(key)}"
+                for key in value
+                if key not in properties
             )
         for key in schema.get("required", []):
             if key not in value:
