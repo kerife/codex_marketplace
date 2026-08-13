@@ -18,13 +18,13 @@ release_version_prefix: `0.2.0+codex`
 
 release_timestamp: `2026-08-13T04:45:23Z`
 
-source_commit: `ae27e0f7cfad8210ef2ec66812520d6e8f9d2d77`
+source_commit: `65fa5d6c31605c01a00d43dfb466911361eb1295`
 
-source_tree: `595f5d1d9761388696c4bbe524885b0e4cc8bd71`
+source_tree: `466868e30403c1a0a91d520e5bc1de9a6f9afb1b`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260813050134`
+installed_cache_version: `0.2.0+codex.20260813050734`
 
 installed_enabled: `true`
 
@@ -32,7 +32,7 @@ source_file_count: `109`
 
 installed_file_count: `109`
 
-normalized_source_cache_sha256: `d2299320b866976eb08005954b2d189f2c0b904a799ec9f0dbea8d6f63995d24`
+normalized_source_cache_sha256: `8c8ef6782ea4780e591d195de47146bca9ede6d751d619823fd3d09b381c6f0b`
 
 active_config: `canonical_only`
 
