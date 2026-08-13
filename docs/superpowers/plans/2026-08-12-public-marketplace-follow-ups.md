@@ -29,6 +29,10 @@ The outcomes CSV CLI now uses the shared descriptor-anchored 256 KiB input
 boundary and rejects symlinked, non-regular, oversized, and invalid UTF-8
 inputs before parsing.
 
+Outcomes diagnostics now avoid echoing missing paths, duplicate headers, or
+invalid window arguments. Shared private-field diagnostics also redact
+absolute paths under common system roots while preserving ordinary field names.
+
 The dossier now exposes localized, card-specific accessible names for copy
 buttons while preserving their visible labels and live status targets. Its
 private utility controls are an explicit action group rather than a misleading
@@ -40,6 +44,10 @@ reference their visible headings with deterministic `aria-labelledby` IDs.
 The dossier and recruiter triage, practice, checkpoint, and conversion
 validators now reject deeply nested or cyclic direct-API mappings with stable
 nesting-limit errors instead of propagating `RecursionError`.
+
+Compact receipt footers now expose a visible continuity separator and retain
+system colors in forced-colors mode. Their stronger high-contrast separator
+weight still needs browser/OS confirmation.
 
 1. Run real browser QA for keyboard skip navigation, 320px/200% reflow,
    dark mode, forced colors, reduced motion, and print pagination. The current
