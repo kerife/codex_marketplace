@@ -21,6 +21,8 @@ paths, priority codes, and unexpected copy headings. Generic priority rejection
 messages also use a fixed diagnostic and no longer echo arbitrary report text.
 Invalid official `source_category` values now use a stable diagnostic and never
 echo submitted email-like, path-like, or control-character text.
+LinkedIn fixture diagnostics now also redact Windows drive, UNC, and common
+absolute system-root paths while retaining ordinary relative field names.
 The JSON schema subset validator now redacts sensitive unsupported-field names
 and escapes diagnostic controls; ordinary field names remain visible.
 The remaining visual and accessibility follow-ups stay separate.
