@@ -172,9 +172,7 @@ def read_rows(
                 header for header, count in Counter(headers).items() if count > 1
             )
             if duplicate_headers:
-                raise InputError(
-                    "duplicate CSV headers: " + ", ".join(duplicate_headers)
-                )
+                raise InputError("duplicate CSV headers")
             missing_headers = [field for field in CSV_FIELDS if field not in headers]
             if missing_headers:
                 raise InputError(

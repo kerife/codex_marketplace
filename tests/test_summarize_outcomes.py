@@ -384,6 +384,21 @@ class SummarizeOutcomesTests(unittest.TestCase):
                 result = run_summary([outcome_row(**{field: ""})])
                 self.assert_invalid(result, f"row 2: {field} is required")
 
+    def test_duplicate_headers_use_a_privacy_safe_diagnostic(self) -> None:
+        sentinel = "/Users/private-candidate/outcomes.csv"
+        duplicate_fields = (*CSV_FIELDS, sentinel, sentinel)
+        result = run_summary([outcome_row()], fieldnames=duplicate_fields)
+        self.assert_invalid(result, "duplicate CSV headers")
+        self.assertNotIn(sentinel, result.stderr)
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "duplicate.csv"
+            path.write_text(f"{sentinel},{sentinel}\n", encoding="utf-8")
+            with self.assertRaises(SUMMARIZER.InputError) as raised:
+                SUMMARIZER.read_rows(path, dt.date(2026, 8, 6))
+            self.assertEqual(str(raised.exception), "duplicate CSV headers")
+            self.assertNotIn(sentinel, str(raised.exception))
+
     def test_duplicate_application_ids_are_rejected_instead_of_double_counted(self) -> None:
         result = run_summary(
             [
