@@ -9,10 +9,10 @@ so they can be handled in a separate cycle without blocking publication.
 2. Decide whether the dossier utility action group needs a visual browser pass
    after its navigation-landmark correction; keep it an action group, not a
    navigation landmark, unless it gains actual links.
-3. Redact arbitrary report-level duplicate fact/evidence/claim identifiers in
-   the LinkedIn validator. Bundle-level diagnostics are sanitized, but a
-   malformed Markdown report can still echo a path-like, credential-like, or
-   Unicode-control identifier.
+3. Extend forced-colors mappings to the practice and triage context, prompt,
+   rehearsal, evidence, and boundary surfaces. Current browser/mobile capture
+   confirms normal flow and ARIA references, but real OS high-contrast mode was
+   unavailable for this cycle.
 4. Consider a separate full-suite harness pass for the few long-running root
    tests that time out under broad discovery; the focused plugin, static,
    privacy, and installed-release gates are green for this release.

@@ -2156,7 +2156,11 @@ def _duplicates(values: tuple[str, ...] | list[str]) -> tuple[str, ...]:
 
 def _safe_diagnostic_identifier(value: object) -> str:
     """Keep canonical synthetic IDs in diagnostics without echoing input values."""
-    if isinstance(value, str) and REPORT_IDENTIFIER.fullmatch(value) is not None:
+    if isinstance(value, str) and (
+        REPORT_IDENTIFIER.fullmatch(value) is not None
+        or value in CLAIM_TOKENS
+        or value in BLOCKED_CLAIMS
+    ):
         return value
     return "<redacted-value>"
 
@@ -2232,7 +2236,10 @@ def _validate_report_priorities(
             if _is_generic_priority_code(code):
                 errors.append(f"generic priority code is not allowed: {code}")
         for evidence_id in _duplicates(priority.evidence_ids):
-            errors.append(f"priority {priority.rank} has duplicate evidence {evidence_id}")
+            errors.append(
+                f"priority {priority.rank} has duplicate evidence "
+                f"{_safe_diagnostic_identifier(evidence_id)}"
+            )
         for evidence_id in priority.evidence_ids:
             if evidence_id not in known_evidence:
                 errors.append(f"priority {priority.rank} references unknown evidence")
@@ -2303,11 +2310,20 @@ def _validate_report_copies(
         if "actual_copy" not in copy_block.present_fields or not copy_block.actual_copy:
             errors.append(f"copy {copy_block.section} requires nonempty actual copy")
         for fact_id in _duplicates(copy_block.fact_ids):
-            errors.append(f"copy {copy_block.section} has duplicate fact {fact_id}")
+            errors.append(
+                f"copy {copy_block.section} has duplicate fact "
+                f"{_safe_diagnostic_identifier(fact_id)}"
+            )
         for evidence_id in _duplicates(copy_block.evidence_ids):
-            errors.append(f"copy {copy_block.section} has duplicate evidence {evidence_id}")
+            errors.append(
+                f"copy {copy_block.section} has duplicate evidence "
+                f"{_safe_diagnostic_identifier(evidence_id)}"
+            )
         for claim in _duplicates(copy_block.claims):
-            errors.append(f"copy {copy_block.section} has duplicate claim {claim}")
+            errors.append(
+                f"copy {copy_block.section} has duplicate claim "
+                f"{_safe_diagnostic_identifier(claim)}"
+            )
         expected = fixture_by_section.get(copy_block.section)
         report_values = {
             "copy_id": copy_block.copy_id,
@@ -2329,9 +2345,15 @@ def _validate_report_copies(
             elif copy_block.state == "ready" and fact["evidence_state"] not in {
                 "verified", "candidate_reported",
             }:
-                errors.append(f"ready copy references unsupported fact {fact_id}")
+                errors.append(
+                    "ready copy references unsupported fact "
+                    f"{_safe_diagnostic_identifier(fact_id)}"
+                )
             if copy_block.state == "ready" and fact_id in blocked_claims:
-                errors.append(f"ready copy duplicates blocked claim {fact_id}")
+                errors.append(
+                    "ready copy duplicates blocked claim "
+                    f"{_safe_diagnostic_identifier(fact_id)}"
+                )
         expected_claims: list[str] = []
         claim_states = {
             "ready": {"verified", "candidate_reported"},
@@ -2366,7 +2388,7 @@ def _validate_report_copies(
             ):
                 errors.append(
                     f"copy {copy_block.section} actual copy exposes undeclared or "
-                    f"unsupported claim {claim}"
+                    f"unsupported claim {_safe_diagnostic_identifier(claim)}"
                 )
         for blocked_claim in blocked_claims:
             if (
@@ -2374,7 +2396,8 @@ def _validate_report_copies(
                 or _normalized_code_is_exposed(copy_block.actual_copy, blocked_claim)
             ):
                 errors.append(
-                    f"copy {copy_block.section} exposes blocked claim {blocked_claim}"
+                    f"copy {copy_block.section} exposes blocked claim "
+                    f"{_safe_diagnostic_identifier(blocked_claim)}"
                 )
         for evidence_id in copy_block.evidence_ids:
             if evidence_id not in known_evidence:
@@ -2430,7 +2453,10 @@ def _validate_blocked_claims(
     }
     for claim in visible_claims:
         if claim in ready_facts:
-            errors.append(f"ready copy duplicates blocked claim {claim}")
+            errors.append(
+                "ready copy duplicates blocked claim "
+                f"{_safe_diagnostic_identifier(claim)}"
+            )
     return errors
 
 

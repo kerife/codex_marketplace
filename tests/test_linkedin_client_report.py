@@ -1521,6 +1521,40 @@ class LinkedInClientReportDecisionTests(unittest.TestCase):
                 self.assertIn(bundle_error, validator.validate_client_report(report, bundle))
                 self.assertIn(bundle_error, validator.validate_fixture_bundle(bundle))
 
+    def test_report_duplicate_diagnostics_redact_arbitrary_identifiers(self) -> None:
+        baseline = self.report("scenario-a-es.md")
+        cases = (
+            (
+                "- Hechos: `FACT-JSC1-READY`",
+                "- Hechos: `/Users/private-candidate/profile.json`, `/Users/private-candidate/profile.json`",
+                "/Users/private-candidate/profile.json",
+                "copy headline has duplicate fact <redacted-value>",
+            ),
+            (
+                "- Evidencia: `EVID-JSC1-HEADLINE`",
+                "- Evidencia: `password=very-secret-value`, `password=very-secret-value`",
+                "password=very-secret-value",
+                "copy headline has duplicate evidence <redacted-value>",
+            ),
+        )
+        control_value = "ordinary" + chr(0x202E) + "INJECTED"
+        cases += (
+            (
+                "- Claims: `RELIABILITY`, `TECHNICAL_SCOPE`",
+                f"- Claims: `{control_value}`, `{control_value}`",
+                control_value,
+                "copy headline has duplicate claim <redacted-value>",
+            ),
+        )
+        for old, new, sensitive, expected in cases:
+            with self.subTest(sensitive=sensitive):
+                errors = validator.validate_client_report(
+                    self.replace_once(baseline, old, new),
+                    self.bundle("scenario-a.json"),
+                )
+                self.assertNotIn(sensitive, "\n".join(errors))
+                self.assertIn(expected, errors)
+
     def test_copy_section_rejects_unexpected_h3_blocks(self) -> None:
         extra = (
             "### Profile summary\n\n"
