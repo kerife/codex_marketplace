@@ -24,7 +24,9 @@ echo submitted email-like, path-like, or control-character text.
 LinkedIn fixture diagnostics now also redact Windows drive, UNC, and common
 absolute system-root paths while retaining ordinary relative field names.
 The JSON schema subset validator now redacts sensitive unsupported-field names
-and escapes diagnostic controls; ordinary field names remain visible.
+and escapes diagnostic controls; ordinary field names remain visible. It also
+bounds schema pattern length and rejects nested-quantifier patterns to avoid
+caller-controlled regular-expression CPU exhaustion.
 The remaining visual and accessibility follow-ups stay separate.
 
 The outcomes CSV CLI now uses the shared descriptor-anchored 256 KiB input
