@@ -63,6 +63,13 @@ class DarkModeAccessibilityTests(unittest.TestCase):
                 self.assertGreaterEqual(_contrast(foreground, TOKENS["--surface"]), 4.5)
         self.assertGreaterEqual(_contrast(TOKENS["--line"], TOKENS["--surface"]), 3.0)
 
+    def test_practice_light_border_token_meets_contrast_floor(self) -> None:
+        css = (ASSETS / "recruiter-practice-session-v1.css").read_text(encoding="utf-8")
+        light_line = re.search(r"--line:\s*(#[0-9a-fA-F]{6});", css)
+        self.assertIsNotNone(light_line)
+        self.assertGreaterEqual(_contrast(light_line.group(1), "#ffffff"), 3.0)
+        self.assertGreaterEqual(_contrast(light_line.group(1), "#f6f4ee"), 3.0)
+
     def test_forced_colors_keeps_footer_boundary_readable(self) -> None:
         selectors = {
             "executive-career-dossier-v1.css": ".footer",

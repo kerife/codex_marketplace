@@ -3,6 +3,10 @@
 This release is statically ready. The items below are deliberately deferred
 so they can be handled in a separate cycle without blocking publication.
 
+The practice light-theme border token now meets the 3:1 non-text contrast
+floor against both white and the paper surface; browser and print confirmation
+remain part of the visual-QA follow-up below.
+
 1. Run real browser QA for keyboard skip navigation, 320px/200% reflow,
    dark mode, forced colors, reduced motion, and print pagination. The current
    evidence is source/render-contract based; no browser screenshot is claimed.

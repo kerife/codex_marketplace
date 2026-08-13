@@ -802,7 +802,7 @@ details summary {
   --coral: #b9513a;
   --coral-soft: #f6e0da;
   --decision-term: #dfbf70;
-  --line: #b8c7c0;
+  --line: #6f8175;
   --measure: 72ch;
   --serif: Georgia, "Times New Roman", Times, serif;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
