@@ -16,15 +16,15 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-13T06:44:07Z`
+release_timestamp: `2026-08-13T07:00:36Z`
 
-source_commit: `313df09c1b518f4ab6f80da0522d75fdd59e34c1`
+source_commit: `93d2638387b16e0bf3879e81963a8143526e777b`
 
-source_tree: `ea464c90189a705c0490741d5ce04f35516ab8a8`
+source_tree: `2e0b0c2e94d199d47cc72bf65e8d1f5adbfcc2e8`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260813004407`
+installed_cache_version: `0.2.0+codex.20260813010036`
 
 installed_enabled: `true`
 
@@ -32,7 +32,7 @@ source_file_count: `109`
 
 installed_file_count: `109`
 
-normalized_source_cache_sha256: `5ba47a97a3756877a9bb31274a064104bb2529e076c43c20566a52dc188b5b6c`
+ normalized_source_cache_sha256: `6f3a4b47cc77faae9ae0f32f72201a978bdfee484a8736ba0b7eaed7cf6b39f3`
 
 active_config: `canonical_only`
 
