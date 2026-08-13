@@ -172,11 +172,63 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         triage_snapshot = copy.deepcopy(fixture)
         triage_snapshot["handoff_context"]["source"] = "private_recruiter_reply_triage"
         triage_snapshot["handoff_context"]["source_snapshot"] = "snap-dossier-001"
+        triage_snapshot["handoff_context"]["question_kind"] = triage_snapshot["question"]["kind"]
         triage_snapshot["handoff_context"].pop("claim_ids")
         triage_snapshot["handoff_context"].pop("evidence_ids")
         self.assertTrue(validate_schema_instance(triage_snapshot, schema), "triage source must reject dossier snapshot")
         triage_snapshot["handoff_context"]["source_snapshot"] = "snap-triage-001"
         self.assertEqual([], validate_schema_instance(triage_snapshot, schema))
+
+    def test_practice_triage_handoff_question_kind_is_closed_and_required(self):
+        source = json.loads(
+            (ROOT.parent.parent / "tests/evals/with-skill/fixtures/recruiter-practice-session/session-es.json").read_text(encoding="utf-8")
+        )
+        kinds = (
+            "screen_opening",
+            "proof_example",
+            "eligibility_boundary",
+            "compensation_boundary",
+            "missing_detail",
+        )
+        for schema_name, snapshot in (
+            ("recruiter-practice-session-v1.schema.json", "snap-triage-001"),
+            ("recruiter-practice-session-v2.schema.json", V2_TRIAGE_PRACTICE_SNAPSHOT),
+        ):
+            schema = self._schema(schema_name)
+            for kind in kinds:
+                with self.subTest(schema=schema_name, kind=kind):
+                    canonical = copy.deepcopy(source)
+                    canonical["handoff_context"]["source"] = "private_recruiter_reply_triage"
+                    canonical["handoff_context"]["source_snapshot"] = snapshot
+                    canonical["handoff_context"]["question_kind"] = kind
+                    canonical["question"]["kind"] = kind
+                    canonical["handoff_context"].pop("claim_ids")
+                    canonical["handoff_context"].pop("evidence_ids")
+                    if schema_name.endswith("-v2.schema.json"):
+                        canonical["schema_version"] = "recruiter-practice-session-v2"
+                        canonical["ui_locale"] = "en"
+                        canonical["content_locale"] = "es"
+                        del canonical["locale"]
+                    self.assertEqual([], validate_schema_instance(canonical, schema))
+                    self.assertEqual([], validate_session(canonical))
+
+                    missing = copy.deepcopy(canonical)
+                    del missing["handoff_context"]["question_kind"]
+                    self.assertTrue(validate_schema_instance(missing, schema))
+                    self.assertTrue(validate_session(missing))
+
+                    invalid = copy.deepcopy(canonical)
+                    invalid["handoff_context"]["question_kind"] = "not-a-question-kind"
+                    self.assertTrue(validate_schema_instance(invalid, schema))
+                    self.assertTrue(validate_session(invalid))
+
+            dossier = copy.deepcopy(source)
+            if schema_name.endswith("-v2.schema.json"):
+                dossier["schema_version"] = "recruiter-practice-session-v2"
+                dossier["ui_locale"] = "en"
+                dossier["content_locale"] = "es"
+                del dossier["locale"]
+            self.assertEqual([], validate_schema_instance(dossier, schema))
 
     def test_practice_v2_schema_accepts_independent_ui_and_content_locales(self):
         fixture = json.loads(
@@ -206,6 +258,7 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         del fixture["locale"]
         fixture["handoff_context"]["source"] = "private_recruiter_reply_triage"
         fixture["handoff_context"]["source_snapshot"] = V2_TRIAGE_PRACTICE_SNAPSHOT
+        fixture["handoff_context"]["question_kind"] = fixture["question"]["kind"]
         fixture["handoff_context"].pop("claim_ids")
         fixture["handoff_context"].pop("evidence_ids")
         schema = self._schema("recruiter-practice-session-v2.schema.json")

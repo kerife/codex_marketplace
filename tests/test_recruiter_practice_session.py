@@ -135,6 +135,7 @@ class RecruiterPracticeSessionContractTests(unittest.TestCase):
                 practice["handoff_context"]["source_snapshot"] = triage["handoff"]["reentry_packet"]["source_snapshot"]
                 practice["handoff_context"]["question_id"] = triage["question"]["id"]
                 practice["handoff_context"]["fact_ids"] = [triage["facts"][0]["id"]]
+                practice["handoff_context"]["question_kind"] = kind
                 practice["handoff_context"].pop("claim_ids")
                 practice["handoff_context"].pop("evidence_ids")
 
@@ -163,6 +164,7 @@ class RecruiterPracticeSessionContractTests(unittest.TestCase):
         practice["requirement"]["fact_ids"] = [triage["facts"][0]["id"]]
         practice["handoff_context"]["source"] = "private_recruiter_reply_triage"
         practice["handoff_context"]["source_snapshot"] = "snap-triage-001"
+        practice["handoff_context"]["question_kind"] = triage["question"]["kind"]
         self.assert_accepted(practice)
         self.assertIsNone(practice["observed_answer"])
         self.assertEqual(practice["feedback"]["score_state"], "unknown")
@@ -201,6 +203,54 @@ class RecruiterPracticeSessionContractTests(unittest.TestCase):
         scored["feedback"]["score"] = "80"
         self.assert_rejected(scored, "feedback.score must be unknown before an observed answer")
 
+    def test_triage_handoff_binds_question_kind_to_practice_question(self) -> None:
+        cases = {
+            "screen_invite": "screen_opening",
+            "request_for_proof": "proof_example",
+            "eligibility_question": "eligibility_boundary",
+            "compensation_question": "compensation_boundary",
+            "unknown": "missing_detail",
+        }
+        for classification, kind in cases.items():
+            with self.subTest(classification=classification):
+                triage = load_triage_fixture()
+                triage["classification"] = classification
+                triage["question"]["kind"] = kind
+                triage["handoff"]["packet"]["prep_scope"] = kind
+                triage["handoff"]["reentry_packet"]["prep_scope"] = kind
+
+                practice = copy.deepcopy(self.awaiting_session)
+                practice["safe_context"]["summary"] = triage["safe_context"]["summary"]
+                practice["facts"][0] = copy.deepcopy(triage["facts"][0])
+                practice["question"] = {
+                    **practice["question"],
+                    "id": triage["question"]["id"],
+                    "kind": kind,
+                    "text": triage["question"]["text"],
+                    "fact_ids": [triage["facts"][0]["id"]],
+                }
+                practice["requirement"]["fact_ids"] = [triage["facts"][0]["id"]]
+                practice["handoff_context"].update(
+                    source="private_recruiter_reply_triage",
+                    source_snapshot=triage["handoff"]["reentry_packet"]["source_snapshot"],
+                    question_id=triage["question"]["id"],
+                    fact_ids=[triage["facts"][0]["id"]],
+                    question_kind=kind,
+                )
+                practice["handoff_context"].pop("claim_ids")
+                practice["handoff_context"].pop("evidence_ids")
+
+                self.assert_accepted(practice)
+                for drifted_kind in cases.values():
+                    if drifted_kind == kind:
+                        continue
+                    drifted = copy.deepcopy(practice)
+                    drifted["question"]["kind"] = drifted_kind
+                    self.assert_rejected(
+                        drifted,
+                        "handoff_context.question_kind must match question.kind",
+                    )
+
         auto_start = copy.deepcopy(triage)
         auto_start["handoff"]["auto_start"] = True
         auto_result = self.run_triage_cli(auto_start)
@@ -211,6 +261,7 @@ class RecruiterPracticeSessionContractTests(unittest.TestCase):
         direct_triage_practice = copy.deepcopy(self.awaiting_session)
         direct_triage_practice["handoff_context"]["source"] = "private_recruiter_reply_triage"
         direct_triage_practice["handoff_context"]["source_snapshot"] = "snap-triage-001"
+        direct_triage_practice["handoff_context"]["question_kind"] = direct_triage_practice["question"]["kind"]
         direct_triage_practice["handoff_context"].pop("claim_ids")
         direct_triage_practice["handoff_context"].pop("evidence_ids")
 
@@ -282,6 +333,7 @@ class RecruiterPracticeSessionContractTests(unittest.TestCase):
         del v2["locale"]
         v2["handoff_context"]["source"] = "private_recruiter_reply_triage"
         v2["handoff_context"]["source_snapshot"] = V2_TRIAGE_SNAPSHOT
+        v2["handoff_context"]["question_kind"] = v2["question"]["kind"]
         v2["handoff_context"].pop("claim_ids")
         v2["handoff_context"].pop("evidence_ids")
         self.assert_accepted(v2)
@@ -290,6 +342,7 @@ class RecruiterPracticeSessionContractTests(unittest.TestCase):
         legacy = copy.deepcopy(self.awaiting_session)
         legacy["handoff_context"]["source"] = "private_recruiter_reply_triage"
         legacy["handoff_context"]["source_snapshot"] = V2_TRIAGE_SNAPSHOT
+        legacy["handoff_context"]["question_kind"] = legacy["question"]["kind"]
         legacy["handoff_context"].pop("claim_ids")
         legacy["handoff_context"].pop("evidence_ids")
         self.assert_rejected(legacy, "handoff_context.source_snapshot must use the bound dossier or snap-triage-000 identifier format")
@@ -305,6 +358,7 @@ class RecruiterPracticeSessionContractTests(unittest.TestCase):
         del malformed["locale"]
         malformed["handoff_context"]["source"] = "private_recruiter_reply_triage"
         malformed["handoff_context"]["source_snapshot"] = "snap-triage-sha256-" + ("g" * 64)
+        malformed["handoff_context"]["question_kind"] = malformed["question"]["kind"]
         malformed["handoff_context"].pop("claim_ids")
         malformed["handoff_context"].pop("evidence_ids")
         result = self.run_cli(malformed)
@@ -320,6 +374,7 @@ class RecruiterPracticeSessionContractTests(unittest.TestCase):
         del v2["locale"]
         v2["handoff_context"]["source"] = "private_recruiter_reply_triage"
         v2["handoff_context"]["source_snapshot"] = V2_TRIAGE_PHONE_LIKE_SNAPSHOT
+        v2["handoff_context"]["question_kind"] = v2["question"]["kind"]
         v2["handoff_context"].pop("claim_ids")
         v2["handoff_context"].pop("evidence_ids")
         self.assert_accepted(v2)

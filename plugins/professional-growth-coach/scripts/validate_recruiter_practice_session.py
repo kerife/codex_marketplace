@@ -52,6 +52,13 @@ V2_TOP_LEVEL_FIELDS = frozenset({
     "rubric", "feedback", "delivery", "handoff_context",
 })
 V2_REQUIRED_TOP_LEVEL_FIELDS = V2_TOP_LEVEL_FIELDS - {"handoff_context"}
+QUESTION_KINDS = frozenset({
+    "screen_opening",
+    "proof_example",
+    "eligibility_boundary",
+    "compensation_boundary",
+    "missing_detail",
+})
 
 
 def _enum(value: object, allowed: set[str] | frozenset[str]) -> bool:
@@ -371,7 +378,7 @@ def validate_session(value: object) -> list[str]:
     question = _closed(session.get("question"), "question", frozenset({"id", "kind", "text", "requirement_id", "fact_ids"}), errors)
     if question is not None:
         _id(question.get("id"), "question.id", "Q", errors)
-        if not _enum(question.get("kind"), {"screen_opening", "proof_example", "eligibility_boundary", "compensation_boundary", "missing_detail"}):
+        if not _enum(question.get("kind"), QUESTION_KINDS):
             errors.append("question.kind has invalid value")
         _text(question.get("text"), "question.text", errors, maximum=500)
         _validate_prose_identifier(question.get("text"), "question.text", errors)
@@ -394,10 +401,12 @@ def validate_session(value: object) -> list[str]:
 
     handoff = session.get("handoff_context")
     if handoff is not None:
-        handoff_fields = frozenset({"source", "source_snapshot", "question_rank", "question_id", "requirement_id", "fact_ids", "claim_ids", "evidence_ids", "draft_only", "external_actions_authorized"})
-        handoff_required = handoff_fields - {"claim_ids", "evidence_ids"}
+        handoff_fields = frozenset({"source", "source_snapshot", "question_rank", "question_id", "requirement_id", "fact_ids", "claim_ids", "evidence_ids", "question_kind", "draft_only", "external_actions_authorized"})
+        handoff_required = handoff_fields - {"claim_ids", "evidence_ids", "question_kind"}
         if isinstance(handoff, Mapping) and handoff.get("source") == "executive_career_dossier":
-            handoff_required = handoff_fields
+            handoff_required = handoff_fields - {"question_kind"}
+        elif isinstance(handoff, Mapping) and handoff.get("source") == "private_recruiter_reply_triage":
+            handoff_required = handoff_fields - {"claim_ids", "evidence_ids"}
         handoff = _closed(handoff, "handoff_context", handoff_fields, errors, required=handoff_required)
         if handoff is not None:
             if not _enum(handoff.get("source"), {"executive_career_dossier", "private_recruiter_reply_triage"}): errors.append("handoff_context.source has invalid value")
@@ -419,6 +428,11 @@ def validate_session(value: object) -> list[str]:
             if isinstance(handoff.get("question_rank"), bool) or handoff.get("question_rank") != 1: errors.append("handoff_context.question_rank must be 1")
             if handoff.get("draft_only") is not True: errors.append("handoff_context.draft_only must be true")
             if handoff.get("external_actions_authorized") is not False: errors.append("handoff_context.external_actions_authorized must be false")
+            if handoff.get("source") == "private_recruiter_reply_triage" and "question_kind" in handoff:
+                if not _enum(handoff.get("question_kind"), QUESTION_KINDS):
+                    errors.append("handoff_context.question_kind has invalid value")
+                elif question is not None and handoff.get("question_kind") != question.get("kind"):
+                    errors.append("handoff_context.question_kind must match question.kind")
             handoff_question_id = _id(handoff.get("question_id"), "handoff_context.question_id", "Q", errors)
             if handoff_question_id is not None and question is not None and handoff_question_id != question.get("id"):
                 errors.append("handoff_context.question_id must match question.id")

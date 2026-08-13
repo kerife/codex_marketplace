@@ -834,6 +834,7 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
         session["feedback"] = {"score": "unknown", "score_state": "unknown", "observations": []}
         session["handoff_context"]["source"] = "private_recruiter_reply_triage"
         session["handoff_context"]["source_snapshot"] = "snap-triage-001"
+        session["handoff_context"]["question_kind"] = session["question"]["kind"]
         errors = self.renderer.VALIDATOR.validate_session(session)
         self.assertEqual(errors, [])
         rendered = self.renderer.render_session_html(session)
@@ -841,6 +842,27 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
         self.assertNotIn("private_recruiter_reply_triage", rendered)
         session["handoff_context"]["source"] = "untrusted_source"
         self.assertIn("handoff_context.source has invalid value", self.renderer.VALIDATOR.validate_session(session))
+
+    def test_triage_handoff_renderer_requires_question_kind_parity(self) -> None:
+        for kind in self.renderer.QUESTION_KINDS:
+            with self.subTest(kind=kind):
+                session = self.feedback_session()
+                session["state"] = "awaiting_answer"
+                session["observed_answer"] = None
+                session["feedback"] = {"score": "unknown", "score_state": "unknown", "observations": []}
+                session["question"]["kind"] = kind
+                session["handoff_context"]["source"] = "private_recruiter_reply_triage"
+                session["handoff_context"]["source_snapshot"] = "snap-triage-001"
+                session["handoff_context"]["question_kind"] = kind
+                self.assertEqual([], self.renderer.VALIDATOR.validate_session(session))
+                self.renderer.render_session_html(session)
+
+                drifted = copy.deepcopy(session)
+                drifted["question"]["kind"] = next(candidate for candidate in self.renderer.QUESTION_KINDS if candidate != kind)
+                errors = self.renderer.VALIDATOR.validate_session(drifted)
+                self.assertIn("handoff_context.question_kind must match question.kind", errors)
+                with self.assertRaises(self.renderer.SessionValidationError):
+                    self.renderer.render_session_html(drifted)
 
     def test_handoff_context_requirement_id_matches_question_and_requirement(self) -> None:
         session = self.feedback_session()
@@ -886,6 +908,7 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
         del session["locale"]
         session["handoff_context"]["source"] = "private_recruiter_reply_triage"
         session["handoff_context"]["source_snapshot"] = V2_TRIAGE_PHONE_LIKE_SNAPSHOT
+        session["handoff_context"]["question_kind"] = session["question"]["kind"]
         session["handoff_context"].pop("claim_ids")
         session["handoff_context"].pop("evidence_ids")
         self.assertEqual(self.renderer.VALIDATOR.validate_session(session), [])
@@ -931,6 +954,7 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
         session = copy.deepcopy(self.awaiting_session)
         session["handoff_context"]["source"] = "private_recruiter_reply_triage"
         session["handoff_context"]["source_snapshot"] = "snap-triage-001"
+        session["handoff_context"]["question_kind"] = session["question"]["kind"]
         rendered = self.renderer.render_session_html(session)
         self.assertIn("triaje privado de respuesta de reclutador", rendered)
         self.assertNotIn("dossier de carrera", rendered)
