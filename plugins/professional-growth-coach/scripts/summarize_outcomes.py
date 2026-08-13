@@ -156,7 +156,7 @@ def read_rows(
         if error.reason == "too_large":
             raise InputError("CSV input exceeds safe size limit") from error
         if not path.exists():
-            raise InputError(f"CSV file not found: {path}") from error
+            raise InputError("CSV file not found") from error
         raise InputError("CSV input is unavailable") from error
     try:
         text = raw.decode("utf-8-sig")

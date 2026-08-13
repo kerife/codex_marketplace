@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import csv
+import datetime as dt
+import importlib.util
 import json
 import subprocess
 import sys
@@ -13,6 +15,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "plugins" / "professional-growth-coach" / "scripts" / "summarize_outcomes.py"
+_SPEC = importlib.util.spec_from_file_location("summarize_outcomes_under_test", SCRIPT)
+if _SPEC is None or _SPEC.loader is None:
+    raise RuntimeError(f"unable to load {SCRIPT}")
+SUMMARIZER = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(SUMMARIZER)
 CSV_FIELDS = (
     "application_id",
     "candidate_id",
@@ -293,12 +300,16 @@ class SummarizeOutcomesTests(unittest.TestCase):
         self.assertNotIn(candidate_sentinel, candidate_result.stderr)
 
     def test_missing_file_and_invalid_window_are_invalid_without_tracebacks(self) -> None:
-        missing_path = Path("/tmp/task9-definitely-missing-outcomes.csv")
+        missing_path = Path("/Users/private-candidate/task9-definitely-missing-outcomes.csv")
 
         self.assert_invalid(
             run_path(missing_path),
-            f"CSV file not found: {missing_path}",
+            "CSV file not found",
         )
+        with self.assertRaises(SUMMARIZER.InputError) as raised:
+            SUMMARIZER.read_rows(missing_path, dt.date(2026, 8, 6))
+        self.assertEqual(str(raised.exception), "CSV file not found")
+        self.assertNotIn(str(missing_path), str(raised.exception))
         self.assert_invalid(
             run_summary([], window="0"),
             "--window must be a positive integer; got '0'",
