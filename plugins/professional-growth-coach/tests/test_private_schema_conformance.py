@@ -605,6 +605,18 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
             )
         )
 
+    def test_dependency_free_checker_rejects_nested_quantifier_patterns(self):
+        errors = validate_schema_instance(
+            "a" * 25 + "!", {"type": "string", "pattern": "(a+)+$"}
+        )
+        self.assertEqual(["$: pattern exceeds safe complexity limit"], errors)
+        self.assertEqual(
+            [],
+            validate_schema_instance(
+                "prefix-abc-suffix", {"type": "string", "pattern": "(abc)+"}
+            ),
+        )
+
         schema = self._schema("executive-career-dossier-v1.schema.json")
         dossier = json.loads(
             (

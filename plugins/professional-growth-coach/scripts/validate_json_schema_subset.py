@@ -10,6 +10,12 @@ from collections.abc import Mapping
 
 MAX_SCHEMA_VALIDATION_DEPTH = 64
 SCHEMA_DEPTH_ERROR = "schema validation exceeds safe depth limit"
+MAX_SCHEMA_PATTERN_LENGTH = 1_024
+SCHEMA_PATTERN_COMPLEXITY_ERROR = "pattern exceeds safe complexity limit"
+_NESTED_QUANTIFIER = re.compile(
+    r"\((?:[^()\\]|\\.)*(?:[+*]|\{\d+(?:,\d*)?\})(?:[^()\\]|\\.)*\)"
+    r"(?:[+*]|\{\d+(?:,\d*)?\})"
+)
 
 
 _SUSPICIOUS_FIELD = re.compile(
@@ -114,7 +120,10 @@ def _validate(
         if "maximum" in schema and value > schema["maximum"]:
             errors.append(f"{path}: number above maximum")
     if "pattern" in schema and isinstance(value, str):
-        if re.search(str(schema["pattern"]), value) is None:
+        pattern = str(schema["pattern"])
+        if len(pattern) > MAX_SCHEMA_PATTERN_LENGTH or _NESTED_QUANTIFIER.search(pattern):
+            errors.append(f"{path}: {SCHEMA_PATTERN_COMPLEXITY_ERROR}")
+        elif re.search(pattern, value) is None:
             errors.append(f"{path}: pattern mismatch")
     if isinstance(value, str):
         if "minLength" in schema and len(value) < schema["minLength"]:
