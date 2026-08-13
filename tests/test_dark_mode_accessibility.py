@@ -103,6 +103,14 @@ class DarkModeAccessibilityTests(unittest.TestCase):
                     rf"{re.escape(scope)} main:focus-visible \{{[^}}]*outline-color: Highlight;",
                 )
 
+    def test_dossier_forced_colors_keeps_all_focus_targets_visible(self) -> None:
+        css = (ASSETS / "executive-career-dossier-v1.css").read_text(encoding="utf-8")
+        forced = css[css.index("@media (forced-colors: active)"):]
+        self.assertRegex(
+            forced,
+            r"a:focus-visible,\s*button:focus-visible,\s*summary:focus-visible,\s*main:focus-visible\s*\{[^}]*outline-color: Highlight;",
+        )
+
     def test_forced_colors_keeps_context_and_boundary_surfaces_distinguishable(self) -> None:
         surfaces = {
             "recruiter-practice-session-v1.css": (
