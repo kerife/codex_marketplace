@@ -271,6 +271,21 @@ html { color-scheme: light; background: var(--paper); }
 @media (forced-colors: active) {
   .recruiter-practice-document .skip-link { background: Canvas; border-color: CanvasText; color: CanvasText; }
   .recruiter-practice-document main:focus-visible { outline-color: Highlight; }
+  .recruiter-practice-document .practice-context,
+  .recruiter-practice-document .practice-prompt,
+  .recruiter-practice-document .practice-rehearsal,
+  .recruiter-practice-document .practice-evidence,
+  .recruiter-practice-document .practice-boundary { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .recruiter-practice-document .practice-prompt,
+  .recruiter-practice-document .practice-boundary { border-left-color: CanvasText; }
+  .recruiter-practice-document .practice-context h2,
+  .recruiter-practice-document .practice-prompt h2,
+  .recruiter-practice-document .practice-rehearsal h2,
+  .recruiter-practice-document .practice-evidence h2,
+  .recruiter-practice-document .practice-boundary h2,
+  .recruiter-practice-document .practice-label,
+  .recruiter-practice-document .practice-rehearsal-hint,
+  .recruiter-practice-document .practice-rehearsal li::marker { color: CanvasText; }
   .recruiter-practice-document .practice-handoff { border: 1px dashed CanvasText; background: Canvas; color: CanvasText; }
   .recruiter-practice-document .practice-handoff h2 { color: CanvasText; }
   .recruiter-practice-document .practice-next-action { background: Canvas; color: CanvasText; border-color: CanvasText; }

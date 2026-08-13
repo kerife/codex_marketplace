@@ -133,6 +133,19 @@
 @media (forced-colors: active) {
   .private-recruiter-triage-document .skip-link { background: Canvas; border-color: CanvasText; color: CanvasText; }
   .private-recruiter-triage-document main:focus-visible { outline-color: Highlight; }
+  .private-recruiter-triage-document .triage-section,
+  .private-recruiter-triage-document .triage-decision,
+  .private-recruiter-triage-document .triage-next-safe-action,
+  .private-recruiter-triage-document .triage-blocked,
+  .private-recruiter-triage-document .triage-missing { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .private-recruiter-triage-document .triage-decision,
+  .private-recruiter-triage-document .triage-next-safe-action,
+  .private-recruiter-triage-document .triage-blocked,
+  .private-recruiter-triage-document .triage-missing { border-left-color: CanvasText; }
+  .private-recruiter-triage-document .triage-section h2,
+  .private-recruiter-triage-document .triage-section h3,
+  .private-recruiter-triage-document .triage-section dt,
+  .private-recruiter-triage-document .triage-section dd { color: CanvasText; }
   .private-recruiter-triage-document .triage-handoff-sequence > li,
   .private-recruiter-triage-document .triage-handoff-step-label,
   .private-recruiter-triage-document .triage-handoff-readiness,

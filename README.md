@@ -30,6 +30,7 @@ You can also register the public repository directly:
 
 ```bash
 codex plugin marketplace add https://github.com/kerife/codex_marketplace.git
+codex plugin add professional-growth-coach@codex-marketplace-public
 ```
 
 ## Validate locally

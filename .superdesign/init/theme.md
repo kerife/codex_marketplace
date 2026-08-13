@@ -735,6 +735,19 @@ details summary {
 @media (forced-colors: active) {
   .private-recruiter-triage-document .skip-link { background: Canvas; border-color: CanvasText; color: CanvasText; }
   .private-recruiter-triage-document main:focus-visible { outline-color: Highlight; }
+  .private-recruiter-triage-document .triage-section,
+  .private-recruiter-triage-document .triage-decision,
+  .private-recruiter-triage-document .triage-next-safe-action,
+  .private-recruiter-triage-document .triage-blocked,
+  .private-recruiter-triage-document .triage-missing { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .private-recruiter-triage-document .triage-decision,
+  .private-recruiter-triage-document .triage-next-safe-action,
+  .private-recruiter-triage-document .triage-blocked,
+  .private-recruiter-triage-document .triage-missing { border-left-color: CanvasText; }
+  .private-recruiter-triage-document .triage-section h2,
+  .private-recruiter-triage-document .triage-section h3,
+  .private-recruiter-triage-document .triage-section dt,
+  .private-recruiter-triage-document .triage-section dd { color: CanvasText; }
   .private-recruiter-triage-document .triage-handoff-sequence > li,
   .private-recruiter-triage-document .triage-handoff-step-label,
   .private-recruiter-triage-document .triage-handoff-readiness,
@@ -1053,6 +1066,21 @@ html { color-scheme: light; background: var(--paper); }
 @media (forced-colors: active) {
   .recruiter-practice-document .skip-link { background: Canvas; border-color: CanvasText; color: CanvasText; }
   .recruiter-practice-document main:focus-visible { outline-color: Highlight; }
+  .recruiter-practice-document .practice-context,
+  .recruiter-practice-document .practice-prompt,
+  .recruiter-practice-document .practice-rehearsal,
+  .recruiter-practice-document .practice-evidence,
+  .recruiter-practice-document .practice-boundary { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .recruiter-practice-document .practice-prompt,
+  .recruiter-practice-document .practice-boundary { border-left-color: CanvasText; }
+  .recruiter-practice-document .practice-context h2,
+  .recruiter-practice-document .practice-prompt h2,
+  .recruiter-practice-document .practice-rehearsal h2,
+  .recruiter-practice-document .practice-evidence h2,
+  .recruiter-practice-document .practice-boundary h2,
+  .recruiter-practice-document .practice-label,
+  .recruiter-practice-document .practice-rehearsal-hint,
+  .recruiter-practice-document .practice-rehearsal li::marker { color: CanvasText; }
   .recruiter-practice-document .practice-handoff { border: 1px dashed CanvasText; background: Canvas; color: CanvasText; }
   .recruiter-practice-document .practice-handoff h2 { color: CanvasText; }
   .recruiter-practice-document .practice-next-action { background: Canvas; color: CanvasText; border-color: CanvasText; }

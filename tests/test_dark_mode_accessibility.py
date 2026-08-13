@@ -96,6 +96,28 @@ class DarkModeAccessibilityTests(unittest.TestCase):
                     rf"{re.escape(scope)} main:focus-visible \{{[^}}]*outline-color: Highlight;",
                 )
 
+    def test_forced_colors_keeps_context_and_boundary_surfaces_distinguishable(self) -> None:
+        surfaces = {
+            "recruiter-practice-session-v1.css": (
+                ".recruiter-practice-document",
+                (".practice-context", ".practice-prompt", ".practice-rehearsal", ".practice-evidence", ".practice-boundary"),
+            ),
+            "private-recruiter-reply-triage-v1.css": (
+                ".private-recruiter-triage-document",
+                (".triage-section", ".triage-decision", ".triage-next-safe-action", ".triage-blocked", ".triage-missing"),
+            ),
+        }
+        for filename, (scope, selectors) in surfaces.items():
+            with self.subTest(filename=filename):
+                css = (ASSETS / filename).read_text(encoding="utf-8")
+                forced = css[css.index("@media (forced-colors: active)"):]
+                for selector in selectors:
+                    with self.subTest(selector=selector):
+                        self.assertIn(f"{scope} {selector}", forced)
+                self.assertIn("background: Canvas;", forced)
+                self.assertIn("color: CanvasText;", forced)
+                self.assertIn("border-color: CanvasText;", forced)
+
     def test_practice_confirm_feedback_has_dark_contrast(self) -> None:
         css = (ASSETS / "recruiter-practice-session-v1.css").read_text(encoding="utf-8")
         dark_start = css.index("@media screen and (prefers-color-scheme: dark)")
