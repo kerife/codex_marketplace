@@ -393,10 +393,10 @@ def emit_json(payload: dict[str, object], *, stream: object) -> None:
 def parse_window(raw_window: str, as_of: date) -> int:
     cleaned = raw_window.strip()
     if not cleaned or not cleaned.isascii() or not cleaned.isdecimal():
-        raise InputError(f"--window must be a positive integer; got {raw_window!r}")
+        raise InputError("--window must be a positive integer")
     normalized = cleaned.lstrip("0")
     if not normalized:
-        raise InputError(f"--window must be a positive integer; got {raw_window!r}")
+        raise InputError("--window must be a positive integer")
 
     maximum = as_of.toordinal()
     maximum_text = str(maximum)

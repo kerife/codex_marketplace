@@ -312,11 +312,11 @@ class SummarizeOutcomesTests(unittest.TestCase):
         self.assertNotIn(str(missing_path), str(raised.exception))
         self.assert_invalid(
             run_summary([], window="0"),
-            "--window must be a positive integer; got '0'",
+            "--window must be a positive integer",
         )
         self.assert_invalid(
             run_summary([], window="thirty"),
-            "--window must be a positive integer; got 'thirty'",
+            "--window must be a positive integer",
         )
 
     def test_symlinked_csv_input_is_rejected_without_following_target(self) -> None:
@@ -370,6 +370,18 @@ class SummarizeOutcomesTests(unittest.TestCase):
         for window in ("739835", "9" * 5000):
             with self.subTest(window_length=len(window)):
                 self.assert_invalid(run_summary([], window=window), expected_error)
+
+    def test_window_diagnostic_does_not_echo_a_local_path(self) -> None:
+        sentinel = "/Users/private-candidate/outcomes.csv"
+        expected = "--window must be a positive integer"
+        result = run_summary([], window=sentinel)
+        self.assert_invalid(result, expected)
+        self.assertNotIn(sentinel, result.stderr)
+
+        with self.assertRaises(SUMMARIZER.InputError) as raised:
+            SUMMARIZER.parse_window(sentinel, dt.date(2026, 8, 6))
+        self.assertEqual(str(raised.exception), expected)
+        self.assertNotIn(sentinel, str(raised.exception))
 
     def test_required_headers_and_ids_are_validated(self) -> None:
         missing_headers = tuple(field for field in CSV_FIELDS if field != "application_id")
