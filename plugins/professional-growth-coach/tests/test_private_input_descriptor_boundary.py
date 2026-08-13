@@ -26,6 +26,7 @@ CHECKPOINT = _load("validate_private_recruiter_followthrough_checkpoint")
 TRIAGE = _load("validate_private_recruiter_reply_triage")
 PRACTICE = _load("validate_recruiter_practice_session")
 DOSSIER = _load("validate_executive_career_dossier")
+PRIVATE_INPUT = _load("private_input_loader")
 
 
 LOAD_CASES = (
@@ -39,6 +40,15 @@ LOAD_CASES = (
 
 
 class PrivateInputDescriptorBoundaryTests(unittest.TestCase):
+    def test_nul_in_parent_path_is_rejected_with_bounded_loader_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            malformed = Path(directory) / "bad\x00parent" / "input.json"
+
+            with self.assertRaises(PRIVATE_INPUT.PrivateInputError) as raised:
+                PRIVATE_INPUT.read_bounded_bytes(malformed, 1024)
+
+            self.assertEqual("unavailable", raised.exception.reason)
+
     def test_intermediate_parent_symlink_is_rejected_by_every_private_loader(self):
         for label, loader, fixture in LOAD_CASES:
             with self.subTest(label=label), tempfile.TemporaryDirectory() as directory:

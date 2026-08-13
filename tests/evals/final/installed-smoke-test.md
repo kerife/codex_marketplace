@@ -16,7 +16,7 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-13T00:16:43-06:00`
+release_timestamp: `2026-08-13T06:16:43Z`
 
 source_commit: `a0c848be27c27c76fc044f6ff3da5a87ff48b35b`
 

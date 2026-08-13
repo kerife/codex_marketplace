@@ -49,6 +49,8 @@ def _open_parent(path: Path, nofollow: int, directory_flag: int) -> tuple[int, s
                 descriptor = next_descriptor
                 next_descriptor = None
                 os.close(old_descriptor)
+            except ValueError as error:
+                raise PrivateInputError("unavailable") from error
             except OSError as error:
                 if error.errno == errno.ELOOP:
                     raise PrivateInputError("symlink") from error
@@ -82,6 +84,8 @@ def read_bounded_bytes(path: Path, max_bytes: int) -> bytes:
         flags = os.O_RDONLY | nofollow | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NONBLOCK", 0)
         try:
             leaf_descriptor = os.open(filename, flags, dir_fd=parent_descriptor)
+        except ValueError as error:
+            raise PrivateInputError("unavailable") from error
         except OSError as error:
             if error.errno == errno.ELOOP:
                 raise PrivateInputError("symlink") from error

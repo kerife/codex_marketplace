@@ -78,6 +78,24 @@ class DarkModeAccessibilityTests(unittest.TestCase):
                 self.assertIn("color: CanvasText", forced)
                 self.assertIn("border-color: CanvasText", forced)
 
+    def test_forced_colors_keeps_triage_and_practice_skip_focus_decision_visible(self) -> None:
+        for filename, scope in (
+            ("private-recruiter-reply-triage-v1.css", ".private-recruiter-triage-document"),
+            ("recruiter-practice-session-v1.css", ".recruiter-practice-document"),
+        ):
+            with self.subTest(filename=filename):
+                css = (ASSETS / filename).read_text(encoding="utf-8")
+                forced_start = css.index("@media (forced-colors: active)")
+                forced = css[forced_start:]
+                self.assertRegex(
+                    forced,
+                    rf"{re.escape(scope)} \.skip-link \{{[^}}]*background: Canvas;[^}}]*border-color: CanvasText;[^}}]*color: CanvasText;",
+                )
+                self.assertRegex(
+                    forced,
+                    rf"{re.escape(scope)} main:focus-visible \{{[^}}]*outline-color: Highlight;",
+                )
+
     def test_practice_confirm_feedback_has_dark_contrast(self) -> None:
         css = (ASSETS / "recruiter-practice-session-v1.css").read_text(encoding="utf-8")
         dark_start = css.index("@media screen and (prefers-color-scheme: dark)")

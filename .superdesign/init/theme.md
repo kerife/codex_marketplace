@@ -733,6 +733,8 @@ details summary {
 }
 
 @media (forced-colors: active) {
+  .private-recruiter-triage-document .skip-link { background: Canvas; border-color: CanvasText; color: CanvasText; }
+  .private-recruiter-triage-document main:focus-visible { outline-color: Highlight; }
   .private-recruiter-triage-document .triage-handoff-sequence > li,
   .private-recruiter-triage-document .triage-handoff-step-label,
   .private-recruiter-triage-document .triage-handoff-readiness,
@@ -1049,6 +1051,8 @@ html { color-scheme: light; background: var(--paper); }
 }
 
 @media (forced-colors: active) {
+  .recruiter-practice-document .skip-link { background: Canvas; border-color: CanvasText; color: CanvasText; }
+  .recruiter-practice-document main:focus-visible { outline-color: Highlight; }
   .recruiter-practice-document .practice-handoff { border: 1px dashed CanvasText; background: Canvas; color: CanvasText; }
   .recruiter-practice-document .practice-handoff h2 { color: CanvasText; }
   .recruiter-practice-document .practice-next-action { background: Canvas; color: CanvasText; border-color: CanvasText; }

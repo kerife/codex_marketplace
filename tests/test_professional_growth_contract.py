@@ -36,7 +36,7 @@ class ProfessionalGrowthContractTests(unittest.TestCase):
 
         self.assertEqual(manifest["name"], "professional-growth-coach")
         self.assertEqual(manifest["interface"]["displayName"], "Professional Growth Coach")
-        self.assertEqual(marketplace["name"], "professional-growth-coach-local")
+        self.assertEqual(marketplace["name"], "codex-marketplace-public")
         self.assertEqual(marketplace["plugins"][0]["name"], "professional-growth-coach")
         self.assertEqual(
             marketplace["plugins"][0]["source"]["path"],

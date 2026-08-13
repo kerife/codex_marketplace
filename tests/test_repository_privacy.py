@@ -593,6 +593,13 @@ class RepositoryPrivacyTests(unittest.TestCase):
             with self.subTest(label=label):
                 self.assertIn(rule_id, scanner.scan_text(Path("synthetic.md"), text))
 
+    def test_phone_rule_requires_phone_like_format_not_timestamp_digits(self) -> None:
+        scanner = load_scanner()
+        self.assertNotIn(
+            "PHONE_NUMBER",
+            scanner.scan_text(Path("synthetic.md"), "release_version: 20260813001643"),
+        )
+
     def test_current_private_aliases_and_literal_assignments_are_rejected(self) -> None:
         scanner = load_scanner()
         cases = {
