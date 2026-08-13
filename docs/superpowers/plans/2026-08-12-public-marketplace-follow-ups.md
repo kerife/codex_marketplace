@@ -19,6 +19,8 @@ remain deferred.
 LinkedIn validator diagnostics now escape control characters in untrusted field
 paths, priority codes, and unexpected copy headings. Generic priority rejection
 messages also use a fixed diagnostic and no longer echo arbitrary report text.
+Invalid official `source_category` values now use a stable diagnostic and never
+echo submitted email-like, path-like, or control-character text.
 The remaining visual and accessibility follow-ups stay separate.
 
 The outcomes CSV CLI now uses the shared descriptor-anchored 256 KiB input
@@ -38,9 +40,9 @@ navigation landmark; no visual browser QA is claimed.
 2. Consider a separate full-suite harness pass for the few long-running root
    tests that time out under broad discovery; the focused plugin, static,
    privacy, and installed-release gates are green for this release.
-3. Redact invalid `source_category` values in LinkedIn fixture diagnostics;
-   malformed categories can still echo arbitrary email-like, path-like, or
-   control-character text. Keep this as a separate validator cycle.
+3. Audit public Python validator APIs for deeply nested mappings. The CLI
+   boundary is bounded, but direct callers should also receive deterministic
+   depth errors instead of a recursion exception.
 
 The public repository must keep the release gates green before each follow-up:
 plugin tests, static checks, privacy scan, Superdesign parity, and installed
