@@ -132,6 +132,23 @@ class DarkModeAccessibilityTests(unittest.TestCase):
                     r"\.skip-link\s*\{[^}]*background:\s*Canvas;[^}]*border-color:\s*CanvasText;[^}]*color:\s*CanvasText;",
                 )
 
+    def test_compact_receipt_footers_preserve_continuity_boundaries(self) -> None:
+        for filename, selector in (
+            ("private-recruiter-conversion-outcome-v1.css", ".outcome-footer"),
+            ("private-recruiter-followthrough-checkpoint-v1.css", ".checkpoint-footer"),
+        ):
+            with self.subTest(filename=filename):
+                css = (ASSETS / filename).read_text(encoding="utf-8")
+                self.assertRegex(
+                    css,
+                    rf"{re.escape(selector)}\s*\{{[^}}]*border-top:\s*1px solid var\(--accent\);",
+                )
+                forced = css[css.index("@media (forced-colors: active)"):]
+                self.assertRegex(
+                    forced,
+                    rf"{re.escape(selector)}\s*\{{[^}}]*color:\s*CanvasText;[^}}]*border-color:\s*CanvasText;",
+                )
+
     def test_dossier_prefers_contrast_strengthens_card_boundaries(self) -> None:
         css = (ASSETS / "executive-career-dossier-v1.css").read_text(encoding="utf-8")
         contrast_start = css.index("@media (prefers-contrast: more)")
