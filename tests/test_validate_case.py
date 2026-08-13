@@ -933,6 +933,38 @@ class ValidateCaseTests(unittest.TestCase):
         )
         self.assertNotIn(sentinel, result.stderr)
 
+    def test_api_redacts_unc_and_common_absolute_path_keys_but_preserves_relative(self) -> None:
+        validator = load_validator_module()
+        for sentinel in (
+            r"\\server\share\profile.json",
+            "/opt/data/profile.json",
+            "/Applications/Cache/profile.json",
+            "/usr/local/data.json",
+        ):
+            with self.subTest(sentinel=sentinel):
+                errors = validator.validate_case({sentinel: "synthetic"})
+                self.assertIn("case has unsupported field: <redacted-key>", errors)
+                self.assertNotIn(sentinel, "\n".join(errors))
+
+        relative = r"relative\profile.json"
+        errors = validator.validate_case({relative: "synthetic"})
+        self.assertIn(f"case has unsupported field: {relative}", errors)
+
+    def test_cli_redacts_unc_and_common_absolute_path_keys(self) -> None:
+        for sentinel in (
+            r"\\server\share\profile.json",
+            "/opt/data/profile.json",
+            "/Applications/Cache/profile.json",
+            "/usr/local/data.json",
+        ):
+            with self.subTest(sentinel=sentinel):
+                case = valid_case()
+                case[sentinel] = "synthetic"
+                result = run_validator(case)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("case has unsupported field: <redacted-key>", result.stderr)
+                self.assertNotIn(sentinel, result.stderr)
+
     def test_cli_diagnostic_cap_preserves_utf8_boundaries(self) -> None:
         case = valid_case()
         case.update({f"campo-ñ-{index:04d}": "x" for index in range(1_000)})
