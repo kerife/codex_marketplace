@@ -1008,7 +1008,7 @@ def parse_score_table(parsed: ParsedClientReport) -> tuple[ReportDomainScore, ..
             raise ValueError("score table rows must contain exactly five columns")
         domain_label, state_label, score_text, evidence_text, reason = cells
         if domain_label not in domains:
-            raise ValueError(f"score table has unknown dimension: {domain_label}")
+            raise ValueError("score table has unknown dimension")
         if state_label not in states:
             raise ValueError(f"score table has invalid state for {domains[domain_label]}")
         if score_text == "—":

@@ -3990,6 +3990,23 @@ class LinkedInClientReportScoreTests(unittest.TestCase):
             validator.validate_client_report(missing, self.bundle("scenario-a.json")),
         )
 
+    def test_score_parser_diagnostics_do_not_echo_arbitrary_dimension_labels(self) -> None:
+        baseline = self.report("scenario-a-es.md")
+        for label in (
+            "/Users/private-candidate/profile.json",
+            "password=very-secret-value",
+            "ordinary" + chr(0x202E) + "INJECTED",
+        ):
+            with self.subTest(label=label):
+                report = baseline.replace(
+                    "| Identidad visual | Evaluada | 60 |",
+                    f"| {label} | Evaluada | 60 |",
+                    1,
+                )
+                errors = validator.validate_client_report(report, self.bundle("scenario-a.json"))
+                self.assertNotIn(label, "\n".join(errors))
+                self.assertIn("score table has unknown dimension", errors)
+
     def test_not_scored_dimensions_use_an_em_dash_and_are_excluded(self) -> None:
         self.assertTrue(hasattr(validator, "parse_score_table"))
         parsed = validator.parse_client_report(self.report("scenario-c-es.md"))
