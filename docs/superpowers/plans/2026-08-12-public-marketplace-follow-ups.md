@@ -43,9 +43,10 @@ reference their visible headings with deterministic `aria-labelledby` IDs.
 2. Consider a separate full-suite harness pass for the few long-running root
    tests that time out under broad discovery; the focused plugin, static,
    privacy, and installed-release gates are green for this release.
-3. Audit public Python validator APIs for deeply nested mappings. The CLI
-   boundary is bounded, but direct callers should also receive deterministic
-   depth errors instead of a recursion exception.
+3. Extend the direct-API depth guard to the remaining recruiter validators
+   (triage, practice, checkpoint, and conversion). Dossier validation now
+   returns a deterministic depth error for deeply nested or cyclic mappings;
+   sibling validators still need the same bounded public-API contract.
 
 The public repository must keep the release gates green before each follow-up:
 plugin tests, static checks, privacy scan, Superdesign parity, and installed
