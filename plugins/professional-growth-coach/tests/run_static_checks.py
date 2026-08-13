@@ -743,7 +743,7 @@ def score_executive_dossier_pressure_sample(
         ready_copy_text = "\n".join(
             match.group(1)
             for card in re.findall(
-                r'<article class="card copy-card span-4">(.*?)</article>',
+                r'<article\b[^>]*\bclass="card copy-card span-4"[^>]*>(.*?)</article>',
                 html_text,
                 flags=re.IGNORECASE | re.DOTALL,
             )
