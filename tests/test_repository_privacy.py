@@ -41,6 +41,10 @@ DOSSIER_FIXTURE_PATHS = (
     Path("tests/evals/with-skill/fixtures/executive-career-dossier/scenario-a-es.json"),
     Path("tests/evals/with-skill/fixtures/executive-career-dossier/scenario-c-en.json"),
 )
+DOSSIER_V2_FIXTURE_PATHS = (
+    Path("tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-a-es.json"),
+    Path("tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-c-en.json"),
+)
 RECRUITER_PRACTICE_FIXTURE_PATH = (
     REPO_ROOT
     / "tests"
@@ -286,6 +290,48 @@ class RepositoryPrivacyTests(unittest.TestCase):
             with self.subTest(path=path):
                 text = (REPO_ROOT / path).read_text(encoding="utf-8")
                 self.assertEqual({}, scanner.scan_text(path, text))
+
+    def test_valid_v2_dossiers_use_only_the_validated_projection_allowance(self) -> None:
+        scanner = load_scanner()
+        for path in DOSSIER_V2_FIXTURE_PATHS:
+            with self.subTest(path=path):
+                text = (REPO_ROOT / path).read_text(encoding="utf-8")
+                self.assertEqual({}, scanner.scan_text(path, text))
+
+    def test_malformed_v2_status_and_private_coaching_fields_scan_conservatively(self) -> None:
+        scanner = load_scanner()
+        path = DOSSIER_V2_FIXTURE_PATHS[0]
+        fixture = json.loads((REPO_ROOT / path).read_text(encoding="utf-8"))
+        cases = (
+            ("status", ("section_coverage", 2, "inspection_request", "decision"), "authorized_for_session", "PRIVATE_ANALYTICS_VALUE"),
+            ("identity", ("priorities", 0, "coach_observation"), "Candidate Ana López needs a change.", "PRIVATE_ANALYTICS_VALUE"),
+            ("contact", ("priorities", 0, "coach_observation"), "person@private.example", "EMAIL_ADDRESS"),
+            ("path", ("priorities", 0, "coach_observation"), "/Users/private/input.json", "LOCAL_USER_PATH"),
+            ("analytics", ("priorities", 0, "coach_observation"), "Profile views: 314.", "PRIVATE_ANALYTICS_VALUE"),
+            ("action", ("priorities", 0, "coach_observation"), "Publish this LinkedIn profile now.", "PRIVATE_ANALYTICS_VALUE"),
+        )
+        for label, target_path, private_value, rule_id in cases:
+            with self.subTest(label=label):
+                payload = copy.deepcopy(fixture)
+                target = payload
+                for part in target_path[:-1]:
+                    target = target[part]
+                target[target_path[-1]] = private_value
+                violations = scanner.scan_text(path, json.dumps(payload, ensure_ascii=False))
+                self.assertIn(rule_id, violations)
+                self.assertNotIn(private_value, scanner.format_finding(path, rule_id, violations[rule_id]))
+                validator, _ = scanner._load_dossier_v2_contract()
+                errors = validator(payload)
+                self.assertTrue(errors)
+                self.assertNotIn(private_value, "\n".join(errors))
+
+    def test_v2_contract_loader_fails_closed_when_validator_or_projector_is_missing(self) -> None:
+        scanner = load_scanner()
+        path = DOSSIER_V2_FIXTURE_PATHS[0]
+        text = (REPO_ROOT / path).read_text(encoding="utf-8")
+        scanner._load_dossier_v2_contract = lambda: None
+        violations = scanner.scan_text(path, text)
+        self.assertTrue(violations)
 
     def test_dossier_analytics_allowance_rejects_malicious_mutations_without_echo(self) -> None:
         scanner = load_scanner()

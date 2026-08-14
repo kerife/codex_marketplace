@@ -706,7 +706,7 @@ class OptimizeLinkedInCareerContractTests(unittest.TestCase):
             "canonical rows",
             "normal HTML dossier",
             "methodological input",
-            "closed `executive-career-dossier-v1`",
+            "closed `executive-career-dossier-v2`",
             "do not emit or append",
             "unavailable and unscored rather than zero",
             "at most the rank-1 decision-changing question",
@@ -737,9 +737,9 @@ class OptimizeLinkedInCareerContractTests(unittest.TestCase):
         normal_branch = skill.split("## Client-first delivery", 1)[1].split("\n## ", 1)[0]
 
         for required in (
-            "executive-career-dossier-v1",
-            "validate_executive_career_dossier.py",
-            "render_executive_career_dossier.py",
+            "executive-career-dossier-v2",
+            "validate_executive_career_dossier_v2.py",
+            "render_executive_career_dossier_v2.py",
             "absolute local file link",
             "at most 180 words",
             "action_state=not_executed",
@@ -748,6 +748,15 @@ class OptimizeLinkedInCareerContractTests(unittest.TestCase):
                 self.assertIn(required, normal_branch + reference)
         self.assertIn("normal + local execution", normal_branch)
         self.assertNotIn("Return the localized Markdown client report from byte 0", normal_branch)
+        for required in (
+            "all 17 sections",
+            "first pending authorization question in chat",
+            "without writing `authorized_for_session`",
+            "no authorization carries forward",
+            "v1 remains an accepted compatibility artifact for debug/eval fixtures",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, normal_branch + reference)
 
     def test_entrypoint_keeps_isolatable_unsupported_claim_on_html_branch(self) -> None:
         """Catch top-level conflict prose overriding the client-first artifact branch."""
