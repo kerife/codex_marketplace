@@ -81,6 +81,7 @@ _TECHNICAL_ORGANIZATION_PREFIXES = frozenset(
     }
 )
 _TECHNICAL_PRODUCT_HEADS = frozenset({"agent", "code"})
+_TECHNICAL_PRODUCT_QUALIFIERS = frozenset({"policy", "studio", "visual"})
 _TECHNICAL_COMPOUND_SUFFIXES = ("database", "engine", "manager", "platform", "server")
 _MAX_IDENTITY_SCAN_CHARS = 4_096
 _MAX_SUBJECT_WORDS = 12
@@ -239,7 +240,10 @@ def _looks_like_person_subject(words: tuple[str, ...]) -> bool:
         _is_acronym_token(words[0])
         or any(_is_mixed_case_technical_token(word) for word in words)
         or folded[0] in _TECHNICAL_ORGANIZATION_PREFIXES
-        or (len(words) >= 3 and folded[-1] in _TECHNICAL_PRODUCT_HEADS)
+        or (
+            folded[-1] in _TECHNICAL_PRODUCT_HEADS
+            and any(word in _TECHNICAL_PRODUCT_QUALIFIERS for word in folded[:-1])
+        )
         or _is_compound_technical_token(words[-1])
     ):
         return False

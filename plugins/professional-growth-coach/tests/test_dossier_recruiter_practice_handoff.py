@@ -567,6 +567,27 @@ class DossierRecruiterPracticeHandoffTests(unittest.TestCase):
             with self.subTest(accepted=value):
                 self.assertTrue(is_identity_free_handoff_text(value, 500))
 
+    def test_identity_free_guard_requires_composable_evidence_for_product_heads(self):
+        person_intros = (
+            "Ana Code managed reliability automation.",
+            "Ana Agent managed reliability automation.",
+            "Ana María Code managed reliability automation.",
+            "Ana María Agent managed reliability automation.",
+            "Ana Loki managed reliability automation.",
+        )
+        for value in person_intros:
+            with self.subTest(rejected=value):
+                self.assertFalse(is_identity_free_handoff_text(value, 500))
+
+        technical_subjects = (
+            "Visual Studio Code improved productivity.",
+            "Open Policy Agent improved security.",
+            "GitHub Copilot Agent improved delivery.",
+        )
+        for value in technical_subjects:
+            with self.subTest(accepted=value):
+                self.assertTrue(is_identity_free_handoff_text(value, 500))
+
     def test_rejects_every_uri_scheme_and_local_path_in_each_vacancy_field(self):
         private_values = {
             "file_uri": "Detalles en file:///Users/Ana/private-cv.pdf",
