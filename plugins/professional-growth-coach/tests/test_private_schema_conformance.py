@@ -22,6 +22,7 @@ from validate_dossier_recruiter_practice_handoff import validate_handoff
 from private_prose_safety import is_safe_prose_text
 from validate_private_recruiter_reply_triage import validate_triage
 from validate_recruiter_practice_session import validate_session
+from validate_target_vacancy_research import validate_research
 
 
 def _load_v2_dossier_helper():
@@ -47,6 +48,18 @@ V2_TRIAGE_PRACTICE_SNAPSHOT = (
 class PrivateSchemaConformanceTests(unittest.TestCase):
     def _schema(self, name):
         return json.loads((ROOT / "schemas" / name).read_text(encoding="utf-8"))
+
+    def test_target_vacancy_research_schema_accepts_closed_synthetic_states(self):
+        schema = self._schema("target-vacancy-research-v1.schema.json")
+        fixture_root = ROOT.parent.parent / "tests/evals/with-skill/fixtures/target-vacancy-research"
+        for name in ("complete-five-es.json", "limited-four-en.json", "unavailable-es.json"):
+            with self.subTest(name=name):
+                value = json.loads((fixture_root / name).read_text(encoding="utf-8"))
+                self.assertEqual([], validate_schema_instance(value, schema))
+                self.assertEqual([], validate_research(value))
+        invalid = json.loads((fixture_root / "complete-five-es.json").read_text(encoding="utf-8"))
+        invalid["vacancies"][0]["unexpected"] = True
+        self.assertTrue(validate_schema_instance(invalid, schema))
 
     def test_executive_dossier_v2_schema_accepts_ledger_and_closes_new_fields(self):
         helper = _load_v2_dossier_helper()
