@@ -75,6 +75,15 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
             mismatched["section_coverage"][10]["inspection_request"]["decision"] = decision
             self.assertTrue(validate_schema_instance(mismatched, schema))
 
+    def test_executive_dossier_v2_runtime_uses_the_schema_checker(self):
+        helper = _load_v2_dossier_helper()
+        validator = helper.load_validator()
+        dossier = helper.make_v2_dossier()
+        dossier["section_coverage"][0]["availability"] = "unsupported"
+        errors = validator.validate_dossier(dossier)
+        self.assertIn("v2 schema validation failed", errors)
+        self.assertNotIn("unsupported", "\n".join(errors))
+
     def test_all_private_conversion_and_followthrough_fixtures_conform(self):
         cases = [
             ("private-recruiter-conversion-outcome-v1.schema.json", ROOT / "tests/fixtures/private-recruiter-conversion-outcome"),

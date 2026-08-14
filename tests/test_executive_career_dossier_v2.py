@@ -68,7 +68,7 @@ UNSAFE_COACHING_PROSE = (
     (
         "why_it_matters",
         "Employers are actively hiring 1000 SREs.",
-        "demand language requires linked dated market evidence",
+        "market claims require local dated market evidence",
     ),
 )
 
@@ -380,25 +380,59 @@ class ExecutiveCareerDossierV2Tests(unittest.TestCase):
             with self.subTest(text=text, surface="v1 projection", evidence="unlinked"):
                 projected = self.validator.project_v2_to_v1(dossier)
                 projected["priorities"][0]["why_now"] = text
-                self.assertIn(
-                    "priorities[0].why_now market claims require local dated market evidence",
-                    self.validator._v1.validate_dossier(projected),
-                )
-
-            with self.subTest(text=text, surface="v1 projection", evidence="linked"):
-                projected = self.validator.project_v2_to_v1(dossier)
-                projected["priorities"][0]["why_now"] = text
-                projected["priorities"][0]["evidence_ids"].append("E-008")
-                self.assertEqual(
-                    self.validator._v1.validate_dossier(projected),
-                    [],
-                )
+                self.assertEqual(self.validator._v1.validate_dossier(projected), [])
 
         safe = copy.deepcopy(dossier)
         safe["priorities"][0]["why_it_matters"] = (
             "Technical controls remain available for private review."
         )
         self.assertEqual(self.validator.validate_dossier(safe), [])
+
+    def test_v2_schema_checker_runs_before_semantic_validation(self) -> None:
+        dossier = make_v2_dossier()
+        dossier["section_coverage"][0]["availability"] = "unsupported"
+        errors = self.validator.validate_dossier(dossier)
+        self.assertIn("v2 schema validation failed", errors)
+        self.assertNotIn("unsupported", "\n".join(errors))
+
+    def test_v2_external_action_guard_applies_to_every_coaching_field(self) -> None:
+        for field in ("coach_observation", "why_it_matters", "coach_prompt"):
+            for unsafe in (
+                "Consider publishing this on LinkedIn.",
+                "The next step is sending the message to the recruiter.",
+            ):
+                with self.subTest(field=field, unsafe=unsafe):
+                    dossier = make_v2_dossier()
+                    dossier["priorities"][0][field] = unsafe
+                    errors = self.validator.validate_dossier(dossier)
+                    self.assertIn(f"priorities[0].{field} must remain a private review action", errors)
+                    self.assertNotIn(unsafe, "\n".join(errors))
+
+    def test_projection_deep_copy_isolation_survives_nested_mutation(self) -> None:
+        source = make_v2_dossier()
+        original = copy.deepcopy(source)
+        projected = self.validator.project_v2_to_v1(source)
+        projected["evidence"][0]["paraphrase"] = "changed"
+        projected["priorities"][0]["evidence_ids"].append("E-999")
+        self.assertEqual(source, original)
+
+    def test_every_locale_section_question_and_declined_failed_state_is_explicit(self) -> None:
+        renderer = load_renderer()
+        for locale, labels in renderer.SECTION_LABELS.items():
+            for section, label in labels.items():
+                with self.subTest(locale=locale, section=section):
+                    question = renderer.AUTHORIZATION_QUESTIONS[locale][section]
+                    self.assertIn(label, question)
+                    self.assertIn("sesión" if locale == "es" else "session", question)
+        dossier = make_v2_dossier()
+        for row in dossier["section_coverage"]:
+            request = row.get("inspection_request")
+            if isinstance(request, dict):
+                request["decision"] = "declined_for_session"
+                row["reason"] = "inspection_declined"
+        dossier["section_coverage"][10]["inspection_request"]["decision"] = "authorized_inspection_failed"
+        dossier["section_coverage"][10]["reason"] = "authorized_inspection_failed"
+        self.assertIsNone(self.validator.select_pending_inspection_section(dossier))
 
     def test_every_ledger_and_request_boundary_rejects_session_or_positive_authorization_fields(self) -> None:
         mutations = (
@@ -549,11 +583,23 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     self.assertIn('class="coach-observation"', card)
                     self.assertIn('class="coach-prompt"', card)
                     self.assertIn('class="coach-template"', card)
-                    blanks = re.findall(r'<li><span class="coach-template-field">[^<]+</span><span class="coach-template-blank" aria-hidden="true"></span></li>', card)
+                    blanks = re.findall(r'<li><span class="coach-template-field">[^<]+</span><span class="coach-template-blank" role="img" aria-label="[^"]+"></span></li>', card)
                     self.assertGreaterEqual(len(blanks), 1)
                     self.assertLessEqual(len(blanks), 5)
                     for old_value in ("problem", "action"):
                         self.assertNotIn(str(priority[old_value]), card)
+
+    def test_coach_templates_expose_localized_private_blank_and_boundary(self) -> None:
+        for locale, expected in (
+            ("es", ("No incluyas texto sin procesar del perfil, datos de contacto ni valores privados.", "Espacio en blanco para completar en privado")),
+            ("en", ("Do not include raw profile text, contact data, or private values.", "Blank for private completion")),
+        ):
+            with self.subTest(locale=locale):
+                rendered = self.renderer.render_dossier_html(make_v2_dossier(locale))
+                self.assertIn(expected[0], rendered)
+                self.assertIn(expected[1], rendered)
+                self.assertEqual(rendered.count('class="coach-template" aria-labelledby='), 3)
+                self.assertEqual(rendered.count('aria-describedby="coach-template-boundary-'), 3)
 
     def test_visible_product_surface_excludes_internal_and_private_values(self) -> None:
         dossier = make_v2_dossier("es")
@@ -587,6 +633,27 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 self.assertIn(f"priorities[0].{field} {diagnostic}", errors)
                 self.assertNotIn(value, errors)
 
+    def test_all_coaching_fields_fail_writer_and_cli_before_output(self) -> None:
+        for field in ("coach_observation", "why_it_matters", "coach_prompt"):
+            with self.subTest(field=field):
+                dossier = make_v2_dossier()
+                unsafe = "The next step is sending the message to the recruiter."
+                dossier["priorities"][0][field] = unsafe
+                with tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    source = root / "unsafe.json"
+                    output = root / "unsafe.html"
+                    source.write_text(json.dumps(dossier), encoding="utf-8")
+                    result = subprocess.run(
+                        [sys.executable, "-B", str(VALIDATOR_PATH), str(source)],
+                        cwd=REPO_ROOT, text=True, capture_output=True, check=False,
+                    )
+                    self.assertEqual(result.returncode, 2)
+                    self.assertNotIn(unsafe, result.stderr)
+                    with self.assertRaises(self.renderer.DossierValidationError):
+                        self.renderer.write_dossier_html(source, output)
+                    self.assertFalse(output.exists())
+
     def test_market_placeholder_is_one_bounded_non_recommendation_state(self) -> None:
         for name in ("scenario-a-es.json", "scenario-c-en.json"):
             with self.subTest(name=name):
@@ -607,6 +674,22 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 ):
                     self.assertNotIn(forbidden, text_value)
 
+    def test_dated_market_state_has_a_separate_bounded_truthful_surface(self) -> None:
+        source = load_v1_fixture("scenario-market-en.json")
+        dossier = make_v2_dossier("en")
+        market_evidence = copy.deepcopy(source["evidence"][-1])
+        market_evidence["profile_section"] = None
+        dossier["evidence"].append(market_evidence)
+        dossier["market_context"] = copy.deepcopy(source["market_context"])
+        self.assertEqual(self.validator.validate_dossier(dossier), [])
+        rendered = self.renderer.render_dossier_html(dossier)
+        self.assertIn('class="card market-evidence-available-card span-12"', rendered)
+        self.assertNotIn("This dossier includes no market evidence.", rendered)
+        surface = re.search(r'<section class="card market-evidence-available-card span-12".*?</section>', rendered, re.DOTALL)
+        self.assertIsNotNone(surface)
+        for forbidden in ("e-008", "vacancy", "http", "score"):
+            self.assertNotIn(forbidden, visible_text(surface.group(0)).casefold())
+
     def test_shipped_fixtures_have_complete_resolved_noninteractive_dom(self) -> None:
         for name in ("scenario-a-es.json", "scenario-c-en.json"):
             with self.subTest(name=name):
@@ -625,6 +708,11 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 self.assertEqual(audit.classes.count("market-unavailable-card"), 1)
                 self.assertNotIn('data-priority-card="true"', rendered)
                 self.assertNotIn('class="timebox"', rendered)
+                self.assertEqual(rendered.count('class="skip-link" href="#main-content"'), 1)
+                self.assertIn('<main id="main-content" class="shell" tabindex="-1">', rendered)
+                self.assertGreaterEqual(audit.tag_counts.get("h2", 0), 1)
+                self.assertGreaterEqual(audit.tag_counts.get("h3", 0), 1)
+                self.assertGreaterEqual(audit.tag_counts.get("h4", 0), 1)
                 templates = re.findall(
                     r'<section class="coach-template"[^>]*>(.*?)</section>',
                     rendered,

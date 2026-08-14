@@ -145,6 +145,10 @@ COPY = {
         "observation": "Observación", "why": "Por qué importa", "prompt": "Pregunta de coaching",
         "template": "Plantilla privada", "market_title": "Evidencia de mercado no disponible",
         "market_body": "Este dossier no incluye evidencia de mercado. Continúa con la evidencia del perfil ya revisada.",
+        "market_available_title": "Evidencia de mercado fechada disponible",
+        "market_available_body": "Hay evidencia de mercado fechada disponible para una revisión privada junto con la evidencia del perfil.",
+        "template_boundary": "No incluyas texto sin procesar del perfil, datos de contacto ni valores privados.",
+        "template_blank": "Espacio en blanco para completar en privado",
     },
     "en": {
         "coverage_title": "Section coverage", "availability": "Availability", "reason": "Reason",
@@ -153,6 +157,10 @@ COPY = {
         "prompt": "Coaching prompt", "template": "Private template",
         "market_title": "Market evidence unavailable",
         "market_body": "This dossier includes no market evidence. Continue with the profile evidence already reviewed.",
+        "market_available_title": "Dated market evidence available",
+        "market_available_body": "Dated market evidence is available for private review alongside the profile evidence.",
+        "template_boundary": "Do not include raw profile text, contact data, or private values.",
+        "template_blank": "Blank for private completion",
     },
 }
 
@@ -207,10 +215,11 @@ def _render_coach_priorities(dossier: Mapping[str, object], locale: str) -> str:
         rank = priority["rank"]
         heading_id = f"coach-priority-title-{rank}"
         template_heading_id = f"coach-template-title-{rank}"
+        template_boundary_id = f"coach-template-boundary-{rank}"
         template = BASE._mapping(priority["client_template"])
         fields = "".join(
             f'<li><span class="coach-template-field">{TEMPLATE_FIELD_LABELS[locale][str(key)]}</span>'
-            f'<span class="coach-template-blank" aria-hidden="true"></span></li>'
+            f'<span class="coach-template-blank" role="img" aria-label="{labels["template_blank"]}"></span></li>'
             for key in template["field_keys"]
         )
         cards.append(f'''<article class="card span-4 coach-priority-card" aria-labelledby="{heading_id}">
@@ -219,9 +228,10 @@ def _render_coach_priorities(dossier: Mapping[str, object], locale: str) -> str:
           <p class="coach-observation"><span class="label">{labels['observation']}</span>{html.escape(str(priority['coach_observation']), quote=True)}</p>
           <p><span class="label">{labels['why']}</span>{html.escape(str(priority['why_it_matters']), quote=True)}</p>
           <p class="coach-prompt"><span class="label">{labels['prompt']}</span>{html.escape(str(priority['coach_prompt']), quote=True)}</p>
-          <section class="coach-template" aria-labelledby="{template_heading_id}">
+          <section class="coach-template" aria-labelledby="{template_heading_id}" aria-describedby="{template_boundary_id}">
             <h4 id="{template_heading_id}">{labels['template']}: {TEMPLATE_LABELS[locale][str(template['template_id'])]}</h4>
             <ul class="coach-template-list">{fields}</ul>
+            <p id="{template_boundary_id}" class="coach-template-boundary">{labels['template_boundary']}</p>
           </section>
         </article>''')
     return f'''<section class="section-block coach-priorities" aria-labelledby="coach-priorities-title">
@@ -240,6 +250,18 @@ def _render_market_evidence_unavailable(locale: str) -> str:
     </div>'''
 
 
+def _render_market_surface(dossier: Mapping[str, object], locale: str) -> str:
+    if BASE._mapping(dossier["market_context"])["state"] == "not_researched":
+        return _render_market_evidence_unavailable(locale)
+    labels = COPY[locale]
+    return f'''<div class="dossier-grid section-block">
+      <section class="card market-evidence-available-card span-12" aria-labelledby="market-evidence-available-title">
+        <h2 id="market-evidence-available-title">{labels['market_available_title']}</h2>
+        <p>{labels['market_available_body']}</p>
+      </section>
+    </div>'''
+
+
 def _render_main(dossier: Mapping[str, object], locale: str) -> str:
     projected = COMPAT.project_v2_to_v1(BASE._mapping(_plain(dossier)))
     opening = BASE._render_verdict(projected, locale) + BASE._render_recruiter_scan(projected, locale)
@@ -251,7 +273,7 @@ def _render_main(dossier: Mapping[str, object], locale: str) -> str:
       <div class="dossier-grid section-block">{BASE._render_analytics(projected, locale)}</div>
       {BASE._render_dimensions(projected, locale)}
       {BASE._render_visual_review(projected, locale)}
-      {_render_market_evidence_unavailable(locale)}
+      {_render_market_surface(dossier, locale)}
       {BASE._render_copy_blocks(projected, locale)}
       <div class="dossier-grid section-block">{bridge_holds}</div>
       {BASE._render_questions(projected, locale)}

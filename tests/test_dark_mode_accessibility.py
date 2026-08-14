@@ -42,7 +42,7 @@ def _contrast(first: str, second: str) -> float:
 class DarkModeAccessibilityTests(unittest.TestCase):
     def test_dossier_v2_extension_reuses_tokens_across_accessibility_modes(self) -> None:
         css = (ASSETS / "executive-career-dossier-v2.css").read_text(encoding="utf-8")
-        dark = css[css.index("@media screen and (prefers-color-scheme: dark)"):css.index("@media (max-width: 480px)")]
+        dark = css[css.index("@media screen and (prefers-color-scheme: dark)"):css.index("@media (max-width: 640px)")]
         self.assertNotRegex(dark, r"#[0-9a-fA-F]{3,8}")
         for token in ("var(--surface)", "var(--paper)", "var(--ink)", "var(--forest)"):
             self.assertIn(token, dark)
@@ -54,10 +54,21 @@ class DarkModeAccessibilityTests(unittest.TestCase):
 
     def test_dossier_v2_compact_contract_is_one_column_without_scroll_primitives(self) -> None:
         css = (ASSETS / "executive-career-dossier-v2.css").read_text(encoding="utf-8")
-        compact = css[css.index("@media (max-width: 480px)"):css.index("@media (prefers-reduced-motion: reduce)")]
+        compact = css[css.index("@media (max-width: 640px)"):css.index("@media (prefers-reduced-motion: reduce)")]
         self.assertIn(".section-coverage-facts { grid-template-columns: 1fr; }", compact)
         self.assertIn("min-width: 0", compact)
         self.assertNotRegex(css, r"overflow-x:\s*(?:auto|scroll)|white-space:\s*nowrap")
+
+    def test_dossier_v2_static_media_and_focus_boundaries_are_present(self) -> None:
+        css = (ASSETS / "executive-career-dossier-v2.css").read_text(encoding="utf-8")
+        for marker in (
+            "@media screen and (prefers-color-scheme: dark)",
+            "@media (prefers-reduced-motion: reduce)",
+            "@media (forced-colors: active)",
+            "@media (prefers-contrast: more)",
+            "main:focus-visible",
+        ):
+            self.assertIn(marker, css)
 
     def test_long_surfaces_have_screen_only_dark_contract_before_print(self) -> None:
         for filename, (scope, extra_token) in SURFACES.items():

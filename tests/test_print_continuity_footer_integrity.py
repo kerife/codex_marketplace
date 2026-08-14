@@ -27,6 +27,8 @@ class PrintContinuityFooterIntegrityTests(unittest.TestCase):
                 self.assertIn(selector, print_css)
         self.assertIn("break-inside: avoid", print_css)
         self.assertIn("page-break-inside: avoid", print_css)
+        base_css = (ASSETS / "executive-career-dossier-v1.css").read_text(encoding="utf-8")
+        self.assertIn("@page { size: auto; margin: 14mm; }", base_css)
 
     def test_print_keeps_each_continuity_footer_atomic(self) -> None:
         for name, selector in FOOTERS.items():

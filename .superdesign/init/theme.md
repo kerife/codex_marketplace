@@ -1263,13 +1263,15 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 .coach-template-list { margin: .5rem 0 0; padding-left: 1.25rem; }
 .coach-template-field { display: block; font-weight: 700; }
 .coach-template-blank { display: block; min-height: 1.5rem; border-bottom: 1px solid var(--line); }
+.coach-template-boundary { margin: .75rem 0 0; color: var(--muted); font-size: .875rem; }
+.market-evidence-available-card { border-top: 4px solid var(--forest); }
 
 @media screen and (prefers-color-scheme: dark) {
   .section-coverage-row article { border-color: var(--forest); background: var(--surface); color: var(--ink); }
   .coach-template { background: var(--paper); color: var(--ink); }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .section-coverage-facts { grid-template-columns: 1fr; }
   .section-coverage-ledger, .section-coverage-list, .section-coverage-row, .section-coverage-row article, .coach-priorities, .coach-priority-card, .coach-template { min-width: 0; }
 }
@@ -1279,18 +1281,18 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 }
 
 @media print {
-  .section-coverage-row, .section-coverage-row article, .coach-priority-card, .coach-template, .market-unavailable-card { break-inside: avoid; page-break-inside: avoid; }
+  .section-coverage-row, .section-coverage-row article, .coach-priority-card, .coach-template, .market-unavailable-card, .market-evidence-available-card { break-inside: avoid; page-break-inside: avoid; }
 }
 
 @media (forced-colors: active) {
-  .section-coverage-row article, .coach-priority-card, .coach-template, .market-unavailable-card { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .section-coverage-row article, .coach-priority-card, .coach-template, .market-unavailable-card, .market-evidence-available-card { background: Canvas; color: CanvasText; border-color: CanvasText; }
   .section-coverage-request, .coach-template { border-left-color: Highlight; }
   .coach-priority-card { border-top-color: Highlight; }
   main:focus-visible { outline-color: Highlight; }
 }
 
 @media (prefers-contrast: more) {
-  .section-coverage-row article, .coach-priority-card, .coach-template, .market-unavailable-card { border-width: 2px; }
+  .section-coverage-row article, .coach-priority-card, .coach-template, .market-unavailable-card, .market-evidence-available-card { border-width: 2px; }
   .section-coverage-request, .coach-template { border-left-width: 5px; }
   .coach-priority-card { border-top-width: 5px; }
 }

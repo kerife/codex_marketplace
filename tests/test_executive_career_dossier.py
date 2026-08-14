@@ -165,6 +165,14 @@ class ExecutiveCareerDossierSchemaTests(unittest.TestCase):
         self.assertEqual(self.validate_dossier(self.es_dossier), [])
         self.assertEqual(self.validate_dossier(self.en_dossier), [])
 
+    def test_v1_base_market_hiring_prose_remains_unchanged(self) -> None:
+        dossier = copy.deepcopy(self.en_dossier)
+        dossier["priorities"][0]["why_now"] = "Employers are actively hiring SREs."
+        self.assertNotIn(
+            "priorities[0].why_now market claims require local dated market evidence",
+            self.validate_dossier(dossier),
+        )
+
     def test_direct_validation_rejects_deep_or_cyclic_mappings(self) -> None:
         deep: dict[str, object] = {}
         cursor = deep

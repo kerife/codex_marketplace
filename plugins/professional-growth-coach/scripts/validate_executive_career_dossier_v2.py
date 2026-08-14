@@ -28,6 +28,7 @@ _v1 = _sibling("validate_executive_career_dossier.py")
 _compat = _sibling("executive_career_dossier_v2_compat.py")
 _loader = _sibling("private_input_loader.py")
 _prose = _sibling("private_prose_safety.py")
+_schema = _sibling("validate_json_schema_subset.py")
 
 CANONICAL_PROFILE_SECTIONS = _compat.CANONICAL_PROFILE_SECTIONS
 project_v2_to_v1 = _compat.project_v2_to_v1
@@ -35,6 +36,11 @@ DossierLoadError = _v1.DossierLoadError
 PrivateInputError = _loader.PrivateInputError
 read_bounded_bytes = _loader.read_bounded_bytes
 format_bounded_diagnostics = _prose.format_bounded_diagnostics
+V2_SCHEMA = json.loads(
+    (Path(__file__).resolve().parents[1] / "schemas" / "executive-career-dossier-v2.schema.json").read_text(encoding="utf-8")
+)
+V2_HIRING_LANGUAGE = re.compile(r"\bemployers?\b[^.!?\n]{0,48}\bhir(?:e|ing)\b", re.I)
+V2_INTERNAL_CONTEXT_LINK = re.compile(r"\bconectar\b[^.!?\n]{0,48}\bcontexto\b", re.I)
 
 SCHEMA_VERSION = "executive-career-dossier-v2"
 TOP_FIELDS = frozenset(set(_v1.TOP_FIELDS) | {"section_coverage"})
@@ -115,6 +121,19 @@ def _validate_priority_prose_semantics(
         for error in semantic_errors
         if error.startswith(f"{placeholder} ")
     )
+    if V2_HIRING_LANGUAGE.search(value) and not (
+        isinstance(row.get("evidence_ids"), list)
+        and any(identifier in market_evidence for identifier in row["evidence_ids"])
+    ):
+        errors.append(f"{path} market claims require local dated market evidence")
+
+
+def _validate_v2_private_action(value: str, path: str, errors: list[str]) -> None:
+    """Reuse the v1 action boundary while allowing a Spanish internal-writing phrase."""
+    before = len(errors)
+    _v1._validate_private_action(value, path, errors)
+    if len(errors) > before and V2_INTERNAL_CONTEXT_LINK.search(value):
+        del errors[before:]
 
 
 def _validate_rows(root: Mapping[str, object], errors: list[str]) -> dict[str, Mapping[str, object]]:
@@ -240,12 +259,7 @@ def _validate_priorities(root: Mapping[str, object], errors: list[str]) -> None:
                     f"{path}.{field} {error}" for error in _v1._privacy_errors(row[field])
                 )
                 if field != "privacy_boundary":
-                    if field == "coach_prompt":
-                        _v1._validate_private_action(row[field], f"{path}.{field}", errors)
-                    else:
-                        _v1._validate_explicit_external_action(
-                            row[field], f"{path}.{field}", errors
-                        )
+                    _validate_v2_private_action(row[field], f"{path}.{field}", errors)
                     _validate_priority_prose_semantics(
                         root,
                         row,
@@ -279,9 +293,11 @@ def _validate_priorities(root: Mapping[str, object], errors: list[str]) -> None:
 
 def validate_dossier(value: object) -> list[str]:
     """Return fixed diagnostics for v2 plus the established v1 semantics."""
-    if not isinstance(value, Mapping):
-        return ["v2 dossier must be an object"]
     errors: list[str] = []
+    if _schema.validate_schema_instance(value, V2_SCHEMA):
+        errors.append("v2 schema validation failed")
+    if not isinstance(value, Mapping):
+        return sorted(set(errors + ["v2 dossier must be an object"]))
     if set(value) - TOP_FIELDS:
         errors.append("v2 dossier has unsupported fields")
     if set(value) != TOP_FIELDS:
