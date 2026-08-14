@@ -547,6 +547,26 @@ class DossierRecruiterPracticeHandoffTests(unittest.TestCase):
             with self.subTest(accepted=value):
                 self.assertTrue(is_identity_free_handoff_text(value, 500))
 
+    def test_identity_free_guard_handles_round_five_name_overflow_and_products(self):
+        person_intros = (
+            "María Fernanda Gabriela Alejandra Sofía Isabella Valentina López García managed reliability.",
+            "Ana Loki managed reliability automation.",
+        )
+        for value in person_intros:
+            with self.subTest(rejected=value):
+                self.assertFalse(is_identity_free_handoff_text(value, 500))
+
+        technical_subjects = (
+            "Grafana Loki improved reliability.",
+            "Docker Compose improved delivery.",
+            "Elastic Stack improved observability.",
+            "Visual Studio Code improved productivity.",
+            "Open Policy Agent improved security.",
+        )
+        for value in technical_subjects:
+            with self.subTest(accepted=value):
+                self.assertTrue(is_identity_free_handoff_text(value, 500))
+
     def test_rejects_every_uri_scheme_and_local_path_in_each_vacancy_field(self):
         private_values = {
             "file_uri": "Detalles en file:///Users/Ana/private-cv.pdf",

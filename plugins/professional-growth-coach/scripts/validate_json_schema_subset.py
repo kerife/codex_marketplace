@@ -289,28 +289,105 @@ def _languages_overlap(
     return any(predicate(character) for character in finite)
 
 
+def _transparent_group_boundaries(
+    fragment: str,
+) -> tuple[
+    tuple[tuple[str, frozenset[str] | None], ...],
+    tuple[tuple[str, frozenset[str] | None], ...],
+]:
+    """Expose unbounded atom languages at transparent group boundaries."""
+    value = _strip_group_extension(fragment)
+    alternatives = _top_level_alternatives(value)
+    if len(alternatives) > 1:
+        # Alternation changes the group language rather than transparently
+        # wrapping one sequence. Repeated alternations are handled separately
+        # by the bounded structural-language analysis.
+        return (), ()
+
+    group_ends = dict(_group_spans(value))
+    tokens: list[
+        tuple[
+            tuple[tuple[str, frozenset[str] | None], ...],
+            tuple[tuple[str, frozenset[str] | None], ...],
+        ]
+    ] = []
+    index = 0
+    while index < len(value):
+        if value[index] in "^$":
+            index += 1
+            continue
+        if value[index] == "(" and index in group_ends:
+            closing = group_ends[index]
+            repeat = _quantifier(value, closing + 1)
+            if repeat is None:
+                tokens.append(
+                    _transparent_group_boundaries(value[index + 1 : closing])
+                )
+                index = closing + 1
+            else:
+                tokens.append(((), ()))
+                index = repeat[0]
+            continue
+        atom = _character_class_language(value, index)
+        if atom is None:
+            index += 1
+            continue
+        language, atom_end = atom
+        repeat = _quantifier(value, atom_end)
+        if repeat is not None and repeat[1]:
+            tokens.append(((language,), (language,)))
+            index = repeat[0]
+        else:
+            tokens.append(((), ()))
+            index = repeat[0] if repeat is not None else atom_end
+    if not tokens:
+        return (), ()
+    return tokens[0][0], tokens[-1][1]
+
+
 def _has_adjacent_ambiguous_quantified_atoms(pattern: str) -> bool:
-    previous: tuple[str, frozenset[str] | None] | None = None
+    previous: tuple[tuple[str, frozenset[str] | None], ...] = ()
+    group_ends = dict(_group_spans(pattern))
     index = 0
     while index < len(pattern):
+        if pattern[index] == "(" and index in group_ends:
+            closing = group_ends[index]
+            body = pattern[index + 1 : closing]
+            if _has_adjacent_ambiguous_quantified_atoms(body):
+                return True
+            repeat = _quantifier(pattern, closing + 1)
+            if repeat is None:
+                leading, trailing = _transparent_group_boundaries(body)
+                if any(
+                    _languages_overlap(left, right)
+                    for left in previous
+                    for right in leading
+                ):
+                    return True
+                previous = trailing
+                index = closing + 1
+            else:
+                previous = ()
+                index = repeat[0]
+            continue
         atom = _character_class_language(pattern, index)
         if atom is None:
-            previous = None
+            previous = ()
             index += 1
             continue
         language, atom_end = atom
         repeat = _quantifier(pattern, atom_end)
         if repeat is None:
-            previous = None
+            previous = ()
             index = atom_end
             continue
         repeat_end, unbounded = repeat
         if unbounded:
-            if previous is not None and _languages_overlap(previous, language):
+            if any(_languages_overlap(left, language) for left in previous):
                 return True
-            previous = language
+            previous = (language,)
         else:
-            previous = None
+            previous = ()
         index = repeat_end
     return False
 
@@ -450,22 +527,22 @@ def _fingerprint_token(digest: object, token: str) -> None:
     digest.update(encoded)
 
 
-def _json_fingerprint(value: object) -> bytes | tuple[str, type[object]] | None:
+def _json_fingerprint(value: object, budget: list[int] | None = None) -> bytes | None:
     """Create a bounded, recursion-free fingerprint for JSON-like graphs."""
+    if budget is None:
+        budget = [_MAX_JSON_EQUALITY_EVALUATIONS]
     digest = hashlib.sha256()
     pending: list[tuple[str, object]] = [("value", value)]
     active: set[int] = set()
-    remaining = _MAX_JSON_EQUALITY_EVALUATIONS
-    saw_cycle = False
     while pending:
-        if remaining <= 0:
-            return None
-        remaining -= 1
         action, current = pending.pop()
         if action == "end":
             active.remove(id(current))
             _fingerprint_token(digest, "]")
             continue
+        if budget[0] <= 0:
+            return None
+        budget[0] -= 1
         if isinstance(current, bool):
             _fingerprint_token(digest, f"bool:{int(current)}")
             continue
@@ -489,9 +566,11 @@ def _json_fingerprint(value: object) -> bytes | tuple[str, type[object]] | None:
         if isinstance(current, (list, Mapping)):
             identity = id(current)
             if identity in active:
-                saw_cycle = True
                 _fingerprint_token(digest, "cycle")
                 continue
+            pending_entries = len(current) if isinstance(current, list) else 2 * len(current)
+            if pending_entries > budget[0]:
+                return None
             active.add(identity)
             _fingerprint_token(
                 digest,
@@ -511,21 +590,23 @@ def _json_fingerprint(value: object) -> bytes | tuple[str, type[object]] | None:
             digest,
             f"{type(current).__module__}.{type(current).__qualname__}:{current!r}",
         )
-    if saw_cycle:
-        return "cycle", type(value)
     return digest.digest()
 
 
-def _enum_values_unique(enum: list[object]) -> bool:
-    buckets: dict[bytes | tuple[str, type[object]], list[object]] = {}
+def _enum_values_unique(enum: list[object], budget: list[int]) -> bool | None:
+    fingerprints: dict[bytes, object] = {}
     for option in enum:
-        fingerprint = _json_fingerprint(option)
+        fingerprint = _json_fingerprint(option, budget)
         if fingerprint is None:
+            return None
+        if fingerprint in fingerprints:
+            equal = _json_equal(option, fingerprints[fingerprint], budget)
+            if equal is None:
+                return None
+            # A duplicate or a digest collision both fail closed without an
+            # attacker-controlled quadratic collision bucket.
             return False
-        bucket = buckets.setdefault(fingerprint, [])
-        if any(_json_equal(option, previous) is not False for previous in bucket):
-            return False
-        bucket.append(option)
+        fingerprints[fingerprint] = option
     return True
 
 
@@ -546,7 +627,6 @@ def _keyword_shapes_valid(schema: Mapping[str, object]) -> bool:
             not isinstance(enum, list)
             or not enum
             or len(enum) > MAX_SCHEMA_EVALUATIONS
-            or not _enum_values_unique(enum)
         ):
             return False
     if "type" in schema:
@@ -649,6 +729,12 @@ def _preflight_schema(
         return []
     if not _keyword_shapes_valid(schema):
         return [SCHEMA_KEYWORD_INVALID_ERROR]
+    if "enum" in schema:
+        unique = _enum_values_unique(schema["enum"], budget)
+        if unique is None:
+            return [SCHEMA_EVALUATION_LIMIT_ERROR]
+        if not unique:
+            return [SCHEMA_KEYWORD_INVALID_ERROR]
     if "pattern" in schema:
         pattern_error = _pattern_error(schema["pattern"])
         if pattern_error is not None:
@@ -725,15 +811,18 @@ def _type_ok(value: object, expected: object) -> bool:
     }.get(expected, True)
 
 
-def _json_equal(left: object, right: object) -> bool | None:
+def _json_equal(
+    left: object, right: object, budget: list[int] | None = None
+) -> bool | None:
     """Compare JSON graphs iteratively; return ``None`` on bounded exhaustion."""
+    if budget is None:
+        budget = [_MAX_JSON_EQUALITY_EVALUATIONS]
     pending = [(left, right)]
     seen: set[tuple[int, int]] = set()
-    remaining = _MAX_JSON_EQUALITY_EVALUATIONS
     while pending:
-        if remaining <= 0:
+        if budget[0] <= 0:
             return None
-        remaining -= 1
+        budget[0] -= 1
         current_left, current_right = pending.pop()
         if isinstance(current_left, bool) or isinstance(current_right, bool):
             if not (
@@ -858,12 +947,27 @@ def _validate(
             active_ref_targets.remove(target_identity)
     if "type" in schema and not _type_ok(value, schema["type"]):
         return [f"{path}: type mismatch"]
-    if "const" in schema and not _json_equal(value, schema["const"]):
-        errors.append(f"{path}: const mismatch")
-    if "enum" in schema and not any(
-        _json_equal(value, option) for option in schema["enum"]
-    ):
-        errors.append(f"{path}: enum mismatch")
+    if "const" in schema:
+        equal = _json_equal(value, schema["const"], budget)
+        if equal is None:
+            errors.append(SCHEMA_EVALUATION_LIMIT_ERROR)
+        elif not equal:
+            errors.append(f"{path}: const mismatch")
+    if "enum" in schema:
+        matched = False
+        exhausted = False
+        for option in schema["enum"]:
+            equal = _json_equal(value, option, budget)
+            if equal is None:
+                exhausted = True
+                break
+            if equal:
+                matched = True
+                break
+        if exhausted:
+            errors.append(SCHEMA_EVALUATION_LIMIT_ERROR)
+        elif not matched:
+            errors.append(f"{path}: enum mismatch")
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         if "minimum" in schema and value < schema["minimum"]:
             errors.append(f"{path}: number below minimum")

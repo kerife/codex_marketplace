@@ -694,6 +694,39 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual([], json.loads(result.stdout))
 
+    def test_dependency_free_checker_bounds_compound_enum_preflight_work(self):
+        probe = (
+            "import json,sys;"
+            "sys.path.insert(0,sys.argv[1]);"
+            "from validate_json_schema_subset import validate_schema_instance;"
+            "enum=[[index]*1024 for index in range(4096)];"
+            "print(json.dumps(validate_schema_instance(None,{'enum':enum})))"
+        )
+        try:
+            result = subprocess.run(
+                [sys.executable, "-B", "-c", probe, str(ROOT / "scripts")],
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=1.0,
+            )
+        except subprocess.TimeoutExpired:
+            self.fail("compound enum preflight exceeded safe timeout")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn(
+            json.loads(result.stdout),
+            (
+                ["schema validation exceeds safe evaluation limit"],
+                ["schema keyword is invalid"],
+            ),
+        )
+
+        safe_enum = [[index, {"value": index}] for index in range(32)]
+        self.assertEqual(
+            [],
+            validate_schema_instance(safe_enum[0], {"enum": safe_enum}),
+        )
+
     def test_dependency_free_checker_rejects_invalid_regex_patterns(self):
         for pattern in ("[", "(?", r"\K"):
             with self.subTest(pattern=pattern):
@@ -822,6 +855,51 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         )
         for pattern, value in safe_cases:
             with self.subTest(pattern=pattern, control="safe"):
+                self.assertEqual(
+                    [],
+                    validate_schema_instance(
+                        value, {"type": "string", "pattern": pattern}
+                    ),
+                )
+
+    def test_dependency_free_checker_rejects_group_atom_overlap_within_timeout(self):
+        probe = (
+            "import json,sys;"
+            "sys.path.insert(0,sys.argv[1]);"
+            "from validate_json_schema_subset import validate_schema_instance;"
+            "print(json.dumps(validate_schema_instance("
+            "'a'*100000,{'type':'string','pattern':sys.argv[2]})))"
+        )
+        for pattern in ("^(?:a*)a*c$", "^a*(?:a*)c$"):
+            with self.subTest(pattern=pattern):
+                try:
+                    result = subprocess.run(
+                        [
+                            sys.executable,
+                            "-B",
+                            "-c",
+                            probe,
+                            str(ROOT / "scripts"),
+                            pattern,
+                        ],
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                        timeout=1.0,
+                    )
+                except subprocess.TimeoutExpired:
+                    self.fail("quantified group/atom overlap exceeded safe timeout")
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual(
+                    ["$: pattern exceeds safe complexity limit"],
+                    json.loads(result.stdout),
+                )
+
+        for pattern, value in (
+            ("^(?:a*)b*c$", "a" * 100_000 + "c"),
+            ("^a*(?:b*)c$", "a" * 100_000 + "c"),
+        ):
+            with self.subTest(pattern=pattern, control="safe-disjoint"):
                 self.assertEqual(
                     [],
                     validate_schema_instance(

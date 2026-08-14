@@ -798,6 +798,34 @@ class ExecutiveCareerDossierSchemaTests(unittest.TestCase):
                 dossier = mutate_path(self.es_dossier, ("evidence", 0, "paraphrase"), text)
                 self.assertEqual(self.validate_dossier(dossier), [])
 
+    def test_evidence_paraphrase_round_five_name_overflow_and_product_controls(self) -> None:
+        rejected = (
+            "María Fernanda Gabriela Alejandra Sofía Isabella Valentina López García managed reliability.",
+            "Ana Loki managed reliability automation.",
+        )
+        for text in rejected:
+            with self.subTest(text=text, boundary="person"):
+                dossier = mutate_path(self.es_dossier, ("evidence", 0, "paraphrase"), text)
+                errors = self.validate_dossier(dossier)
+                rendered = "\n".join(errors)
+                self.assertTrue(
+                    any("unlabelled candidate identity" in error for error in errors),
+                    errors,
+                )
+                self.assertNotIn(text, rendered)
+
+        accepted = (
+            "Grafana Loki improved reliability.",
+            "Docker Compose improved delivery.",
+            "Elastic Stack improved observability.",
+            "Visual Studio Code improved productivity.",
+            "Open Policy Agent improved security.",
+        )
+        for text in accepted:
+            with self.subTest(text=text, boundary="technical"):
+                dossier = mutate_path(self.es_dossier, ("evidence", 0, "paraphrase"), text)
+                self.assertEqual(self.validate_dossier(dossier), [])
+
     def test_confirmation_copy_requires_one_linked_question(self) -> None:
         mutated = copy.deepcopy(self.es_dossier)
         mutated["questions"] = []

@@ -75,8 +75,12 @@ _NON_PERSON_SUBJECT_HEADS = frozenset(
     }
 )
 _TECHNICAL_ORGANIZATION_PREFIXES = frozenset(
-    {"amazon", "apache", "argo", "google", "microsoft"}
+    {
+        "amazon", "apache", "argo", "docker", "elastic", "google",
+        "grafana", "microsoft",
+    }
 )
+_TECHNICAL_PRODUCT_HEADS = frozenset({"agent", "code"})
 _TECHNICAL_COMPOUND_SUFFIXES = ("database", "engine", "manager", "platform", "server")
 _MAX_IDENTITY_SCAN_CHARS = 4_096
 _MAX_SUBJECT_WORDS = 12
@@ -195,7 +199,7 @@ def _subject_separator(value: str, cursor: int) -> tuple[int, bool]:
     return cursor + separator.end(), False
 
 
-def _sentence_subject_words(value: str, start: int) -> tuple[str, ...]:
+def _sentence_subject_words(value: str, start: int) -> tuple[str, ...] | None:
     significant: list[str] = []
     has_predicate = False
     cursor = _skip_subject_opening_punctuation(value, start)
@@ -210,7 +214,7 @@ def _sentence_subject_words(value: str, start: int) -> tuple[str, ...]:
         elif _is_cased_name_token(word) or _is_uncased_name_token(word):
             significant.append(word)
             if len(significant) > _MAX_SIGNIFICANT_NAME_WORDS:
-                return ()
+                return None
         else:
             has_predicate = True
             break
@@ -235,6 +239,7 @@ def _looks_like_person_subject(words: tuple[str, ...]) -> bool:
         _is_acronym_token(words[0])
         or any(_is_mixed_case_technical_token(word) for word in words)
         or folded[0] in _TECHNICAL_ORGANIZATION_PREFIXES
+        or (len(words) >= 3 and folded[-1] in _TECHNICAL_PRODUCT_HEADS)
         or _is_compound_technical_token(words[-1])
     ):
         return False
@@ -264,12 +269,11 @@ def has_unlabelled_person_intro(value: object) -> bool:
     normalized = unicodedata.normalize("NFKC", value)
     if len(normalized) > _MAX_IDENTITY_SCAN_CHARS:
         return True
-    return any(
-        _looks_like_person_subject(
-            _sentence_subject_words(normalized, sentence_start.end())
-        )
-        for sentence_start in _SENTENCE_START.finditer(normalized)
-    )
+    for sentence_start in _SENTENCE_START.finditer(normalized):
+        words = _sentence_subject_words(normalized, sentence_start.end())
+        if words is None or _looks_like_person_subject(words):
+            return True
+    return False
 
 
 def is_identity_free_handoff_text(value: object, maximum: int) -> bool:
