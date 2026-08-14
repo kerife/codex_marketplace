@@ -8,6 +8,19 @@
 
 **Tech Stack:** Python 3.11 and 3.14, standard library only, JSON Schema 2020-12 dependency-free subset, `unittest`, offline HTML/CSS, Superdesign byte-parity contracts, Codex plugin marketplace/release tooling, Git worktrees and bundles.
 
+## User-goal sequencing addendum — intermediate Task 1 release
+
+The user explicitly requires every independently reviewed increment to be
+published to remote `main` and loaded locally. Therefore the completed,
+SPEC/QUALITY-approved Task 1 defensive baseline will receive one intermediate
+canonical release before Task 2 begins. Apply the Task 4/5 release mechanics
+only to the reviewed Task 1 tree: require all non-provenance gates green,
+consume the cachebuster exactly once, install only the public canonical
+selector, attest measured source/cache parity and installed behavior, then
+publish the verified attestation commit to `origin/main`. Keep Task 2 and the
+five-vacancy work deferred, preserve `0a05045` under a local recovery ref, and
+do not remove or disable the legacy local identity in this intermediate step.
+
 ## Global Constraints
 
 - Canonical repository, remote, catalog, and publication branch remain `codex_marketplace`, its existing `origin`, `.agents/plugins/marketplace.json`, and `main`.
