@@ -195,10 +195,15 @@ class DossierDOMAudit(HTMLParser):
         self.references: list[str] = []
         self.classes: list[str] = []
         self.tag_counts: dict[str, int] = {}
+        self.heading_levels: list[int] = []
+        self.start_tags: list[tuple[str, dict[str, str | None]]] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self.tag_counts[tag] = self.tag_counts.get(tag, 0) + 1
         values = dict(attrs)
+        self.start_tags.append((tag, values))
+        if tag in {"h1", "h2", "h3", "h4", "h5", "h6"}:
+            self.heading_levels.append(int(tag[1]))
         identifier = values.get("id")
         if identifier:
             self.ids.append(identifier)
@@ -394,6 +399,17 @@ class ExecutiveCareerDossierV2Tests(unittest.TestCase):
         errors = self.validator.validate_dossier(dossier)
         self.assertIn("v2 schema validation failed", errors)
         self.assertNotIn("unsupported", "\n".join(errors))
+
+    def test_v2_direct_validation_is_total_for_self_and_nested_cycles(self) -> None:
+        self_cycle: dict[str, object] = {}
+        self_cycle["opaque_self_cycle"] = self_cycle
+        nested_cycle: dict[str, object] = {"branch": []}
+        nested_cycle["branch"].append({"opaque_nested_cycle": nested_cycle})
+        for value in (self_cycle, nested_cycle):
+            with self.subTest(kind="self" if value is self_cycle else "nested"):
+                errors = self.validator.validate_dossier(value)
+                self.assertEqual(errors, ["v2 dossier contains cyclic data", "v2 schema validation failed"])
+                self.assertNotIn("opaque", "\n".join(errors))
 
     def test_v2_external_action_guard_applies_to_every_coaching_field(self) -> None:
         for field in ("coach_observation", "why_it_matters", "coach_prompt"):
@@ -720,11 +736,24 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 self.assertEqual(audit.classes.count("market-unavailable-card"), 1)
                 self.assertNotIn('data-priority-card="true"', rendered)
                 self.assertNotIn('class="timebox"', rendered)
-                self.assertEqual(rendered.count('class="skip-link" href="#main-content"'), 1)
-                self.assertIn('<main id="main-content" class="shell" tabindex="-1">', rendered)
-                self.assertGreaterEqual(audit.tag_counts.get("h2", 0), 1)
-                self.assertGreaterEqual(audit.tag_counts.get("h3", 0), 1)
-                self.assertGreaterEqual(audit.tag_counts.get("h4", 0), 1)
+                skip_links = [
+                    attrs for tag, attrs in audit.start_tags
+                    if tag == "a" and "skip-link" in (attrs.get("class") or "").split()
+                ]
+                self.assertEqual(len(skip_links), 1)
+                self.assertEqual(skip_links[0].get("href"), "#main-content")
+                main_targets = [attrs for tag, attrs in audit.start_tags if tag == "main"]
+                self.assertEqual(len(main_targets), 1)
+                self.assertEqual(main_targets[0].get("id"), "main-content")
+                self.assertEqual(main_targets[0].get("tabindex"), "-1")
+                self.assertEqual(audit.heading_levels[0], 1)
+                self.assertEqual(set(audit.heading_levels), {1, 2, 3, 4})
+                self.assertTrue(
+                    all(
+                        next_level <= level + 1
+                        for level, next_level in zip(audit.heading_levels, audit.heading_levels[1:])
+                    )
+                )
                 templates = re.findall(
                     r'<section class="coach-template"[^>]*>(.*?)</section>',
                     rendered,
@@ -763,6 +792,53 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         )
         self.assertNotIn("Certifications", summary)
         self.assertLessEqual(len(summary.split()), 180)
+
+    def test_chat_summary_executes_every_localized_section_question(self) -> None:
+        renderer = load_renderer()
+        for locale, questions in renderer.AUTHORIZATION_QUESTIONS.items():
+            for section, expected in questions.items():
+                with self.subTest(locale=locale, section=section):
+                    dossier = make_v2_dossier(locale)
+                    for row in dossier["section_coverage"]:
+                        request = row.get("inspection_request")
+                        if isinstance(request, dict):
+                            row["reason"] = "inspection_declined"
+                            request["decision"] = "declined_for_session"
+                    target = next(row for row in dossier["section_coverage"] if row["section"] == section)
+                    scope = dossier["evidence_scope"]
+                    scope["inspected_sections"] = [name for name in scope["inspected_sections"] if name != section]
+                    target.update({
+                        "availability": "unavailable",
+                        "evidence_state": "unknown",
+                        "reason": "authorization_required",
+                        "inspection_request": {
+                            "access_type": "read_only_visible_section_inspection",
+                            "decision": "pending_response",
+                            "scope": "current_session_only",
+                            "carry_forward": False,
+                        },
+                    })
+                    summary = renderer.build_chat_summary(dossier)
+                    matches = [question for question in questions.values() if question in summary]
+                    self.assertEqual(matches, [expected])
+                    self.assertEqual(summary.count(expected), 1)
+
+    def test_chat_summary_declined_and_failed_requests_keep_the_fallback_question(self) -> None:
+        renderer = load_renderer()
+        for locale in renderer.AUTHORIZATION_QUESTIONS:
+            with self.subTest(locale=locale):
+                dossier = make_v2_dossier(locale)
+                for row in dossier["section_coverage"]:
+                    request = row.get("inspection_request")
+                    if isinstance(request, dict):
+                        row["reason"] = "inspection_declined"
+                        request["decision"] = "declined_for_session"
+                failed = next(row for row in dossier["section_coverage"] if row["section"] == "featured")
+                failed["reason"] = "authorized_inspection_failed"
+                failed["inspection_request"]["decision"] = "authorized_inspection_failed"
+                summary = renderer.build_chat_summary(dossier)
+                self.assertIn(dossier["questions"][0]["question"], summary)
+                self.assertFalse(any(question in summary for question in renderer.AUTHORIZATION_QUESTIONS[locale].values()))
 
     def test_chat_summary_retains_v1_behavior_when_no_inspection_request_is_pending(self) -> None:
         dossier = make_v2_dossier("en")

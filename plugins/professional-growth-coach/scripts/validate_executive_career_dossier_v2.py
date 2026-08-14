@@ -41,6 +41,8 @@ V2_SCHEMA = json.loads(
 )
 V2_HIRING_LANGUAGE = re.compile(r"\bemployers?\b[^.!?\n]{0,48}\bhir(?:e|ing)\b", re.I)
 V2_SAFE_INTERNAL_WRITING_PHRASE = "la apertura describe responsabilidades sin conectar todavía contexto y resultado."
+MAX_V2_DIRECT_INPUT_DEPTH = _schema.MAX_SCHEMA_VALIDATION_DEPTH
+MAX_V2_DIRECT_INPUT_NODES = _schema.MAX_SCHEMA_EVALUATIONS
 
 SCHEMA_VERSION = "executive-career-dossier-v2"
 TOP_FIELDS = frozenset(set(_v1.TOP_FIELDS) | {"section_coverage"})
@@ -291,6 +293,33 @@ def _validate_priorities(root: Mapping[str, object], errors: list[str]) -> None:
             errors.append(f"{path}.evidence_ids must bind to the target section")
 
 
+def _direct_input_preflight(value: object) -> str | None:
+    """Reject cyclic or oversized direct graphs before recursive v1 helpers."""
+    pending: list[tuple[str, object, int]] = [("visit", value, 0)]
+    active: set[int] = set()
+    nodes = 0
+    while pending:
+        operation, current, depth = pending.pop()
+        if operation == "leave":
+            active.discard(id(current))
+            continue
+        if not isinstance(current, (Mapping, list)):
+            continue
+        if depth > MAX_V2_DIRECT_INPUT_DEPTH:
+            return "v2 dossier exceeds safe input limit"
+        identity = id(current)
+        if identity in active:
+            return "v2 dossier contains cyclic data"
+        nodes += 1
+        if nodes > MAX_V2_DIRECT_INPUT_NODES:
+            return "v2 dossier exceeds safe input limit"
+        active.add(identity)
+        pending.append(("leave", current, depth))
+        children = current.values() if isinstance(current, Mapping) else current
+        pending.extend(("visit", child, depth + 1) for child in children)
+    return None
+
+
 def validate_dossier(value: object) -> list[str]:
     """Return fixed diagnostics for v2 plus the established v1 semantics."""
     errors: list[str] = []
@@ -298,6 +327,9 @@ def validate_dossier(value: object) -> list[str]:
         errors.append("v2 schema validation failed")
     if not isinstance(value, Mapping):
         return sorted(set(errors + ["v2 dossier must be an object"]))
+    preflight_error = _direct_input_preflight(value)
+    if preflight_error is not None:
+        return sorted(set(errors + [preflight_error]))
     if set(value) - TOP_FIELDS:
         errors.append("v2 dossier has unsupported fields")
     if set(value) != TOP_FIELDS:
