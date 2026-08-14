@@ -442,7 +442,7 @@ class DossierRecruiterPracticeHandoffTests(unittest.TestCase):
         dossier = copy.deepcopy(self.dossier)
         dossier["evidence"][3]["paraphrase"] = "Ana López reports Terraform experience."
         source_snapshot = handoff_builder.snapshot_for_dossier(dossier)
-        with self.assertRaisesRegex(ValueError, "contains forbidden safe text"):
+        with self.assertRaisesRegex(ValueError, "dossier validation failed"):
             build_handoff(dossier, self.fixture["vacancy"], source_snapshot)
 
     def test_identity_free_guard_rejects_person_intros_but_preserves_role_prose(self):
@@ -450,12 +450,17 @@ class DossierRecruiterPracticeHandoffTests(unittest.TestCase):
             "Ana López reports Terraform experience.",
             "Jordan Lee works at Acme Corporation.",
             "Ana López reporta experiencia con Terraform.",
+            "Ana María López delivered reliability automation.",
+            "Ana de la Cruz delivered reliability automation.",
+            "José Luis García delivered reliability automation.",
+            "Contexto seguro. Ana María López delivered reliability automation.",
         ):
             with self.subTest(rejected=value):
                 self.assertFalse(is_identity_free_handoff_text(value, 500))
         for value in (
             "Senior Engineer leads incident response.",
             "Platform Engineering covers incident response scope.",
+            "Oracle Cloud delivers reliability automation.",
         ):
             with self.subTest(accepted=value):
                 self.assertTrue(is_identity_free_handoff_text(value, 500))

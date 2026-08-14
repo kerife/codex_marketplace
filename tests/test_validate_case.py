@@ -933,6 +933,46 @@ class ValidateCaseTests(unittest.TestCase):
         )
         self.assertNotIn(sentinel, result.stderr)
 
+    def test_redacts_absolute_and_unc_path_keys(self) -> None:
+        module = load_validator_module()
+        path_keys = (
+            "/etc/passwd",
+            "/opt/data/profile.json",
+            r"D:\work\candidate\profile.json",
+            r"\\server\share\profile.json",
+        )
+        for key in path_keys:
+            with self.subTest(key=key):
+                case = valid_case()
+                case[key] = "x"
+
+                errors = module.validate_case(case)
+                result = run_validator(case)
+
+                self.assertTrue(any("<redacted-key>" in error for error in errors))
+                self.assertNotIn(key, "\n".join(errors))
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("<redacted-key>", result.stderr)
+                self.assertNotIn(key, result.stderr)
+
+        control_key = "ordinary\x1b[31mINJECTED\nLINE"
+        control_case = valid_case()
+        control_case[control_key] = "x"
+        control_errors = module.validate_case(control_case)
+        control_result = run_validator(control_case)
+        for rendered in ("\n".join(control_errors), control_result.stderr):
+            self.assertNotIn(control_key, rendered)
+            self.assertNotIn("\x1b", rendered)
+            self.assertIn(r"ordinary\u001b[31mINJECTED\u000aLINE", rendered)
+
+        relative_case = valid_case()
+        relative_key = r"relative\profile.json"
+        relative_case[relative_key] = "x"
+        self.assertIn(
+            f"case has unsupported field: {relative_key}",
+            module.validate_case(relative_case),
+        )
+
     def test_api_redacts_unc_and_common_absolute_path_keys_but_preserves_relative(self) -> None:
         validator = load_validator_module()
         for sentinel in (

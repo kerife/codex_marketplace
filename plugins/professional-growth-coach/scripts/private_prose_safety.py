@@ -19,7 +19,7 @@ _SUSPICIOUS_DIAGNOSTIC_FIELD = re.compile(
     r"(?:token|secret|password|credential|api[_-]?key|access[_-]?key|auth|cookie|private)",
     re.IGNORECASE,
 )
-_ABSOLUTE_WINDOWS_PATH = re.compile(r"^(?:[A-Za-z]:[\\/]|\\\\|//)")
+_ABSOLUTE_DIAGNOSTIC_PATH = re.compile(r"^(?:/|[A-Za-z]:[\\/]|\\\\|//)")
 
 
 def contains_unicode_controls(value: object) -> bool:
@@ -37,9 +37,14 @@ def is_safe_prose_text(value: object) -> bool:
 
 def safe_diagnostic_field_name(value: str) -> str:
     """Redact contact-, path-, and credential-shaped keys in diagnostics."""
-    if _SUSPICIOUS_DIAGNOSTIC_FIELD.search(value) or _ABSOLUTE_WINDOWS_PATH.match(value):
+    if _SUSPICIOUS_DIAGNOSTIC_FIELD.search(value) or _ABSOLUTE_DIAGNOSTIC_PATH.match(value):
         return "<redacted-field>"
-    return value
+    return "".join(
+        f"\\u{ord(character):04x}"
+        if unicodedata.category(character) in {"Cc", "Cf", "Cs", "Zl", "Zp"}
+        else character
+        for character in value
+    )
 
 
 def format_bounded_diagnostics(

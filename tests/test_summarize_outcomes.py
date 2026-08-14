@@ -540,9 +540,37 @@ class SummarizeOutcomesTests(unittest.TestCase):
         summary = self.parse_valid(result)
         self.assertEqual(summary["applications"], 2)
         self.assertIn(
-            "LinkedIn outreach measurement events observed: LI-FIRST-002; descriptive only, no causal attribution",
+            "LinkedIn outreach measurement events observed; descriptive only, no causal attribution",
             summary["warnings"],
         )
+
+    def test_linkedin_outreach_warning_does_not_echo_untrusted_intervention_ids(self) -> None:
+        sentinels = (
+            "/etc/passwd",
+            "/opt/data/profile.json",
+            r"D:\work\candidate\profile.json",
+            r"\\server\share\profile.json",
+            "ordinary\x1b[31mINJECTED\nLINE",
+        )
+        for sentinel in sentinels:
+            with self.subTest(sentinel=sentinel):
+                result = run_summary(
+                    [
+                        outcome_row(
+                            source="linkedin_outreach",
+                            intervention_id=f"LI-{sentinel}",
+                        )
+                    ]
+                )
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertNotIn(sentinel, result.stdout)
+                self.assertNotIn(sentinel, result.stderr)
+                self.assertNotIn("\x1b", result.stdout + result.stderr)
+                summary = self.parse_valid(result)
+                self.assertIn(
+                    "LinkedIn outreach measurement events observed; descriptive only, no causal attribution",
+                    summary["warnings"],
+                )
 
     def test_multiple_candidates_without_unanimous_consent_get_zero_safe_summary(self) -> None:
         result = run_summary(
@@ -828,6 +856,38 @@ class SummarizeOutcomesTests(unittest.TestCase):
                     f"row 2: {field} must be true, false, or empty",
                 )
 
+    def test_invalid_scalar_diagnostics_never_echo_input_values(self) -> None:
+        sentinels = (
+            "/etc/passwd",
+            "/opt/data/profile.json",
+            r"D:\work\candidate\profile.json",
+            r"\\server\share\profile.json",
+            "ordinary\x1b[31mINJECTED\nLINE",
+        )
+        for sentinel in sentinels:
+            cases = (
+                run_summary([outcome_row(application_date=sentinel)]),
+                run_summary([outcome_row(benchmark_consent=sentinel)]),
+                run_summary(
+                    [
+                        outcome_row(application_id=sentinel),
+                        outcome_row(application_id=sentinel),
+                    ]
+                ),
+                run_summary([], window=sentinel),
+                run_summary([], as_of=sentinel),
+                run_summary(
+                    [outcome_row()],
+                    fieldnames=CSV_FIELDS + (sentinel, sentinel),
+                ),
+                run_summary([outcome_row(candidate_id="c-1")], candidate_id=sentinel),
+            )
+            for result in cases:
+                with self.subTest(sentinel=sentinel, stderr=result.stderr):
+                    self.assertNotIn(sentinel, result.stdout)
+                    self.assertNotIn(sentinel, result.stderr)
+                    self.assertNotIn("\x1b", result.stdout + result.stderr)
+
     def test_bundled_asset_and_forward_fixtures_use_the_canonical_header(self) -> None:
         paths = [
             REPO_ROOT
@@ -918,7 +978,7 @@ class SummarizeOutcomesTests(unittest.TestCase):
                 "warnings": [
                     "small sample: 4 applications in window; rates are descriptive",
                     "interventions observed; summary is descriptive and does not prove causality",
-                    "LinkedIn outreach measurement events observed: LI-FIRST-002; descriptive only, no causal attribution",
+                    "LinkedIn outreach measurement events observed; descriptive only, no causal attribution",
                 ],
                 "window_days": 30,
             },

@@ -186,8 +186,10 @@ class LinkedInReportFixtureTests(unittest.TestCase):
             (external / "bundle.json").write_bytes(source)
             alias = root / "alias"
             alias.symlink_to(external, target_is_directory=True)
-            with self.assertRaisesRegex(ValueError, "unavailable"):
+            with self.assertRaisesRegex(ValueError, "symlink") as raised:
                 validator.load_bundle(alias / "bundle.json")
+        self.assertNotIn(str(external / "bundle.json"), str(raised.exception))
+        self.assertNotIn("FIXTURE-JSC1-TECHNICAL-SIGNAL-DISPERSED", str(raised.exception))
 
     def test_deeply_nested_bundle_returns_bounded_validation_error(self) -> None:
         nested: object = "leaf"
@@ -506,6 +508,60 @@ class LinkedInReportFixtureTests(unittest.TestCase):
                     validator.validate_fixture_bundle(bundle),
                 )
 
+    def test_privacy_diagnostics_redact_untrusted_mapping_key_paths_api_and_cli(self) -> None:
+        sentinels = (
+            "/etc/passwd",
+            "/opt/data/profile.json",
+            r"D:\work\candidate\profile.json",
+            r"\\server\share\profile.json",
+            "ordinary\x1b[31mINJECTED\nLINE",
+        )
+        report = FIXTURE_ROOT / "scenario-a-es.md"
+        for sentinel in sentinels:
+            with self.subTest(sentinel=sentinel):
+                bundle = self.fixture("scenario-a.json")
+                bundle[sentinel] = "https://evil.example"
+
+                api_errors = validator.validate_fixture_bundle(bundle)
+                api_text = "\n".join(api_errors)
+                self.assertNotIn(sentinel, api_text)
+                self.assertNotIn("\x1b", api_text)
+                self.assertIn(
+                    "fixture contains forbidden URL value outside source_catalog[].url at",
+                    api_text,
+                )
+
+                with tempfile.TemporaryDirectory() as temporary:
+                    bundle_path = Path(temporary) / "sentinel.json"
+                    bundle_path.write_text(json.dumps(bundle), encoding="utf-8")
+                    stdout = io.StringIO()
+                    stderr = io.StringIO()
+                    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                        result = validator._cli([str(report), str(bundle_path)])
+
+                self.assertNotEqual(0, result)
+                self.assertNotIn(sentinel, stderr.getvalue())
+                self.assertNotIn("\x1b", stderr.getvalue())
+                self.assertIn(
+                    "fixture contains forbidden URL value outside source_catalog[].url at",
+                    stderr.getvalue(),
+                )
+
+        relative_key = r"relative\profile.json"
+        relative_bundle = self.fixture("scenario-a.json")
+        relative_bundle[relative_key] = "https://evil.example"
+        self.assertIn(
+            f"fixture contains forbidden URL value outside source_catalog[].url at {relative_key}",
+            validator.validate_fixture_bundle(relative_bundle),
+        )
+        nested_relative_key = "foo/opt/data/profile.json"
+        nested_relative_bundle = self.fixture("scenario-a.json")
+        nested_relative_bundle[nested_relative_key] = "https://evil.example"
+        self.assertIn(
+            f"fixture contains forbidden URL value outside source_catalog[].url at {nested_relative_key}",
+            validator.validate_fixture_bundle(nested_relative_bundle),
+        )
+
     def test_fixture_requires_non_mapping_profile_origin(self) -> None:
         bundle = self.fixture("scenario-a.json")
         bundle["real_profile_mapping"] = "mapping_retained"
@@ -562,6 +618,129 @@ class LinkedInReportFixtureTests(unittest.TestCase):
         bundle = self.fixture("scenario-a.json")
         bundle["synthetic_fact_catalog"].append(copy.deepcopy(bundle["synthetic_fact_catalog"][0]))
         self.assertIn("synthetic_fact_catalog has duplicate fact_id: FACT-JSC1-READY", validator.validate_fixture_bundle(bundle))
+
+    def test_duplicate_reference_diagnostics_redact_untrusted_values_api_and_cli(self) -> None:
+        sentinels = (
+            "/etc/passwd",
+            "/opt/data/profile.json",
+            r"D:\work\candidate\profile.json",
+            r"\\server\share\profile.json",
+            "ordinary\x1b[31mINJECTED\nLINE",
+        )
+        report = FIXTURE_ROOT / "scenario-a-es.md"
+        for sentinel in sentinels:
+            cases = (
+                (
+                    ("priorities", 0, "evidence_ids"),
+                    "priorities[0].evidence_ids has duplicate evidence_id: <redacted-value>",
+                ),
+                (
+                    ("copy_blocks", 0, "fact_ids"),
+                    "copy_blocks[0].fact_ids has duplicate fact_id: <redacted-value>",
+                ),
+                (
+                    ("copy_blocks", 0, "evidence_ids"),
+                    "copy_blocks[0].evidence_ids has duplicate evidence_id: <redacted-value>",
+                ),
+            )
+            for path, expected in cases:
+                with self.subTest(sentinel=sentinel, path=path):
+                    bundle = self.fixture("scenario-a.json")
+                    bundle[path[0]][path[1]][path[2]] = [sentinel, sentinel]
+                    api_errors = validator.validate_fixture_bundle(bundle)
+                    self.assertIn(expected, api_errors)
+                    self.assertNotIn(sentinel, "\n".join(api_errors))
+
+                    with tempfile.TemporaryDirectory() as temporary:
+                        bundle_path = Path(temporary) / "duplicate.json"
+                        bundle_path.write_text(json.dumps(bundle), encoding="utf-8")
+                        stdout = io.StringIO()
+                        stderr = io.StringIO()
+                        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                            result = validator._cli([str(report), str(bundle_path)])
+                    self.assertNotEqual(0, result)
+                    self.assertIn(expected, stderr.getvalue())
+                    self.assertNotIn(sentinel, stderr.getvalue())
+
+    def test_duplicate_source_and_fact_id_diagnostics_redact_untrusted_values(self) -> None:
+        sentinels = (
+            "/etc/passwd",
+            "/opt/data/profile.json",
+            r"D:\work\candidate\profile.json",
+            r"\\server\share\profile.json",
+            "ordinary\x1b[31mINJECTED\nLINE",
+        )
+        for sentinel in sentinels:
+            with self.subTest(sentinel=sentinel, kind="source"):
+                source_bundle = self.fixture("scenario-a.json")
+                source_bundle["source_catalog"][0]["source_id"] = sentinel
+                source_bundle["source_catalog"][1]["source_id"] = sentinel
+                source_errors = validator.validate_fixture_bundle(source_bundle)
+                self.assertIn(
+                    "source_catalog has duplicate source_id: <redacted-value>",
+                    source_errors,
+                )
+                self.assertNotIn(sentinel, "\n".join(source_errors))
+
+            with self.subTest(sentinel=sentinel, kind="fact"):
+                fact_bundle = self.fixture("scenario-a.json")
+                fact = copy.deepcopy(fact_bundle["synthetic_fact_catalog"][0])
+                fact["fact_id"] = sentinel
+                fact_bundle["synthetic_fact_catalog"].append(copy.deepcopy(fact))
+                fact_bundle["synthetic_fact_catalog"][0]["fact_id"] = sentinel
+                fact_errors = validator.validate_fixture_bundle(fact_bundle)
+                self.assertIn(
+                    "synthetic_fact_catalog has duplicate fact_id: <redacted-value>",
+                    fact_errors,
+                )
+                self.assertNotIn(sentinel, "\n".join(fact_errors))
+
+    def test_source_diagnostics_redact_untrusted_ids_and_categories_api_and_cli(self) -> None:
+        sentinels = (
+            "/etc/passwd",
+            "/opt/data/profile.json",
+            r"D:\work\candidate\profile.json",
+            r"\\server\share\profile.json",
+            "ordinary\x1b[31mINJECTED\nLINE",
+        )
+        report = FIXTURE_ROOT / "scenario-a-es.md"
+        for sentinel in sentinels:
+            cases = (
+                (
+                    "source_id",
+                    "source <redacted-value> resolved stale and must degrade to COACH_HEURISTIC or BLOCK_CLAIM",
+                ),
+                (
+                    "source_category",
+                    "source_catalog[0] official URL is not registered for source_category <redacted-value>",
+                ),
+            )
+            for field, expected in cases:
+                with self.subTest(sentinel=sentinel, field=field):
+                    bundle = self.fixture("scenario-a.json")
+                    source = bundle["source_catalog"][0]
+                    source[field] = sentinel
+                    if field == "source_id":
+                        source["access_date"] = "2020-01-01"
+                        source["fallback"] = "bad"
+
+                    api_errors = validator.validate_fixture_bundle(bundle)
+                    api_text = "\n".join(api_errors)
+                    self.assertNotIn(sentinel, api_text)
+                    self.assertNotIn("\x1b", api_text)
+                    self.assertIn(expected, api_text)
+
+                    with tempfile.TemporaryDirectory() as temporary:
+                        bundle_path = Path(temporary) / "source-sentinel.json"
+                        bundle_path.write_text(json.dumps(bundle), encoding="utf-8")
+                        stdout = io.StringIO()
+                        stderr = io.StringIO()
+                        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                            result = validator._cli([str(report), str(bundle_path)])
+                    self.assertNotEqual(0, result)
+                    self.assertNotIn(sentinel, stderr.getvalue())
+                    self.assertNotIn("\x1b", stderr.getvalue())
+                    self.assertIn(expected, stderr.getvalue())
 
     def test_fixture_rejects_references_to_nonexistent_facts(self) -> None:
         bundle = self.fixture("scenario-a.json")

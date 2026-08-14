@@ -48,11 +48,14 @@ _UNLABELLED_PERSON_INTRO = re.compile(
     r"(?:^|[:.!?]\s+)"
     r"(?!(?i:senior|principal|lead|staff|software|platform|data|product|engineering|"
     r"cloud|security|technical|solutions|project|program|people|talent|customer|"
-    r"account|enterprise|sales|marketing|finance|operations|strategy|user|ux|ui)\s+)"
-    r"[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ'-]+\s+"
-    r"[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ'-]+\s+"
-    r"(?i:reports?|describes?|works?|has|joined|explains?|reported|reporta|"
-    r"describe|trabaja|tiene|explica|menciona|coment[aoó]?)\b"
+    r"account|enterprise|sales|marketing|finance|operations|strategy|user|ux|ui|"
+    r"oracle\s+cloud)\s+)"
+    r"[A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'-]+"
+    r"(?:\s+(?:(?i:de\s+la|de\s+las|de\s+los|de|del|da|das|do|dos|la|las|los|van|von|y)\s+)?"
+    r"[A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'-]+){1,3}\s+"
+    r"(?i:reports?|describes?|works?|has|joined|deliver(?:s|ed)?|explains?|reported|"
+    r"reporta|describe|trabaja|tiene|entreg[aoó]|explica|explic[óo]|reduce|reduj[oe]|"
+    r"lider[óo]|construy[óo]|implement[óo]|diseñ[óo]|menciona|coment[aoó]?)\b"
 )
 
 
@@ -69,8 +72,13 @@ def is_safe_handoff_text(value: object, maximum: int) -> bool:
     )
 
 
+def has_unlabelled_person_intro(value: object) -> bool:
+    """Return whether prose begins a sentence with an ordinary person name."""
+    return isinstance(value, str) and _UNLABELLED_PERSON_INTRO.search(
+        unicodedata.normalize("NFKC", value)
+    ) is not None
+
+
 def is_identity_free_handoff_text(value: object, maximum: int) -> bool:
     """Return whether projected source-fact prose contains no bare person intro."""
-    return is_safe_handoff_text(value, maximum) and _UNLABELLED_PERSON_INTRO.search(
-        unicodedata.normalize("NFKC", value)
-    ) is None
+    return is_safe_handoff_text(value, maximum) and not has_unlabelled_person_intro(value)

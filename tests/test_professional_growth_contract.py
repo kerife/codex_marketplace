@@ -76,7 +76,12 @@ class ProfessionalGrowthContractTests(unittest.TestCase):
                 self.assertIn(marker, combined)
 
     def test_python311_can_import_the_linkedin_validator(self) -> None:
-        locked_python = REPO_ROOT / ".release-validation-venv" / "bin" / "python"
+        locked_python = Path(
+            os.environ.get(
+                "VALIDATION_PYTHON",
+                REPO_ROOT / ".release-validation-venv" / "bin" / "python",
+            )
+        )
         self.assertTrue(locked_python.is_file(), f"missing locked interpreter: {locked_python}")
         scripts = PLUGIN_ROOT / "scripts"
         result = subprocess.run(

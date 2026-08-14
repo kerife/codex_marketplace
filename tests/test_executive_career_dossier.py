@@ -639,6 +639,75 @@ class ExecutiveCareerDossierSchemaTests(unittest.TestCase):
                 errors = self.validate_dossier(dossier)
                 self.assertTrue(any(fragment in error for error in errors), errors)
 
+    def test_evidence_paraphrase_rejects_ordinary_unlabelled_identity(self) -> None:
+        unsafe = mutate_path(
+            self.es_dossier,
+            ("evidence", 0, "paraphrase"),
+            "Ana López delivered Kubernetes reliability automation.",
+        )
+        errors = self.validate_dossier(unsafe)
+        self.assertTrue(
+            any("unlabelled candidate identity" in error for error in errors),
+            errors,
+        )
+
+    def test_evidence_paraphrase_keeps_safe_technical_control(self) -> None:
+        safe = mutate_path(
+            self.es_dossier,
+            ("evidence", 0, "paraphrase"),
+            "Kubernetes reliability automation reduced repetitive deployment work.",
+        )
+        self.assertEqual(self.validate_dossier(safe), [])
+
+    def test_evidence_paraphrase_rejects_common_unlabelled_identity_verbs_and_diacritics(self) -> None:
+        rejected = (
+            "Ana López redujo trabajo repetitivo.",
+            "Ana López lideró automatización.",
+            "Ana López construyó automatización.",
+            "Ana López implementó automatización.",
+            "Ana López diseñó automatización.",
+            "Álvaro Pérez explicó el incidente.",
+            "Jörg Müller delivered reliability automation.",
+            "Contexto seguro. Ana López implementó automatización.",
+        )
+        for text in rejected:
+            with self.subTest(text=text):
+                dossier = mutate_path(self.es_dossier, ("evidence", 0, "paraphrase"), text)
+                errors = self.validate_dossier(dossier)
+                self.assertTrue(
+                    any("unlabelled candidate identity" in error for error in errors),
+                    errors,
+                )
+
+    def test_evidence_paraphrase_rejects_multi_token_and_particle_unlabelled_identities(self) -> None:
+        rejected = (
+            "Ana María López delivered reliability automation.",
+            "Ana de la Cruz delivered reliability automation.",
+            "José Luis García delivered reliability automation.",
+            "Contexto seguro. Ana María López delivered reliability automation.",
+        )
+        for text in rejected:
+            with self.subTest(text=text):
+                dossier = mutate_path(self.es_dossier, ("evidence", 0, "paraphrase"), text)
+                errors = self.validate_dossier(dossier)
+                self.assertTrue(
+                    any("unlabelled candidate identity" in error for error in errors),
+                    errors,
+                )
+
+    def test_evidence_paraphrase_preserves_non_person_subject_and_role_controls(self) -> None:
+        accepted = (
+            "Kubernetes reliability automation reduced repetitive deployment work.",
+            "Senior Engineer coordinates incident response.",
+            "Platform Engineering covers incident response scope.",
+            "El equipo implementó automatización.",
+            "Oracle Cloud delivers reliability automation.",
+        )
+        for text in accepted:
+            with self.subTest(text=text):
+                dossier = mutate_path(self.es_dossier, ("evidence", 0, "paraphrase"), text)
+                self.assertEqual(self.validate_dossier(dossier), [])
+
     def test_confirmation_copy_requires_one_linked_question(self) -> None:
         mutated = copy.deepcopy(self.es_dossier)
         mutated["questions"] = []
@@ -2141,6 +2210,21 @@ class ExecutiveCareerDossierRendererTests(unittest.TestCase):
         )
         with self.assertRaises(self.renderer.DossierValidationError):
             self.renderer.render_dossier_html(dossier)
+
+    def test_renderer_rejects_ordinary_unlabelled_identity_before_rendering(self) -> None:
+        marker = "Ana López delivered Kubernetes reliability automation."
+        dossier = mutate_path(
+            self.es_dossier,
+            ("evidence", 0, "paraphrase"),
+            marker,
+        )
+        with self.assertRaises(self.renderer.DossierValidationError) as context:
+            self.renderer.render_dossier_html(dossier)
+        self.assertTrue(
+            any("unlabelled candidate identity" in error for error in context.exception.errors),
+            context.exception.errors,
+        )
+        self.assertNotIn("Ana López", "\n".join(context.exception.errors))
 
     def test_artifact_has_no_remote_dependency_or_runtime_ledger(self) -> None:
         rendered = self.renderer.render_dossier_html(self.es_dossier)

@@ -170,7 +170,7 @@ _SUSPICIOUS_DIAGNOSTIC_FIELD = re.compile(
     re.IGNORECASE,
 )
 _ABSOLUTE_PATH_DIAGNOSTIC_FIELD = re.compile(
-    r"^(?:[A-Za-z]:[\\/]|\\\\|//|/(?:users|private|tmp|home|var|opt|applications|volumes|root|srv|usr)(?:/|$))",
+    r"^(?:[A-Za-z]:[\\/]|\\\\|//|/)",
     re.IGNORECASE,
 )
 FORBIDDEN_PLACEHOLDERS = frozenset({"x", "criteria", "generic", "tbd"})
@@ -1013,7 +1013,10 @@ def parse_score_table(parsed: ParsedClientReport) -> tuple[ReportDomainScore, ..
             raise ValueError("score table rows must contain exactly five columns")
         domain_label, state_label, score_text, evidence_text, reason = cells
         if domain_label not in domains:
-            raise ValueError("score table has unknown dimension")
+            raise ValueError(
+                "score table has unknown dimension: "
+                f"{_safe_diagnostic_field_name(domain_label)}"
+            )
         if state_label not in states:
             raise ValueError(f"score table has invalid state for {domains[domain_label]}")
         if score_text == "—":
@@ -1078,7 +1081,7 @@ def parse_copy_blocks(parsed: ParsedClientReport) -> tuple[ReportCopyBlock, ...]
         if heading not in allowed_headings:
             raise ValueError(
                 "copy section has unexpected H3: "
-                f"{_escape_diagnostic_controls(heading)}"
+                f"{_safe_diagnostic_field_name(heading)}"
             )
     copies: list[ReportCopyBlock] = []
     for heading, body in blocks:
@@ -2171,6 +2174,13 @@ def _safe_diagnostic_identifier(value: object) -> str:
     ):
         return value
     return "<redacted-value>"
+
+
+def _safe_source_category(value: object) -> str:
+    """Keep canonical source categories readable without echoing invalid input."""
+    if isinstance(value, str) and value in SOURCE_CATEGORIES:
+        return value
+    return _safe_diagnostic_identifier(value)
 
 
 def _validate_decisions(parsed: ParsedClientReport, bundle: Mapping[str, object]) -> list[str]:
@@ -3447,14 +3457,9 @@ def _validate_sources(
                     f"{label} official URL cannot include a sensitive query or fragment"
                 )
             if not registered_official_url and isinstance(source_category, str):
-                category_suffix = (
-                    f" {source_category}"
-                    if source_category in SOURCE_CATEGORIES
-                    else ""
-                )
                 errors.append(
-                    f"{label} official URL is not registered for source_category"
-                    f"{category_suffix}"
+                    f"{label} official URL is not registered for source_category "
+                    f"{_safe_source_category(source_category)}"
                 )
         elif source_class == "secondary":
             secondary_url_error = _secondary_source_url_error(source["url"])

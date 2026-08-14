@@ -10,6 +10,10 @@ from collections.abc import Mapping
 
 MAX_SCHEMA_VALIDATION_DEPTH = 64
 SCHEMA_DEPTH_ERROR = "schema validation exceeds safe depth limit"
+MAX_SCHEMA_EVALUATIONS = 4_096
+SCHEMA_EVALUATION_LIMIT_ERROR = "schema validation exceeds safe evaluation limit"
+SCHEMA_KEYWORD_INVALID_ERROR = "schema keyword is invalid"
+SCHEMA_PATTERN_INVALID_ERROR = "schema pattern is invalid"
 MAX_SCHEMA_PATTERN_LENGTH = 1_024
 SCHEMA_PATTERN_COMPLEXITY_ERROR = "pattern exceeds safe complexity limit"
 _NESTED_QUANTIFIER = re.compile(
@@ -25,6 +29,39 @@ _SUSPICIOUS_FIELD = re.compile(
     r"(?:token|secret|password|credential|api[_-]?key|access[_-]?key|auth|cookie|private)",
     re.IGNORECASE | re.VERBOSE,
 )
+
+
+def _keyword_shapes_valid(schema: Mapping[str, object]) -> bool:
+    if "properties" in schema and not isinstance(schema["properties"], Mapping):
+        return False
+    for keyword in ("required", "enum"):
+        if keyword in schema and not isinstance(schema[keyword], list):
+            return False
+    for keyword in ("minimum", "maximum"):
+        value = schema.get(keyword)
+        if value is not None and (
+            not isinstance(value, (int, float)) or isinstance(value, bool)
+        ):
+            return False
+    for keyword in ("minLength", "maxLength", "minItems", "maxItems"):
+        value = schema.get(keyword)
+        if value is not None and (
+            not isinstance(value, int) or isinstance(value, bool) or value < 0
+        ):
+            return False
+    if "pattern" in schema and not isinstance(schema["pattern"], str):
+        return False
+    return True
+
+
+def _pattern_error(pattern: str) -> str | None:
+    if len(pattern) > MAX_SCHEMA_PATTERN_LENGTH or _NESTED_QUANTIFIER.search(pattern):
+        return SCHEMA_PATTERN_COMPLEXITY_ERROR
+    try:
+        re.compile(pattern)
+    except re.error:
+        return SCHEMA_PATTERN_INVALID_ERROR
+    return None
 
 
 def _escape_diagnostic_controls(value: str) -> str:
@@ -66,8 +103,12 @@ def _type_ok(value: object, expected: object) -> bool:
     }.get(expected, True)
 
 
-def _json_equal(left: object, right: object) -> bool:
+def _json_equal(
+    left: object, right: object, seen: set[tuple[int, int]] | None = None
+) -> bool:
     """Compare JSON values without Python's bool/int equality quirk."""
+    if seen is None:
+        seen = set()
     if isinstance(left, bool) or isinstance(right, bool):
         return isinstance(left, bool) and isinstance(right, bool) and left == right
     if isinstance(left, (int, float)) and isinstance(right, (int, float)):
@@ -75,12 +116,20 @@ def _json_equal(left: object, right: object) -> bool:
     if type(left) is not type(right):
         return False
     if isinstance(left, list) and isinstance(right, list):
+        pair = (id(left), id(right))
+        if pair in seen:
+            return True
+        seen.add(pair)
         return len(left) == len(right) and all(
-            _json_equal(item, other) for item, other in zip(left, right)
+            _json_equal(item, other, seen) for item, other in zip(left, right)
         )
     if isinstance(left, Mapping) and isinstance(right, Mapping):
+        pair = (id(left), id(right))
+        if pair in seen:
+            return True
+        seen.add(pair)
         return set(left) == set(right) and all(
-            _json_equal(left[key], right[key]) for key in left
+            _json_equal(left[key], right[key], seen) for key in left
         )
     return left == right
 
@@ -93,19 +142,66 @@ def _validate(
     *,
     collect: bool = True,
     _depth: int = 0,
+    budget: list[int] | None = None,
+    active_ref_targets: set[int] | None = None,
 ) -> list[str]:
     if _depth > MAX_SCHEMA_VALIDATION_DEPTH:
         return [SCHEMA_DEPTH_ERROR]
+    if budget is None:
+        budget = [MAX_SCHEMA_EVALUATIONS]
+    if active_ref_targets is None:
+        active_ref_targets = set()
+    if not isinstance(schema, Mapping):
+        return ["schema branch is invalid"]
+    if not _keyword_shapes_valid(schema):
+        return [SCHEMA_KEYWORD_INVALID_ERROR]
+    if "pattern" in schema:
+        pattern_error = _pattern_error(schema["pattern"])
+        if pattern_error is not None:
+            if pattern_error == SCHEMA_PATTERN_COMPLEXITY_ERROR:
+                return [f"{path}: {pattern_error}"]
+            return [pattern_error]
+    for combinator in ("oneOf", "anyOf", "allOf"):
+        if combinator in schema:
+            branches = schema[combinator]
+            if not isinstance(branches, list) or any(
+                not isinstance(branch, Mapping) for branch in branches
+            ):
+                return ["schema branch is invalid"]
+    for branch_name in ("if", "then", "else", "not"):
+        if branch_name in schema and not isinstance(schema[branch_name], Mapping):
+            return ["schema branch is invalid"]
+    if budget[0] <= 0:
+        return [SCHEMA_EVALUATION_LIMIT_ERROR]
+    budget[0] -= 1
     errors: list[str] = []
     if "$ref" in schema:
-        return _validate(
-            value,
-            _pointer(root, str(schema["$ref"])),
-            root,
-            path,
-            collect=collect,
-            _depth=_depth + 1,
-        )
+        reference = schema["$ref"]
+        if not isinstance(reference, str):
+            return ["schema reference is invalid"]
+        try:
+            target = _pointer(root, reference)
+        except (KeyError, TypeError, AttributeError, IndexError):
+            return ["schema reference is invalid"]
+        if not isinstance(target, Mapping):
+            return ["schema reference is invalid"]
+        target_identity = id(target)
+        if target_identity in active_ref_targets:
+            return [SCHEMA_EVALUATION_LIMIT_ERROR]
+        active_ref_targets.add(target_identity)
+        try:
+            return _validate(
+                value,
+                target,
+                root,
+                path,
+                collect=collect,
+                _depth=_depth + 1,
+                budget=budget,
+                active_ref_targets=active_ref_targets,
+            )
+        finally:
+            active_ref_targets.remove(target_identity)
     if "type" in schema and not _type_ok(value, schema["type"]):
         return [f"{path}: type mismatch"]
     if "const" in schema and not _json_equal(value, schema["const"]):
@@ -120,10 +216,7 @@ def _validate(
         if "maximum" in schema and value > schema["maximum"]:
             errors.append(f"{path}: number above maximum")
     if "pattern" in schema and isinstance(value, str):
-        pattern = str(schema["pattern"])
-        if len(pattern) > MAX_SCHEMA_PATTERN_LENGTH or _NESTED_QUANTIFIER.search(pattern):
-            errors.append(f"{path}: {SCHEMA_PATTERN_COMPLEXITY_ERROR}")
-        elif re.search(pattern, value) is None:
+        if re.search(schema["pattern"], value) is None:
             errors.append(f"{path}: pattern mismatch")
     if isinstance(value, str):
         if "minLength" in schema and len(value) < schema["minLength"]:
@@ -145,12 +238,21 @@ def _validate(
             )
         for key in schema.get("required", []):
             if key not in value:
-                errors.append(f"{path}: missing required field {key}")
+                errors.append(
+                    f"{path}: missing required field {_safe_diagnostic_field_name(key)}"
+                )
         for key, child_schema in properties.items():
             if key in value:
+                safe_key = _safe_diagnostic_field_name(key)
                 errors.extend(
                     _validate(
-                        value[key], child_schema, root, f"{path}.{key}", _depth=_depth + 1
+                        value[key],
+                        child_schema,
+                        root,
+                        f"{path}.{safe_key}",
+                        _depth=_depth + 1,
+                        budget=budget,
+                        active_ref_targets=active_ref_targets,
                     )
                 )
     if isinstance(value, list):
@@ -164,7 +266,13 @@ def _validate(
             for index, child in enumerate(value):
                 errors.extend(
                     _validate(
-                        child, schema["items"], root, f"{path}[{index}]", _depth=_depth + 1
+                        child,
+                        schema["items"],
+                        root,
+                        f"{path}[{index}]",
+                        _depth=_depth + 1,
+                        budget=budget,
+                        active_ref_targets=active_ref_targets,
                     )
                 )
         if "contains" in schema and not any(
@@ -174,27 +282,61 @@ def _validate(
                 root,
                 f"{path}[{index}]",
                 _depth=_depth + 1,
+                budget=budget,
+                active_ref_targets=active_ref_targets,
             )
             for index, child in enumerate(value)
         ):
             errors.append(f"{path}: contains mismatch")
     for branch in schema.get("allOf", []):
-        errors.extend(_validate(value, branch, root, path, _depth=_depth + 1))
+        errors.extend(
+            _validate(
+                value,
+                branch,
+                root,
+                path,
+                _depth=_depth + 1,
+                budget=budget,
+                active_ref_targets=active_ref_targets,
+            )
+        )
     if "oneOf" in schema:
         matches = sum(
-            not _validate(value, branch, root, path, _depth=_depth + 1)
+            not _validate(
+                value,
+                branch,
+                root,
+                path,
+                _depth=_depth + 1,
+                budget=budget,
+                active_ref_targets=active_ref_targets,
+            )
             for branch in schema["oneOf"]
         )
         if matches != 1:
             errors.append(f"{path}: oneOf mismatch")
     if "anyOf" in schema:
         if not any(
-            not _validate(value, branch, root, path, _depth=_depth + 1)
+            not _validate(
+                value,
+                branch,
+                root,
+                path,
+                _depth=_depth + 1,
+                budget=budget,
+                active_ref_targets=active_ref_targets,
+            )
             for branch in schema["anyOf"]
         ):
             errors.append(f"{path}: anyOf mismatch")
     if "not" in schema and not _validate(
-        value, schema["not"], root, path, _depth=_depth + 1
+        value,
+        schema["not"],
+        root,
+        path,
+        _depth=_depth + 1,
+        budget=budget,
+        active_ref_targets=active_ref_targets,
     ):
         errors.append(f"{path}: not mismatch")
     if "if" in schema:
@@ -206,12 +348,24 @@ def _validate(
                 path,
                 collect=False,
                 _depth=_depth + 1,
+                budget=budget,
+                active_ref_targets=active_ref_targets,
             )
             == []
         )
         branch = schema.get("then", {}) if condition_matches else schema.get("else", {})
         if branch:
-            errors.extend(_validate(value, branch, root, path, _depth=_depth + 1))
+            errors.extend(
+                _validate(
+                    value,
+                    branch,
+                    root,
+                    path,
+                    _depth=_depth + 1,
+                    budget=budget,
+                    active_ref_targets=active_ref_targets,
+                )
+            )
     return errors
 
 
@@ -219,4 +373,8 @@ def validate_schema_instance(
     value: object, schema: Mapping[str, object]
 ) -> list[str]:
     """Return bounded schema errors for the supported keyword subset."""
-    return sorted(set(_validate(value, schema, schema, "$")))
+    budget = [MAX_SCHEMA_EVALUATIONS]
+    errors = _validate(value, schema, schema, "$", budget=budget)
+    if budget[0] <= 0:
+        errors.append(SCHEMA_EVALUATION_LIMIT_ERROR)
+    return sorted(set(errors))

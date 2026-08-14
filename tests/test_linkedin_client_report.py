@@ -1021,11 +1021,13 @@ class LinkedInClientReportDecisionTests(unittest.TestCase):
     def test_untrusted_priority_code_and_heading_escape_controls(self) -> None:
         report = self.report("scenario-a-es.md")
         priority_mutant = self.replace_once(report, "GAP-A-PRIMARY", "Profile\x1b[31m improve")
-        priority_errors = "\n".join(
-            validator.validate_client_report(priority_mutant, self.bundle("scenario-a.json"))
+        priority_errors = validator.validate_client_report(
+            priority_mutant, self.bundle("scenario-a.json")
         )
-        self.assertNotIn("\x1b", priority_errors)
-        self.assertIn(r"Profile\u001b[31m improve", priority_errors)
+        rendered = "\n".join(priority_errors)
+        self.assertIn("generic priority code is not allowed", priority_errors)
+        self.assertNotIn("Profile", rendered)
+        self.assertNotIn("\x1b", rendered)
 
         heading_mutant = self.replace_once(report, "### Titular", "### Profile\x1b[31msummary")
         heading_errors = "\n".join(
@@ -1574,6 +1576,128 @@ class LinkedInClientReportDecisionTests(unittest.TestCase):
                 )
                 self.assertNotIn(sensitive, "\n".join(errors))
                 self.assertIn(expected, errors)
+
+    def test_untrusted_parser_and_generic_diagnostics_redact_api_and_cli(self) -> None:
+        sentinels = (
+            "/etc/passwd",
+            "/opt/data/profile.json",
+            r"D:\work\candidate\profile.json",
+            r"\\server\share\profile.json",
+            "ordinary\x1b[31mINJECTED\nLINE",
+        )
+        baseline = self.report("scenario-a-es.md")
+        for sentinel in sentinels:
+            cases = (
+                (
+                    "| Identidad visual | Evaluada | 60 |",
+                    f"| {sentinel} | Evaluada | 60 |",
+                    "score table has unknown dimension:",
+                ),
+                (
+                    "### Titular",
+                    f"### {sentinel}",
+                    "copy section has unexpected H3:",
+                ),
+                (
+                    "- Acción: `ACTION-A-HEADLINE`",
+                    f"- Acción: `{sentinel}/profile/improve`",
+                    "generic priority code is not allowed",
+                ),
+            )
+            for old, new, expected in cases:
+                with self.subTest(sentinel=sentinel, expected=expected):
+                    if "\n" in sentinel:
+                        if expected == "score table has unknown dimension:":
+                            expected = "score table rows must contain exactly five columns"
+                        elif expected == "generic priority code is not allowed":
+                            expected = "priority 1 does not match fixture action_type"
+                    report = self.replace_once(baseline, old, new)
+                    errors = validator.validate_client_report(
+                        report, self.bundle("scenario-a.json")
+                    )
+                    rendered = "\n".join(errors)
+                    self.assertIn(expected, rendered)
+                    self.assertNotIn(sentinel, rendered)
+                    self.assertNotIn("\x1b", rendered)
+
+                    with tempfile.TemporaryDirectory() as temporary:
+                        report_path = Path(temporary) / "parser-sentinel.md"
+                        report_path.write_text(report, encoding="utf-8")
+                        result = subprocess.run(
+                            [
+                                sys.executable,
+                                "-B",
+                                str(VALIDATOR_PATH),
+                                str(report_path),
+                                str(FIXTURE_ROOT / "scenario-a.json"),
+                            ],
+                            capture_output=True,
+                            text=True,
+                            check=False,
+                        )
+                    self.assertEqual(2, result.returncode)
+                    self.assertIn(expected, result.stderr)
+                    self.assertNotIn(sentinel, result.stderr)
+                    self.assertNotIn("\x1b", result.stderr)
+
+    def test_report_duplicate_reference_diagnostics_redact_untrusted_values_api_and_cli(self) -> None:
+        sentinels = (
+            "/etc/passwd",
+            "/opt/data/profile.json",
+            r"D:\work\candidate\profile.json",
+            r"\\server\share\profile.json",
+        )
+        baseline = self.report("scenario-a-es.md")
+        for sentinel in sentinels:
+            cases = (
+                (
+                    "- Evidencia: `EVID-JSC1-PRIORITY-1`",
+                    f"- Evidencia: `{sentinel}`, `{sentinel}`",
+                    "priority 1 has duplicate evidence <redacted-value>",
+                ),
+                (
+                    "- Hechos: `FACT-JSC1-READY`",
+                    f"- Hechos: `{sentinel}`, `{sentinel}`",
+                    "copy headline has duplicate fact <redacted-value>",
+                ),
+                (
+                    "- Evidencia: `EVID-JSC1-HEADLINE`",
+                    f"- Evidencia: `{sentinel}`, `{sentinel}`",
+                    "copy headline has duplicate evidence <redacted-value>",
+                ),
+                (
+                    "- Claims: `RELIABILITY`, `TECHNICAL_SCOPE`",
+                    f"- Claims: `{sentinel}`, `{sentinel}`",
+                    "copy headline has duplicate claim <redacted-value>",
+                ),
+            )
+            for old, new, expected in cases:
+                with self.subTest(sentinel=sentinel, expected=expected):
+                    report = self.replace_once(baseline, old, new)
+                    errors = validator.validate_client_report(
+                        report, self.bundle("scenario-a.json")
+                    )
+                    self.assertIn(expected, errors)
+                    self.assertNotIn(sentinel, "\n".join(errors))
+
+                    with tempfile.TemporaryDirectory() as temporary:
+                        report_path = Path(temporary) / "report.md"
+                        report_path.write_text(report, encoding="utf-8")
+                        result = subprocess.run(
+                            [
+                                sys.executable,
+                                "-B",
+                                str(VALIDATOR_PATH),
+                                str(report_path),
+                                str(FIXTURE_ROOT / "scenario-a.json"),
+                            ],
+                            capture_output=True,
+                            text=True,
+                            check=False,
+                        )
+                    self.assertEqual(2, result.returncode)
+                    self.assertIn(expected, result.stderr)
+                    self.assertNotIn(sentinel, result.stderr)
 
     def test_copy_section_rejects_unexpected_h3_blocks(self) -> None:
         extra = (
@@ -3032,7 +3156,7 @@ class LinkedInClientReportSafetyTests(unittest.TestCase):
                 source["source_category"] = sentinel
                 errors = validator.validate_fixture_bundle(bundle)
                 self.assertIn(
-                    "source_catalog[0] official URL is not registered for source_category",
+                    "source_catalog[0] official URL is not registered for source_category <redacted-value>",
                     errors,
                 )
                 self.assertNotIn(sentinel, "\n".join(errors))
@@ -4109,10 +4233,19 @@ class LinkedInClientReportScoreTests(unittest.TestCase):
 
     def test_score_parser_diagnostics_do_not_echo_arbitrary_dimension_labels(self) -> None:
         baseline = self.report("scenario-a-es.md")
-        for label in (
-            "/Users/private-candidate/profile.json",
-            "password=very-secret-value",
-            "ordinary" + chr(0x202E) + "INJECTED",
+        for label, expected in (
+            (
+                "/Users/private-candidate/profile.json",
+                "score table has unknown dimension: <redacted-field>",
+            ),
+            (
+                "password=very-secret-value",
+                "score table has unknown dimension: <redacted-field>",
+            ),
+            (
+                "ordinary" + chr(0x202E) + "INJECTED",
+                r"score table has unknown dimension: ordinary\u202eINJECTED",
+            ),
         ):
             with self.subTest(label=label):
                 report = baseline.replace(
@@ -4122,7 +4255,7 @@ class LinkedInClientReportScoreTests(unittest.TestCase):
                 )
                 errors = validator.validate_client_report(report, self.bundle("scenario-a.json"))
                 self.assertNotIn(label, "\n".join(errors))
-                self.assertIn("score table has unknown dimension", errors)
+                self.assertIn(expected, errors)
 
     def test_not_scored_dimensions_use_an_em_dash_and_are_excluded(self) -> None:
         self.assertTrue(hasattr(validator, "parse_score_table"))

@@ -492,6 +492,81 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         ):
             self.assertTrue(any(expected in error for error in validate_schema_instance(value, schema)), (value, expected))
 
+    def test_dependency_free_checker_bounds_nested_combinator_evaluations(self):
+        schema = {"const": "ok"}
+        for _ in range(13):
+            schema = {"oneOf": [schema, copy.deepcopy(schema)]}
+
+        errors = validate_schema_instance("not-ok", schema)
+
+        self.assertIn("schema validation exceeds safe evaluation limit", errors)
+
+    def test_dependency_free_checker_bounds_cyclic_schema_references(self):
+        schema = {"$defs": {}}
+        schema["$defs"]["loop"] = {"$ref": "#/$defs/loop"}
+        schema["$ref"] = "#/$defs/loop"
+
+        errors = validate_schema_instance({}, schema)
+
+        self.assertIn("schema validation exceeds safe evaluation limit", errors)
+
+    def test_dependency_free_checker_rejects_missing_schema_references(self):
+        errors = validate_schema_instance({}, {"$ref": "#/missing"})
+
+        self.assertIn("schema reference is invalid", errors)
+
+        errors = validate_schema_instance(
+            {}, {"$defs": {"scalar": "not a schema"}, "$ref": "#/$defs/scalar"}
+        )
+        self.assertIn("schema reference is invalid", errors)
+
+    def test_dependency_free_checker_rejects_non_object_combinator_branches(self):
+        malformed_schemas = (
+            {"oneOf": [None]},
+            {"anyOf": ["invalid"]},
+            {"allOf": [None]},
+            {"if": None},
+            {"not": None},
+        )
+        for schema in malformed_schemas:
+            with self.subTest(schema=schema):
+                errors = validate_schema_instance({}, schema)
+                self.assertIn("schema branch is invalid", errors)
+
+    def test_dependency_free_checker_rejects_malformed_keyword_shapes(self):
+        malformed_schemas = (
+            ({}, {"type": "object", "properties": None}),
+            ({}, {"type": "object", "required": None}),
+            ({}, {"enum": None}),
+            (1, {"type": "number", "minimum": "a"}),
+            ([1], {"type": "array", "minItems": "a"}),
+        )
+        for value, schema in malformed_schemas:
+            with self.subTest(schema=schema):
+                errors = validate_schema_instance(value, schema)
+                self.assertIn("schema keyword is invalid", errors)
+
+    def test_dependency_free_checker_rejects_invalid_regex_patterns(self):
+        for pattern in ("[", "(?", r"\K"):
+            with self.subTest(pattern=pattern):
+                errors = validate_schema_instance("x", {"pattern": pattern})
+                self.assertIn("schema pattern is invalid", errors)
+
+    def test_dependency_free_checker_rejects_nested_unbounded_regex(self):
+        errors = validate_schema_instance(
+            "a" * 22 + "!", {"type": "string", "pattern": "(a+)+$"}
+        )
+
+        self.assertEqual(["$: pattern exceeds safe complexity limit"], errors)
+
+    def test_dependency_free_checker_rejects_cyclic_json_values_without_recursion_error(self):
+        value = []
+        value.append(value)
+
+        errors = validate_schema_instance(value, {"const": value})
+
+        self.assertEqual([], errors)
+
     def test_dependency_free_checker_bounds_deep_values(self):
         value: object = "leaf"
         schema: object = {"type": "string"}
@@ -508,7 +583,7 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         schema = {"$defs": {"node": {"$ref": "#/$defs/node"}}, "$ref": "#/$defs/node"}
 
         self.assertEqual(
-            ["schema validation exceeds safe depth limit"],
+            ["schema validation exceeds safe evaluation limit"],
             validate_schema_instance("leaf", schema),
         )
 
