@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import calendar
 import datetime as dt
 import hashlib
 import importlib.util
@@ -99,6 +100,13 @@ def _date(value: object) -> dt.date | None:
         return dt.date.fromisoformat(value)
     except ValueError:
         return None
+
+
+def _months_before(value: dt.date, months: int) -> dt.date:
+    month_index = value.year * 12 + value.month - 1 - months
+    year, zero_based_month = divmod(month_index, 12)
+    month = zero_based_month + 1
+    return dt.date(year, month, min(value.day, calendar.monthrange(year, month)[1]))
 
 
 def _valid_text(value: object) -> bool:
@@ -232,6 +240,10 @@ def _validate_employers(root: Mapping[str, object], as_of: dt.date | None, error
         if isinstance(identifier, str) and normalized_name is not None: identities[identifier] = identity
         source_date, access_date = _date(employer.get("source_date")), _date(employer.get("access_date"))
         if source_date is None or access_date is None or (as_of is not None and (source_date > as_of or access_date != as_of)): errors.append("research has invalid employer dates")
+        elif as_of is not None:
+            qualification_type = employer.get("qualification_type")
+            if (qualification_type == "official_headcount" and source_date < _months_before(as_of, 18)) or (qualification_type == "official_index_membership" and source_date != access_date):
+                errors.append("employer qualification evidence is stale")
     if identifiers != {f"EMP-{index:03d}" for index in range(1, len(employers) + 1)}: errors.append("employer IDs must use the canonical sequence")
     return identities
 

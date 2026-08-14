@@ -150,6 +150,22 @@ class TargetVacancyResearchTests(unittest.TestCase):
             with self.subTest(diagnostic=diagnostic):
                 self.assert_invalid(value, diagnostic)
 
+    def test_employer_qualification_evidence_must_be_current(self) -> None:
+        headcount_boundary = self.complete()
+        headcount_boundary["employers"][0]["source_date"] = "2025-02-13"
+        self.assertEqual([], self.validator.validate_research(headcount_boundary))
+
+        stale_headcount = self.complete()
+        stale_headcount["employers"][0]["source_date"] = "2025-02-12"
+        self.assert_invalid(stale_headcount, "employer qualification evidence is stale")
+
+        current_membership = load_fixture("limited-four-en.json")
+        self.assertEqual([], self.validator.validate_research(current_membership))
+
+        stale_membership = load_fixture("limited-four-en.json")
+        stale_membership["employers"][0]["source_date"] = "2026-08-12"
+        self.assert_invalid(stale_membership, "employer qualification evidence is stale")
+
     def test_source_kind_url_rules_reject_unsafe_or_mismatched_sources(self) -> None:
         cases = []
         backup_host = self.complete()
