@@ -73,6 +73,13 @@ CANDIDATE_IDENTITY_VARIANTS = (
     "Candidate's profile Kevin Rios",
     "Candidate’s profile Kevin Rios",
     "CANDIDATA PERFIL JOSE\u0301 O’NEIL",
+    "Candidate Kevin Rios Engineer",
+    "Candidate Kevin Rios Architect",
+    "Candidate Kevin Rios Developer",
+    "Candidate Kevin Rios Manager",
+    "Candidate Kevin Rios Specialist",
+    "Candidate Kevin Rios SRE",
+    "Candidate Kevin Rios Cloud Platform Engineer",
 )
 ROLE_AND_PRODUCT_TITLE_CONTROLS = (
     "Candidate Experience Platform Engineer",
@@ -85,6 +92,12 @@ ROLE_AND_PRODUCT_TITLE_CONTROLS = (
     "O’Neil Cloud Platform Engineer",
     "Kevin Platform Candidate Experience",
     "CANDIDATO SEARCH INDEX PLATFORM ENGINEER",
+    "Candidate Cloud Architecture Architect",
+    "Candidate Platform Services Developer",
+    "Candidate Infrastructure Engineering Manager",
+    "Candidate Security Operations Specialist",
+    "Candidate Site Reliability SRE",
+    "Candidate Principal Cloud Platform Engineer",
 )
 
 
