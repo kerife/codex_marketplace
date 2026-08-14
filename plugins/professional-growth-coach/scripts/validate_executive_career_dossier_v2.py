@@ -40,7 +40,7 @@ V2_SCHEMA = json.loads(
     (Path(__file__).resolve().parents[1] / "schemas" / "executive-career-dossier-v2.schema.json").read_text(encoding="utf-8")
 )
 V2_HIRING_LANGUAGE = re.compile(r"\bemployers?\b[^.!?\n]{0,48}\bhir(?:e|ing)\b", re.I)
-V2_INTERNAL_CONTEXT_LINK = re.compile(r"\bconectar\b[^.!?\n]{0,48}\bcontexto\b", re.I)
+V2_SAFE_INTERNAL_WRITING_PHRASE = "la apertura describe responsabilidades sin conectar todavía contexto y resultado."
 
 SCHEMA_VERSION = "executive-career-dossier-v2"
 TOP_FIELDS = frozenset(set(_v1.TOP_FIELDS) | {"section_coverage"})
@@ -132,7 +132,7 @@ def _validate_v2_private_action(value: str, path: str, errors: list[str]) -> Non
     """Reuse the v1 action boundary while allowing a Spanish internal-writing phrase."""
     before = len(errors)
     _v1._validate_private_action(value, path, errors)
-    if len(errors) > before and V2_INTERNAL_CONTEXT_LINK.search(value):
+    if len(errors) > before and " ".join(value.casefold().split()) == V2_SAFE_INTERNAL_WRITING_PHRASE:
         del errors[before:]
 
 

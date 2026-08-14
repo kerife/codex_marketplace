@@ -400,6 +400,7 @@ class ExecutiveCareerDossierV2Tests(unittest.TestCase):
             for unsafe in (
                 "Consider publishing this on LinkedIn.",
                 "The next step is sending the message to the recruiter.",
+                "Conectar contexto y publicar esto en LinkedIn.",
             ):
                 with self.subTest(field=field, unsafe=unsafe):
                     dossier = make_v2_dossier()
@@ -407,6 +408,13 @@ class ExecutiveCareerDossierV2Tests(unittest.TestCase):
                     errors = self.validator.validate_dossier(dossier)
                     self.assertIn(f"priorities[0].{field} must remain a private review action", errors)
                     self.assertNotIn(unsafe, "\n".join(errors))
+
+    def test_exact_internal_writing_fixture_phrase_remains_valid(self) -> None:
+        dossier = make_v2_dossier()
+        dossier["priorities"][0]["coach_observation"] = (
+            "La apertura describe responsabilidades sin conectar todavía contexto y resultado."
+        )
+        self.assertEqual(self.validator.validate_dossier(dossier), [])
 
     def test_projection_deep_copy_isolation_survives_nested_mutation(self) -> None:
         source = make_v2_dossier()
@@ -637,7 +645,7 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         for field in ("coach_observation", "why_it_matters", "coach_prompt"):
             with self.subTest(field=field):
                 dossier = make_v2_dossier()
-                unsafe = "The next step is sending the message to the recruiter."
+                unsafe = "Conectar contexto y publicar esto en LinkedIn."
                 dossier["priorities"][0][field] = unsafe
                 with tempfile.TemporaryDirectory() as directory:
                     root = Path(directory)
@@ -649,10 +657,14 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                         cwd=REPO_ROOT, text=True, capture_output=True, check=False,
                     )
                     self.assertEqual(result.returncode, 2)
+                    self.assertIn(f"priorities[0].{field} must remain a private review action", result.stderr)
                     self.assertNotIn(unsafe, result.stderr)
-                    with self.assertRaises(self.renderer.DossierValidationError):
+                    with self.assertRaises(self.renderer.DossierValidationError) as context:
                         self.renderer.write_dossier_html(source, output)
                     self.assertFalse(output.exists())
+                errors = "\n".join(context.exception.errors)
+                self.assertIn(f"priorities[0].{field} must remain a private review action", errors)
+                self.assertNotIn(unsafe, errors)
 
     def test_market_placeholder_is_one_bounded_non_recommendation_state(self) -> None:
         for name in ("scenario-a-es.json", "scenario-c-en.json"):
