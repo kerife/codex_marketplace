@@ -4068,11 +4068,15 @@ class LinkedInClientReportCliTests(unittest.TestCase):
         self.assertNotIn(sentinel, result.stderr)
         self.assertNotIn("Traceback", result.stderr)
 
-    def test_cli_redacts_absolute_path_field_names(self) -> None:
+    def test_cli_redacts_absolute_path_field_names_and_prefix_bypasses(self) -> None:
         for sentinel in (
             r"D:\work\candidate\profile.json",
             r"\\server\share\profile.json",
             "/opt/data/profile.json",
+            " /etc/passwd",
+            "\u200e/etc/passwd",
+            "\tD:\\work\\candidate\\profile.json",
+            " \\\\server\\share\\profile.json",
         ):
             with self.subTest(sentinel=sentinel):
                 bundle = json.loads(self.BUNDLE_A.read_text(encoding="utf-8"))
@@ -4084,6 +4088,9 @@ class LinkedInClientReportCliTests(unittest.TestCase):
                 self.assertEqual(2, result.returncode)
                 self.assertIn("fixture has unsupported field: <redacted-field>", result.stderr)
                 self.assertNotIn(sentinel, result.stderr)
+                self.assertNotIn("/etc/passwd", result.stderr)
+                self.assertNotIn(r"D:\work\candidate\profile.json", result.stderr)
+                self.assertNotIn(r"\\server\share\profile.json", result.stderr)
 
     def test_cli_has_no_advisory_override_interface(self) -> None:
         result = self.run_cli(
@@ -4256,6 +4263,28 @@ class LinkedInClientReportScoreTests(unittest.TestCase):
                 errors = validator.validate_client_report(report, self.bundle("scenario-a.json"))
                 self.assertNotIn(label, "\n".join(errors))
                 self.assertIn(expected, errors)
+
+    def test_prefixed_absolute_path_fields_are_redacted_at_the_api_boundary(self) -> None:
+        for sentinel in (
+            " /etc/passwd",
+            "\u200e/etc/passwd",
+            "\tD:\\work\\candidate\\profile.json",
+            " \\\\server\\share\\profile.json",
+        ):
+            with self.subTest(sentinel=repr(sentinel)):
+                bundle = self.bundle("scenario-a.json")
+                bundle[sentinel] = "synthetic"
+                errors = validator.validate_client_report(
+                    self.report("scenario-a-es.md"), bundle
+                )
+                rendered = "\n".join(errors)
+                self.assertIn(
+                    "fixture has unsupported field: <redacted-field>", errors
+                )
+                self.assertNotIn(sentinel, rendered)
+                self.assertNotIn("/etc/passwd", rendered)
+                self.assertNotIn(r"D:\work\candidate\profile.json", rendered)
+                self.assertNotIn(r"\\server\share\profile.json", rendered)
 
     def test_not_scored_dimensions_use_an_em_dash_and_are_excluded(self) -> None:
         self.assertTrue(hasattr(validator, "parse_score_table"))

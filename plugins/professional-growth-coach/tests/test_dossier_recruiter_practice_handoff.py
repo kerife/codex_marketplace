@@ -506,6 +506,47 @@ class DossierRecruiterPracticeHandoffTests(unittest.TestCase):
             with self.subTest(accepted=value):
                 self.assertTrue(is_identity_free_handoff_text(value, 500))
 
+    def test_identity_free_guard_handles_round_four_unicode_boundaries_and_products(self):
+        person_intros = (
+            "Ana LÓPEZ managed reliability automation.",
+            "   Ana López managed reliability automation.",
+            "> Ana López managed reliability automation.",
+            "  > Ana López managed reliability automation.",
+            "أحمد-علي managed reliability automation.",
+            "عبد-الرحمن علي managed reliability automation.",
+            "ヤマダ タロウ managed reliability automation.",
+            "サトウ タロウ managed reliability automation.",
+            "María Fernanda Gabriela López García managed reliability automation.",
+            "María del Carmen Ana López García managed reliability automation.",
+            "Jean d’Arcy managed reliability automation.",
+            "Ana McDonald managed reliability automation.",
+            "Patrick O’Neill managed reliability automation.",
+            "Ana Manager managed reliability automation.",
+            "Franz Kafka managed reliability automation.",
+        )
+        for value in person_intros:
+            with self.subTest(rejected=value):
+                self.assertFalse(is_identity_free_handoff_text(value, 500))
+
+        technical_subjects = (
+            "AWS Lambda improved reliability.",
+            "Google BigQuery improved delivery.",
+            "HashiCorp Vault improved security.",
+            "SRE Platform improved reliability.",
+            "Prometheus Alertmanager improved reliability.",
+            "PostgreSQL Replication improved reliability.",
+            "Linux Kernel improved reliability.",
+            "Kafka Streams improved delivery.",
+            "Zero Trust improved security.",
+            "Google Kubernetes improved reliability.",
+            "Apache Kafka improved reliability.",
+            "Red Hat OpenShift improved delivery.",
+            "Microsoft Entra improved security.",
+        )
+        for value in technical_subjects:
+            with self.subTest(accepted=value):
+                self.assertTrue(is_identity_free_handoff_text(value, 500))
+
     def test_rejects_every_uri_scheme_and_local_path_in_each_vacancy_field(self):
         private_values = {
             "file_uri": "Detalles en file:///Users/Ana/private-cv.pdf",
@@ -901,6 +942,36 @@ class DossierRecruiterPracticeHandoffTests(unittest.TestCase):
                 )
                 self.assertNotIn(sentinel, rendered)
                 self.assertNotIn("\x1b", rendered)
+
+    def test_real_handoff_schema_consumer_redacts_prefixed_absolute_paths(self):
+        schema = json.loads(
+            (ROOT / "schemas/dossier-recruiter-practice-handoff-v1.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        handoff = copy.deepcopy(self.fixture["expected"])
+        sentinels = (
+            "  /etc/passwd",
+            "\t/opt/data/profile.json",
+            " \n" + r"D:\work\candidate\profile.json",
+            "\u200b" + r"\\server\share\profile.json",
+        )
+        for sentinel in sentinels:
+            with self.subTest(sentinel=sentinel, location="instance"):
+                mutated = copy.deepcopy(handoff)
+                mutated[sentinel] = "x"
+                errors = handoff_builder.validate_schema_instance(mutated, schema)
+                self.assertIn("$: unsupported field <redacted-field>", errors)
+                self.assertNotIn(sentinel, "\n".join(errors))
+
+            with self.subTest(sentinel=sentinel, location="required"):
+                required_schema = copy.deepcopy(schema)
+                required_schema["required"].append(sentinel)
+                errors = handoff_builder.validate_schema_instance(
+                    handoff, required_schema
+                )
+                self.assertIn("$: missing required field <redacted-field>", errors)
+                self.assertNotIn(sentinel, "\n".join(errors))
 
             with self.subTest(sentinel=sentinel, location="required"):
                 required_schema = copy.deepcopy(schema)

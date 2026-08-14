@@ -691,6 +691,8 @@ class ExecutiveCareerDossierSchemaTests(unittest.TestCase):
             "Context; Ana López managed reliability automation.",
             "Ana McDonald managed reliability automation.",
             "Patrick O’Neill managed reliability automation.",
+            "Ana Manager managed reliability automation.",
+            "Franz Kafka managed reliability automation.",
         )
         for text in rejected:
             with self.subTest(text=text):
@@ -746,6 +748,53 @@ class ExecutiveCareerDossierSchemaTests(unittest.TestCase):
         )
         for text in accepted:
             with self.subTest(text=text):
+                dossier = mutate_path(self.es_dossier, ("evidence", 0, "paraphrase"), text)
+                self.assertEqual(self.validate_dossier(dossier), [])
+
+    def test_evidence_paraphrase_round_four_identity_matrix_is_fixed_and_non_echoing(self) -> None:
+        rejected = (
+            "Ana LÓPEZ managed reliability automation.",
+            "   Ana López managed reliability automation.",
+            "> Ana López managed reliability automation.",
+            "  > Ana López managed reliability automation.",
+            "أحمد-علي managed reliability automation.",
+            "عبد-الرحمن علي managed reliability automation.",
+            "ヤマダ タロウ managed reliability automation.",
+            "サトウ タロウ managed reliability automation.",
+            "María Fernanda Gabriela López García managed reliability automation.",
+            "María del Carmen Ana López García managed reliability automation.",
+            "Jean d’Arcy managed reliability automation.",
+            "Ana McDonald managed reliability automation.",
+            "Patrick O’Neill managed reliability automation.",
+        )
+        for text in rejected:
+            with self.subTest(text=text, boundary="person"):
+                dossier = mutate_path(self.es_dossier, ("evidence", 0, "paraphrase"), text)
+                errors = self.validate_dossier(dossier)
+                rendered = "\n".join(errors)
+                self.assertTrue(
+                    any("unlabelled candidate identity" in error for error in errors),
+                    errors,
+                )
+                self.assertNotIn(text, rendered)
+
+        accepted = (
+            "AWS Lambda improved reliability.",
+            "Google BigQuery improved delivery.",
+            "HashiCorp Vault improved security.",
+            "SRE Platform improved reliability.",
+            "Prometheus Alertmanager improved reliability.",
+            "PostgreSQL Replication improved reliability.",
+            "Linux Kernel improved reliability.",
+            "Kafka Streams improved delivery.",
+            "Zero Trust improved security.",
+            "Google Kubernetes improved reliability.",
+            "Apache Kafka improved reliability.",
+            "Red Hat OpenShift improved delivery.",
+            "Microsoft Entra improved security.",
+        )
+        for text in accepted:
+            with self.subTest(text=text, boundary="technical"):
                 dossier = mutate_path(self.es_dossier, ("evidence", 0, "paraphrase"), text)
                 self.assertEqual(self.validate_dossier(dossier), [])
 

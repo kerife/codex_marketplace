@@ -36,7 +36,18 @@ def is_safe_prose_text(value: object) -> bool:
 
 def safe_diagnostic_field_name(value: str) -> str:
     """Redact contact-, path-, and credential-shaped keys in diagnostics."""
-    if _SUSPICIOUS_DIAGNOSTIC_FIELD.search(value) or _ABSOLUTE_DIAGNOSTIC_PATH.match(value):
+    classification = unicodedata.normalize("NFKC", value)
+    prefix = 0
+    while prefix < len(classification) and (
+        classification[prefix].isspace()
+        or unicodedata.category(classification[prefix])
+        in {"Cc", "Cf", "Cs", "Zl", "Zp"}
+    ):
+        prefix += 1
+    classification = classification[prefix:]
+    if _SUSPICIOUS_DIAGNOSTIC_FIELD.search(
+        classification
+    ) or _ABSOLUTE_DIAGNOSTIC_PATH.match(classification):
         return "<redacted-field>"
     return "".join(
         f"\\u{ord(character):04x}"

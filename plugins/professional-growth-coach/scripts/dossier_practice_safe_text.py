@@ -66,25 +66,46 @@ _NON_PERSON_SUBJECT_HEADS = frozenset(
     {
         "actions", "analysis", "automation", "cloud", "cluster", "company",
         "corporation", "database", "engine", "engineering", "enterprise",
-        "infrastructure", "integration", "intelligence", "learning", "management",
+        "infrastructure", "integration", "intelligence", "kernel", "learning",
+        "management",
         "objectives", "operations", "organization", "platform", "processing",
-        "product", "program", "project", "recovery", "reliability", "response",
-        "security", "service", "services", "software", "system", "systems",
-        "team", "technology",
+        "product", "program", "project", "recovery", "reliability", "replication",
+        "response", "security", "service", "services", "software", "streams",
+        "system", "systems", "team", "technology", "trust",
     }
 )
+_TECHNICAL_ORGANIZATION_PREFIXES = frozenset(
+    {"amazon", "apache", "argo", "google", "microsoft"}
+)
+_TECHNICAL_COMPOUND_SUFFIXES = ("database", "engine", "manager", "platform", "server")
 _MAX_IDENTITY_SCAN_CHARS = 4_096
+_MAX_SUBJECT_WORDS = 12
+_MAX_SIGNIFICANT_NAME_WORDS = 8
 _OPENING_SUBJECT_PUNCTUATION = frozenset({"'", '"', "‘", "“", "«", "‹", "(", "[", "{"})
 _CLOSING_SUBJECT_PUNCTUATION = frozenset({"'", '"', "’", "”", "»", "›", ")", "]", "}"})
 _SUBJECT_LABEL_PUNCTUATION = frozenset({":", "—", "–"})
 _SUBJECT_BULLETS = frozenset({"-", "*", "•", "‣", "◦", "▪"})
-_UNCASED_NAME_SCRIPTS = ("ARABIC", "CJK UNIFIED IDEOGRAPH", "HANGUL")
+_UNCASED_NAME_SCRIPTS = (
+    "ARABIC",
+    "CJK UNIFIED IDEOGRAPH",
+    "HANGUL",
+    "HIRAGANA",
+    "KATAKANA",
+)
 
 
 def _is_uncased_name_token(word: str) -> bool:
-    return 1 <= len(word) <= 16 and all(
-        any(script in unicodedata.name(character, "") for script in _UNCASED_NAME_SCRIPTS)
-        for character in word
+    parts = re.split(r"['’\-]", word)
+    return 1 <= len(word) <= 32 and all(
+        part
+        and all(
+            any(
+                script in unicodedata.name(character, "")
+                for script in _UNCASED_NAME_SCRIPTS
+            )
+            for character in part
+        )
+        for part in parts
     )
 
 
@@ -92,21 +113,64 @@ def _is_compact_east_asian_name(word: str) -> bool:
     return 2 <= len(word) <= 4 and all(
         any(
             script in unicodedata.name(character, "")
-            for script in ("CJK UNIFIED IDEOGRAPH", "HANGUL")
+            for script in (
+                "CJK UNIFIED IDEOGRAPH",
+                "HANGUL",
+                "HIRAGANA",
+                "KATAKANA",
+            )
         )
         for character in word
     )
 
 
-def _is_product_style_token(word: str) -> bool:
+def _is_acronym_token(word: str) -> bool:
     letters = tuple(character for character in word if character.isalpha())
-    return len(letters) >= 2 and (
-        all(character.isupper() for character in letters)
-        or word.endswith("Ops")
+    return 2 <= len(letters) <= 8 and all(
+        character.isupper() for character in letters
+    )
+
+
+def _is_mixed_case_technical_token(word: str) -> bool:
+    if "'" in word or "’" in word or "-" in word:
+        return False
+    if re.fullmatch(r"Mc[A-Z][a-z]+", word) or re.fullmatch(
+        r"Mac[A-Z][a-z]+", word
+    ):
+        return False
+    letters = tuple(character for character in word if character.isalpha())
+    return (
+        len(letters) >= 3
+        and letters[0].isupper()
+        and any(character.islower() for character in letters)
+        and any(character.isupper() for character in letters[1:])
+    )
+
+
+def _is_compound_technical_token(word: str) -> bool:
+    folded = word.casefold()
+    return any(
+        folded != suffix and folded.endswith(suffix)
+        for suffix in _TECHNICAL_COMPOUND_SUFFIXES
+    )
+
+
+def _is_cased_name_token(word: str) -> bool:
+    return word[0].isupper() or (
+        len(word) >= 3
+        and word[0].casefold() in {"d", "l"}
+        and word[1] in {"'", "’"}
+        and word[2].isupper()
     )
 
 
 def _skip_subject_opening_punctuation(value: str, cursor: int) -> int:
+    while cursor < len(value) and value[cursor].isspace():
+        cursor += 1
+    while cursor < len(value) and value[cursor] == ">":
+        cursor += 1
+        while cursor < len(value) and value[cursor] in " \t":
+            cursor += 1
     while cursor < len(value) and value[cursor] in _OPENING_SUBJECT_PUNCTUATION:
         cursor += 1
     if cursor < len(value) and value[cursor] in _SUBJECT_BULLETS:
@@ -135,7 +199,7 @@ def _sentence_subject_words(value: str, start: int) -> tuple[str, ...]:
     significant: list[str] = []
     has_predicate = False
     cursor = _skip_subject_opening_punctuation(value, start)
-    for _ in range(7):
+    for _ in range(_MAX_SUBJECT_WORDS):
         word_match = _UNICODE_WORD.match(value, cursor)
         if word_match is None:
             break
@@ -143,9 +207,9 @@ def _sentence_subject_words(value: str, start: int) -> tuple[str, ...]:
         folded = word.casefold()
         if folded in _NAME_PARTICLES and significant:
             pass
-        elif word[0].isupper() or _is_uncased_name_token(word):
+        elif _is_cased_name_token(word) or _is_uncased_name_token(word):
             significant.append(word)
-            if len(significant) > 4:
+            if len(significant) > _MAX_SIGNIFICANT_NAME_WORDS:
                 return ()
         else:
             has_predicate = True
@@ -160,14 +224,23 @@ def _sentence_subject_words(value: str, start: int) -> tuple[str, ...]:
 
 def _looks_like_person_subject(words: tuple[str, ...]) -> bool:
     if len(words) == 1:
-        return _is_compact_east_asian_name(words[0])
-    if not 2 <= len(words) <= 4:
+        return _is_compact_east_asian_name(words[0]) or (
+            any(separator in words[0] for separator in ("'", "’", "-"))
+            and _is_uncased_name_token(words[0])
+        )
+    if len(words) < 2:
         return False
     folded = tuple(word.casefold() for word in words)
+    if (
+        _is_acronym_token(words[0])
+        or any(_is_mixed_case_technical_token(word) for word in words)
+        or folded[0] in _TECHNICAL_ORGANIZATION_PREFIXES
+        or _is_compound_technical_token(words[-1])
+    ):
+        return False
     return (
         folded[0] not in _ROLE_OR_DOMAIN_QUALIFIERS
         and folded[-1] not in _NON_PERSON_SUBJECT_HEADS
-        and not _is_product_style_token(words[-1])
     )
 
 

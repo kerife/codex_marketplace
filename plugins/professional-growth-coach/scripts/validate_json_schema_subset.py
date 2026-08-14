@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import re
 from collections.abc import Mapping
 
@@ -23,6 +24,7 @@ _NESTED_QUANTIFIER = re.compile(
 )
 _MAX_LITERAL_PATTERN_VARIANTS = 256
 _MAX_LITERAL_PATTERN_TOKENS = 1_024
+_MAX_JSON_EQUALITY_EVALUATIONS = MAX_SCHEMA_EVALUATIONS
 
 
 _SUPPORTED_TYPES = frozenset(
@@ -171,6 +173,181 @@ def _literal_atom_choices(
     return None
 
 
+def _character_class_language(
+    pattern: str, index: int
+) -> tuple[tuple[str, frozenset[str] | None], int] | None:
+    """Return a bounded language descriptor for one simple regex atom."""
+    character = pattern[index]
+    if character == "\\":
+        if index + 1 >= len(pattern):
+            return None
+        escaped = pattern[index + 1]
+        if escaped in "dws":
+            return (escaped, None), index + 2
+        if escaped.isalnum():
+            return ("unknown", None), index + 2
+        return ("finite", frozenset({escaped})), index + 2
+    if character == "[":
+        cursor = index + 1
+        unknown = False
+        if cursor < len(pattern) and pattern[cursor] == "^":
+            unknown = True
+            cursor += 1
+        characters: set[str] = set()
+        while cursor < len(pattern) and pattern[cursor] != "]":
+            if pattern[cursor] == "\\":
+                if cursor + 1 >= len(pattern):
+                    return None
+                escaped = pattern[cursor + 1]
+                if escaped in "dws" or escaped.isalnum():
+                    unknown = True
+                    cursor += 2
+                    continue
+                start = escaped
+                cursor += 2
+            else:
+                start = pattern[cursor]
+                cursor += 1
+            if (
+                cursor + 1 < len(pattern)
+                and pattern[cursor] == "-"
+                and pattern[cursor + 1] != "]"
+            ):
+                end = pattern[cursor + 1]
+                if ord(end) < ord(start) or ord(end) - ord(start) > 256:
+                    unknown = True
+                else:
+                    characters.update(
+                        chr(code) for code in range(ord(start), ord(end) + 1)
+                    )
+                cursor += 2
+            else:
+                characters.add(start)
+            if len(characters) > 256:
+                unknown = True
+                characters.clear()
+        if cursor >= len(pattern):
+            return None
+        if unknown or not characters:
+            return ("unknown", None), cursor + 1
+        return ("finite", frozenset(characters)), cursor + 1
+    if character == ".":
+        return ("unknown", None), index + 1
+    if character in "^$|(){}+*?":
+        return None
+    return ("finite", frozenset({character})), index + 1
+
+
+def _quantifier(
+    pattern: str, index: int
+) -> tuple[int, bool] | None:
+    if index >= len(pattern):
+        return None
+    if pattern[index] in "+*":
+        return (
+            index + 1 + (index + 1 < len(pattern) and pattern[index + 1] == "?"),
+            True,
+        )
+    if pattern[index] == "?":
+        return (
+            index + 1 + (index + 1 < len(pattern) and pattern[index + 1] == "?"),
+            False,
+        )
+    match = re.match(r"\{\d+(?:,\d*)?\}", pattern[index:])
+    if match is None:
+        return None
+    text = match.group(0)
+    end = index + len(text)
+    if end < len(pattern) and pattern[end] == "?":
+        end += 1
+    return end, text.endswith(",}")
+
+
+def _languages_overlap(
+    left: tuple[str, frozenset[str] | None],
+    right: tuple[str, frozenset[str] | None],
+) -> bool:
+    left_kind, left_characters = left
+    right_kind, right_characters = right
+    if left_kind == "unknown" or right_kind == "unknown":
+        return True
+    if left_kind == right_kind and left_kind in {"d", "w", "s"}:
+        return True
+    if left_kind in {"d", "w", "s"} and right_kind in {"d", "w", "s"}:
+        return {left_kind, right_kind} == {"d", "w"}
+    finite = left_characters if left_kind == "finite" else right_characters
+    category = right_kind if left_kind == "finite" else left_kind
+    if finite is None:
+        return True
+    if category == "finite":
+        return bool(finite & (right_characters or frozenset()))
+    predicate = {
+        "d": str.isdigit,
+        "w": lambda value: value.isalnum() or value == "_",
+        "s": str.isspace,
+    }[category]
+    return any(predicate(character) for character in finite)
+
+
+def _has_adjacent_ambiguous_quantified_atoms(pattern: str) -> bool:
+    previous: tuple[str, frozenset[str] | None] | None = None
+    index = 0
+    while index < len(pattern):
+        atom = _character_class_language(pattern, index)
+        if atom is None:
+            previous = None
+            index += 1
+            continue
+        language, atom_end = atom
+        repeat = _quantifier(pattern, atom_end)
+        if repeat is None:
+            previous = None
+            index = atom_end
+            continue
+        repeat_end, unbounded = repeat
+        if unbounded:
+            if previous is not None and _languages_overlap(previous, language):
+                return True
+            previous = language
+        else:
+            previous = None
+        index = repeat_end
+    return False
+
+
+def _has_oversized_quantifier(pattern: str) -> bool:
+    escaped = False
+    in_character_class = False
+    for index, character in enumerate(pattern):
+        if escaped:
+            escaped = False
+            continue
+        if character == "\\":
+            escaped = True
+            continue
+        if character == "[" and not in_character_class:
+            in_character_class = True
+            continue
+        if character == "]" and in_character_class:
+            in_character_class = False
+            continue
+        if in_character_class or character != "{":
+            continue
+        match = re.match(r"\{(\d+)(?:,(\d*))?\}", pattern[index:])
+        if match is None:
+            continue
+        for digits in match.groups():
+            if digits is None or digits == "":
+                continue
+            normalized = digits.lstrip("0") or "0"
+            limit = str(_MAX_LITERAL_PATTERN_TOKENS)
+            if len(normalized) > len(limit) or (
+                len(normalized) == len(limit) and normalized > limit
+            ):
+                return True
+    return False
+
+
 def _bounded_repeat(
     fragment: str, index: int
 ) -> tuple[int, int, int] | None:
@@ -253,6 +430,8 @@ def _has_ambiguous_literal_paths(fragment: str) -> bool:
 
 
 def _pattern_has_structural_redos_risk(pattern: str) -> bool:
+    if _has_adjacent_ambiguous_quantified_atoms(pattern):
+        return True
     for opening, closing in _group_spans(pattern):
         if not _is_repeated_group(pattern, closing):
             continue
@@ -263,6 +442,91 @@ def _pattern_has_structural_redos_risk(pattern: str) -> bool:
         ):
             return True
     return False
+
+
+def _fingerprint_token(digest: object, token: str) -> None:
+    encoded = token.encode("utf-8", errors="backslashreplace")
+    digest.update(len(encoded).to_bytes(8, "big"))
+    digest.update(encoded)
+
+
+def _json_fingerprint(value: object) -> bytes | tuple[str, type[object]] | None:
+    """Create a bounded, recursion-free fingerprint for JSON-like graphs."""
+    digest = hashlib.sha256()
+    pending: list[tuple[str, object]] = [("value", value)]
+    active: set[int] = set()
+    remaining = _MAX_JSON_EQUALITY_EVALUATIONS
+    saw_cycle = False
+    while pending:
+        if remaining <= 0:
+            return None
+        remaining -= 1
+        action, current = pending.pop()
+        if action == "end":
+            active.remove(id(current))
+            _fingerprint_token(digest, "]")
+            continue
+        if isinstance(current, bool):
+            _fingerprint_token(digest, f"bool:{int(current)}")
+            continue
+        if isinstance(current, (int, float)):
+            try:
+                numerator, denominator = current.as_integer_ratio()
+                _fingerprint_token(digest, f"number:{numerator}/{denominator}")
+            except (OverflowError, ValueError):
+                _fingerprint_token(
+                    digest,
+                    f"number-special:{type(current).__name__}:{current!r}",
+                )
+            continue
+        if current is None:
+            _fingerprint_token(digest, "null")
+            continue
+        if isinstance(current, str):
+            _fingerprint_token(digest, "string")
+            _fingerprint_token(digest, current)
+            continue
+        if isinstance(current, (list, Mapping)):
+            identity = id(current)
+            if identity in active:
+                saw_cycle = True
+                _fingerprint_token(digest, "cycle")
+                continue
+            active.add(identity)
+            _fingerprint_token(
+                digest,
+                f"{type(current).__module__}.{type(current).__qualname__}:{len(current)}[",
+            )
+            pending.append(("end", current))
+            if isinstance(current, list):
+                pending.extend(("value", item) for item in reversed(current))
+            else:
+                if not all(isinstance(key, str) for key in current):
+                    return None
+                for key in reversed(sorted(current)):
+                    pending.append(("value", current[key]))
+                    pending.append(("value", key))
+            continue
+        _fingerprint_token(
+            digest,
+            f"{type(current).__module__}.{type(current).__qualname__}:{current!r}",
+        )
+    if saw_cycle:
+        return "cycle", type(value)
+    return digest.digest()
+
+
+def _enum_values_unique(enum: list[object]) -> bool:
+    buckets: dict[bytes | tuple[str, type[object]], list[object]] = {}
+    for option in enum:
+        fingerprint = _json_fingerprint(option)
+        if fingerprint is None:
+            return False
+        bucket = buckets.setdefault(fingerprint, [])
+        if any(_json_equal(option, previous) is not False for previous in bucket):
+            return False
+        bucket.append(option)
+    return True
 
 
 def _keyword_shapes_valid(schema: Mapping[str, object]) -> bool:
@@ -281,12 +545,8 @@ def _keyword_shapes_valid(schema: Mapping[str, object]) -> bool:
         if (
             not isinstance(enum, list)
             or not enum
-            or any(
-                _json_equal(left, right)
-                for left_index, left in enumerate(enum)
-                for right_index, right in enumerate(enum)
-                if left_index < right_index
-            )
+            or len(enum) > MAX_SCHEMA_EVALUATIONS
+            or not _enum_values_unique(enum)
         ):
             return False
     if "type" in schema:
@@ -332,13 +592,14 @@ def _keyword_shapes_valid(schema: Mapping[str, object]) -> bool:
 def _pattern_error(pattern: str) -> str | None:
     if (
         len(pattern) > MAX_SCHEMA_PATTERN_LENGTH
+        or _has_oversized_quantifier(pattern)
         or _NESTED_QUANTIFIER.search(pattern)
         or _pattern_has_structural_redos_risk(pattern)
     ):
         return SCHEMA_PATTERN_COMPLEXITY_ERROR
     try:
         re.compile(pattern)
-    except re.error:
+    except (re.error, OverflowError):
         return SCHEMA_PATTERN_INVALID_ERROR
     return None
 
@@ -464,35 +725,57 @@ def _type_ok(value: object, expected: object) -> bool:
     }.get(expected, True)
 
 
-def _json_equal(
-    left: object, right: object, seen: set[tuple[int, int]] | None = None
-) -> bool:
-    """Compare JSON values without Python's bool/int equality quirk."""
-    if seen is None:
-        seen = set()
-    if isinstance(left, bool) or isinstance(right, bool):
-        return isinstance(left, bool) and isinstance(right, bool) and left == right
-    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
-        return left == right
-    if type(left) is not type(right):
-        return False
-    if isinstance(left, list) and isinstance(right, list):
-        pair = (id(left), id(right))
-        if pair in seen:
-            return True
-        seen.add(pair)
-        return len(left) == len(right) and all(
-            _json_equal(item, other, seen) for item, other in zip(left, right)
-        )
-    if isinstance(left, Mapping) and isinstance(right, Mapping):
-        pair = (id(left), id(right))
-        if pair in seen:
-            return True
-        seen.add(pair)
-        return set(left) == set(right) and all(
-            _json_equal(left[key], right[key], seen) for key in left
-        )
-    return left == right
+def _json_equal(left: object, right: object) -> bool | None:
+    """Compare JSON graphs iteratively; return ``None`` on bounded exhaustion."""
+    pending = [(left, right)]
+    seen: set[tuple[int, int]] = set()
+    remaining = _MAX_JSON_EQUALITY_EVALUATIONS
+    while pending:
+        if remaining <= 0:
+            return None
+        remaining -= 1
+        current_left, current_right = pending.pop()
+        if isinstance(current_left, bool) or isinstance(current_right, bool):
+            if not (
+                isinstance(current_left, bool)
+                and isinstance(current_right, bool)
+                and current_left == current_right
+            ):
+                return False
+            continue
+        if isinstance(current_left, (int, float)) and isinstance(
+            current_right, (int, float)
+        ):
+            if current_left != current_right:
+                return False
+            continue
+        if current_left is current_right:
+            continue
+        if type(current_left) is not type(current_right):
+            return False
+        if isinstance(current_left, list):
+            if len(current_left) != len(current_right):
+                return False
+            pair = (id(current_left), id(current_right))
+            if pair in seen:
+                continue
+            seen.add(pair)
+            pending.extend(zip(current_left, current_right))
+            continue
+        if isinstance(current_left, Mapping):
+            if set(current_left) != set(current_right):
+                return False
+            pair = (id(current_left), id(current_right))
+            if pair in seen:
+                continue
+            seen.add(pair)
+            pending.extend(
+                (current_left[key], current_right[key]) for key in current_left
+            )
+            continue
+        if current_left != current_right:
+            return False
+    return True
 
 
 def _validate(

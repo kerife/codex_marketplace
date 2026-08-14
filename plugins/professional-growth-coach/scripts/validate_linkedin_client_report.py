@@ -2764,9 +2764,18 @@ def _safe_diagnostic_field_name(value: object) -> str:
     """Redact sensitive field names and keep control characters single-line."""
     if not isinstance(value, str):
         return _escape_diagnostic_controls(str(value))
+    classification = unicodedata.normalize("NFKC", value)
+    prefix = 0
+    while prefix < len(classification) and (
+        classification[prefix].isspace()
+        or unicodedata.category(classification[prefix])
+        in {"Cc", "Cf", "Cs", "Zl", "Zp"}
+    ):
+        prefix += 1
+    classification = classification[prefix:]
     if (
-        _SUSPICIOUS_DIAGNOSTIC_FIELD.search(value)
-        or _ABSOLUTE_PATH_DIAGNOSTIC_FIELD.match(value)
+        _SUSPICIOUS_DIAGNOSTIC_FIELD.search(classification)
+        or _ABSOLUTE_PATH_DIAGNOSTIC_FIELD.match(classification)
     ):
         return "<redacted-field>"
     return _escape_diagnostic_controls(value)

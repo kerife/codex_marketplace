@@ -68,6 +68,21 @@ class PrivateProseSafetyTests(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertEqual(expected, safe_diagnostic_field_name(value))
 
+    def test_safe_diagnostic_field_name_classifies_prefixed_absolute_paths(self):
+        for value in (
+            "  /etc/passwd",
+            "\t/opt/data/profile.json",
+            " \n" + r"D:\work\candidate\profile.json",
+            "\u200b" + r"\\server\share\profile.json",
+        ):
+            with self.subTest(value=value):
+                self.assertEqual("<redacted-field>", safe_diagnostic_field_name(value))
+
+        self.assertEqual(
+            "  relative/profile.json",
+            safe_diagnostic_field_name("  relative/profile.json"),
+        )
+
     def test_format_bounded_diagnostics_preserves_short_messages(self):
         self.assertEqual(
             "first diagnostic\nsecond diagnostic\n",
