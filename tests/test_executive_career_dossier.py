@@ -870,20 +870,37 @@ class ExecutiveCareerDossierSchemaTests(unittest.TestCase):
         )
 
         cases = (
-            ("safe aggregate", (safe_prefix, notice, safe_suffix), ()),
+            (
+                "safe aggregate",
+                ((True, safe_prefix), (True, notice), (True, safe_suffix)),
+                (),
+            ),
             (
                 "identity before aggregate limit",
-                ("Ana López managed reliability automation.", safe_prefix, safe_suffix),
+                (
+                    (True, "Ana López managed reliability automation."),
+                    (True, safe_prefix),
+                    (True, safe_suffix),
+                ),
                 (diagnostic,),
             ),
             (
                 "identity after aggregate limit",
-                (safe_prefix, safe_suffix, "Ana López managed reliability automation."),
+                (
+                    (True, safe_prefix),
+                    (True, safe_suffix),
+                    (True, "Ana López managed reliability automation."),
+                ),
                 (diagnostic,),
             ),
             (
                 "identity across fragment boundary",
-                (safe_prefix, "Ana", " López managed reliability automation.", safe_suffix),
+                (
+                    (True, safe_prefix),
+                    (True, "Ana"),
+                    (False, " López managed reliability automation."),
+                    (True, safe_suffix),
+                ),
                 (diagnostic,),
             ),
         )
@@ -893,15 +910,55 @@ class ExecutiveCareerDossierSchemaTests(unittest.TestCase):
                 self.assertEqual(expected, errors)
                 self.assertNotIn("Ana López", "\n".join(errors))
 
+    def test_visible_document_privacy_uses_explicit_structural_boundaries(self) -> None:
+        diagnostic = ("client report contains forbidden unlabelled candidate identity",)
+        for separator in ("\n ", "\r ", "\r\n ", " \t", "\u000b ", "\u200b "):
+            with self.subTest(inline_separator=repr(separator)):
+                inline_errors = self.validator.candidate_visible_text_privacy_errors(
+                    (
+                        (True, "Ana"),
+                        (False, separator + "López managed reliability automation."),
+                    )
+                )
+                split_inline_errors = self.validator.candidate_visible_text_privacy_errors(
+                    (
+                        (True, "Ana"),
+                        (False, separator),
+                        (False, "López managed reliability automation."),
+                    )
+                )
+                block_errors = self.validator.candidate_visible_text_privacy_errors(
+                    (
+                        (True, "Ana"),
+                        (True, separator + "López managed reliability automation."),
+                    )
+                )
+                self.assertEqual(diagnostic, inline_errors)
+                self.assertEqual(diagnostic, split_inline_errors)
+                self.assertEqual((), block_errors)
+                self.assertNotIn("Ana López", "\n".join(inline_errors))
+
+        self.assertEqual(
+            (),
+            self.validator.candidate_visible_text_privacy_errors(
+                (
+                    (True, "Ana"),
+                    (True, "\n López managed reliability automation."),
+                )
+            ),
+        )
+
     def test_visible_document_privacy_fails_closed_for_malformed_or_unbounded_fragments(self) -> None:
         diagnostic = ("client report contains forbidden unlabelled candidate identity",)
         safe_fragment = "Delivery evidence remains bounded. " * 100
         cases = (
             ("malformed document", None),
-            ("malformed fragment", ("Safe delivery evidence.", object())),
-            ("fragment count", tuple("Safe." for _ in range(1_000))),
-            ("total characters", tuple(safe_fragment for _ in range(20))),
-            ("single oversized fragment", (safe_fragment + safe_fragment,)),
+            ("legacy content-only fragments", ("Safe delivery evidence.",)),
+            ("malformed fragment", ((True, "Safe delivery evidence."), object())),
+            ("malformed boundary", (("yes", "Safe delivery evidence."),)),
+            ("fragment count", tuple((True, "Safe.") for _ in range(1_000))),
+            ("total characters", tuple((True, safe_fragment) for _ in range(20))),
+            ("single oversized fragment", ((True, safe_fragment + safe_fragment),)),
         )
         for case, fragments in cases:
             with self.subTest(case=case):

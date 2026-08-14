@@ -992,6 +992,19 @@ def _candidate_visible_text_fragment_privacy_errors(value: str) -> tuple[str, ..
     return tuple(sorted(errors))
 
 
+def _normalize_visible_inline_boundary(value: str) -> str:
+    """Preserve inline prose while neutralizing layout and format separators."""
+
+    normalized = unicodedata.normalize("NFKC", value)
+    return "".join(
+        " "
+        if character.isspace()
+        or unicodedata.category(character) in {"Cc", "Cf", "Cs", "Zl", "Zp"}
+        else character
+        for character in normalized
+    )
+
+
 def candidate_visible_text_privacy_errors(value: object) -> tuple[str, ...]:
     """Apply privacy checks to bounded public-text fragments and their boundaries."""
 
@@ -1005,21 +1018,35 @@ def candidate_visible_text_privacy_errors(value: object) -> tuple[str, ...]:
     errors: set[str] = set()
     total_chars = 0
     boundary_tail = ""
-    for fragment in value:
-        if not isinstance(fragment, str):
+    for index, fragment_record in enumerate(value):
+        if (
+            not isinstance(fragment_record, (list, tuple))
+            or len(fragment_record) != 2
+        ):
+            return _VISIBLE_PRIVACY_FAIL_CLOSED
+        boundary_before, fragment = fragment_record
+        if type(boundary_before) is not bool or not isinstance(fragment, str):
+            return _VISIBLE_PRIVACY_FAIL_CLOSED
+        if index == 0 and not boundary_before:
             return _VISIBLE_PRIVACY_FAIL_CLOSED
         total_chars += len(fragment)
         if total_chars > _MAX_VISIBLE_PRIVACY_TOTAL_CHARS:
             return _VISIBLE_PRIVACY_FAIL_CLOSED
         errors.update(_candidate_visible_text_fragment_privacy_errors(fragment))
-        if boundary_tail and fragment and not fragment.startswith(("\n", "\r")):
-            boundary_head = fragment[:_MAX_VISIBLE_PRIVACY_BOUNDARY_CHARS]
+        normalized_fragment = _normalize_visible_inline_boundary(fragment)
+        if boundary_tail and normalized_fragment and not boundary_before:
+            boundary_head = normalized_fragment[:_MAX_VISIBLE_PRIVACY_BOUNDARY_CHARS]
             errors.update(
                 _candidate_visible_text_fragment_privacy_errors(
                     boundary_tail + boundary_head
                 )
             )
-        boundary_tail = re.split(r"[.!?;\n]+", boundary_tail + fragment)[-1][
+        boundary_source = (
+            normalized_fragment
+            if boundary_before
+            else boundary_tail + normalized_fragment
+        )
+        boundary_tail = re.split(r"[.!?;]+", boundary_source)[-1][
             -_MAX_VISIBLE_PRIVACY_BOUNDARY_CHARS:
         ]
     return tuple(sorted(errors))
