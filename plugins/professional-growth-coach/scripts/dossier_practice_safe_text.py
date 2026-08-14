@@ -44,7 +44,9 @@ _FORBIDDEN_NAME = re.compile(
 
 _FORBIDDEN_CONTROL = re.compile(r"[\u0000-\u001f\u007f-\u009f\u200b-\u200d\u2060\ufeff]")
 
-_SENTENCE_START = re.compile(r"(?:^|[:.!?]\s+)")
+_SENTENCE_START = re.compile(
+    r"(?:^|[:.!?;]\s+|[\r\n]+[ \t]*(?:[-*•‣◦▪][ \t]*)?)"
+)
 _UNICODE_WORD = re.compile(r"[^\W\d_]+(?:['’\-][^\W\d_]+)*", re.UNICODE)
 _NAME_PARTICLES = frozenset(
     {"da", "das", "de", "del", "do", "dos", "la", "las", "los", "van", "von", "y"}
@@ -62,30 +64,55 @@ _ROLE_OR_DOMAIN_QUALIFIERS = frozenset(
 # a technical subject, not a person name. This avoids phrase-by-phrase exceptions.
 _NON_PERSON_SUBJECT_HEADS = frozenset(
     {
-        "actions", "automation", "cloud", "cluster", "company", "corporation",
-        "database", "engine", "engineering", "infrastructure", "integration",
-        "intelligence", "learning", "management", "operations", "organization",
-        "platform", "product", "program", "project", "recovery", "reliability",
-        "response", "security", "service", "services", "software", "system",
-        "systems", "team", "technology",
+        "actions", "analysis", "automation", "cloud", "cluster", "company",
+        "corporation", "database", "engine", "engineering", "enterprise",
+        "infrastructure", "integration", "intelligence", "learning", "management",
+        "objectives", "operations", "organization", "platform", "processing",
+        "product", "program", "project", "recovery", "reliability", "response",
+        "security", "service", "services", "software", "system", "systems",
+        "team", "technology",
     }
 )
 _MAX_IDENTITY_SCAN_CHARS = 4_096
 _OPENING_SUBJECT_PUNCTUATION = frozenset({"'", '"', "‘", "“", "«", "‹", "(", "[", "{"})
 _CLOSING_SUBJECT_PUNCTUATION = frozenset({"'", '"', "’", "”", "»", "›", ")", "]", "}"})
 _SUBJECT_LABEL_PUNCTUATION = frozenset({":", "—", "–"})
+_SUBJECT_BULLETS = frozenset({"-", "*", "•", "‣", "◦", "▪"})
+_UNCASED_NAME_SCRIPTS = ("ARABIC", "CJK UNIFIED IDEOGRAPH", "HANGUL")
 
 
-def _is_cjk_name_token(word: str) -> bool:
-    return 1 <= len(word) <= 3 and all(
-        "CJK UNIFIED IDEOGRAPH" in unicodedata.name(character, "")
+def _is_uncased_name_token(word: str) -> bool:
+    return 1 <= len(word) <= 16 and all(
+        any(script in unicodedata.name(character, "") for script in _UNCASED_NAME_SCRIPTS)
         for character in word
+    )
+
+
+def _is_compact_east_asian_name(word: str) -> bool:
+    return 2 <= len(word) <= 4 and all(
+        any(
+            script in unicodedata.name(character, "")
+            for script in ("CJK UNIFIED IDEOGRAPH", "HANGUL")
+        )
+        for character in word
+    )
+
+
+def _is_product_style_token(word: str) -> bool:
+    letters = tuple(character for character in word if character.isalpha())
+    return len(letters) >= 2 and (
+        all(character.isupper() for character in letters)
+        or word.endswith("Ops")
     )
 
 
 def _skip_subject_opening_punctuation(value: str, cursor: int) -> int:
     while cursor < len(value) and value[cursor] in _OPENING_SUBJECT_PUNCTUATION:
         cursor += 1
+    if cursor < len(value) and value[cursor] in _SUBJECT_BULLETS:
+        cursor += 1
+        while cursor < len(value) and value[cursor] in " \t":
+            cursor += 1
     return cursor
 
 
@@ -116,7 +143,7 @@ def _sentence_subject_words(value: str, start: int) -> tuple[str, ...]:
         folded = word.casefold()
         if folded in _NAME_PARTICLES and significant:
             pass
-        elif word[0].isupper() or _is_cjk_name_token(word):
+        elif word[0].isupper() or _is_uncased_name_token(word):
             significant.append(word)
             if len(significant) > 4:
                 return ()
@@ -132,12 +159,15 @@ def _sentence_subject_words(value: str, start: int) -> tuple[str, ...]:
 
 
 def _looks_like_person_subject(words: tuple[str, ...]) -> bool:
+    if len(words) == 1:
+        return _is_compact_east_asian_name(words[0])
     if not 2 <= len(words) <= 4:
         return False
     folded = tuple(word.casefold() for word in words)
     return (
         folded[0] not in _ROLE_OR_DOMAIN_QUALIFIERS
         and folded[-1] not in _NON_PERSON_SUBJECT_HEADS
+        and not _is_product_style_token(words[-1])
     )
 
 

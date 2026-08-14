@@ -623,6 +623,26 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
             with self.subTest(schema=schema, control="safe"):
                 self.assertEqual([], validate_schema_instance(value, schema))
 
+    def test_dependency_free_checker_rejects_duplicate_enum_values_cycle_safely(self):
+        cyclic_left = []
+        cyclic_left.append(cyclic_left)
+        cyclic_right = []
+        cyclic_right.append(cyclic_right)
+        duplicate_enums = (
+            ["same", "same"],
+            [{"nested": [1, 2]}, {"nested": [1, 2]}],
+            [1, 1.0],
+            [cyclic_left, cyclic_right],
+        )
+        for enum in duplicate_enums:
+            with self.subTest(enum=enum):
+                self.assertEqual(
+                    ["schema keyword is invalid"],
+                    validate_schema_instance(enum[0], {"enum": enum}),
+                )
+
+        self.assertEqual([], validate_schema_instance(True, {"enum": [True, 1]}))
+
     def test_dependency_free_checker_rejects_invalid_regex_patterns(self):
         for pattern in ("[", "(?", r"\K"):
             with self.subTest(pattern=pattern):
@@ -649,6 +669,9 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
             ("(a|aa)+$", "a" * 38 + "!"),
             ("(a|a)+$", "a" * 38 + "!"),
             ("(a?|a)+$", "a" * 30 + "!"),
+            ("(a|[a])+$", "a" * 30 + "!"),
+            ("([a]|a)+$", "a" * 30 + "!"),
+            ("([ab]|a)+$", "a" * 30 + "!"),
         )
         for pattern, value in cases:
             with self.subTest(pattern=pattern):
@@ -680,6 +703,9 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
             ("^(a|b)+$", "abba"),
             ("^((ab))+$", "abab"),
             ("^(?:ab?c)+$", "acabcac"),
+            ("^(?:ab{2}c)+$", "abbcabbc"),
+            ("^(?:ab{1,2}c)+$", "abcabbc"),
+            ("^(?:[ab])+$", "abba"),
         ):
             with self.subTest(pattern=pattern, control="safe"):
                 self.assertEqual(

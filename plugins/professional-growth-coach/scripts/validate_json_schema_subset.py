@@ -18,9 +18,11 @@ SCHEMA_PATTERN_INVALID_ERROR = "schema pattern is invalid"
 MAX_SCHEMA_PATTERN_LENGTH = 1_024
 SCHEMA_PATTERN_COMPLEXITY_ERROR = "pattern exceeds safe complexity limit"
 _NESTED_QUANTIFIER = re.compile(
-    r"\((?:[^()\\]|\\.)*(?:[+*]|\{\d+(?:,\d*)?\})(?:[^()\\]|\\.)*\)"
+    r"\((?:[^()\\]|\\.)*(?:[+*]|\{\d+,\})(?:[^()\\]|\\.)*\)"
     r"(?:[+*]|\{\d+(?:,\d*)?\})"
 )
+_MAX_LITERAL_PATTERN_VARIANTS = 256
+_MAX_LITERAL_PATTERN_TOKENS = 1_024
 
 
 _SUPPORTED_TYPES = frozenset(
@@ -81,7 +83,9 @@ def _contains_unbounded_quantifier(fragment: str) -> bool:
             continue
         if in_character_class:
             continue
-        if character in "+*{":
+        if character in "+*" or (
+            character == "{" and re.match(r"\{\d+,\}", fragment[index:])
+        ):
             return True
     return False
 
@@ -132,77 +136,118 @@ def _top_level_alternatives(fragment: str) -> list[str]:
     return alternatives
 
 
-def _literal_tokens(fragment: str) -> tuple[str, ...] | None:
-    tokens: list[str] = []
-    index = 0
-    while index < len(fragment):
-        character = fragment[index]
-        if character == "\\":
-            index += 1
-            if index >= len(fragment) or fragment[index].isalnum():
-                return None
-            tokens.append(fragment[index])
-        elif character.isalnum() or character in " _-'":
-            tokens.append(character)
-        else:
+def _literal_atom_choices(
+    fragment: str, index: int
+) -> tuple[list[tuple[str, ...]], int] | None:
+    character = fragment[index]
+    if character == "\\":
+        if index + 1 >= len(fragment) or fragment[index + 1].isalnum():
             return None
-        index += 1
-    return tuple(tokens)
+        return [(fragment[index + 1],)], index + 2
+    if character == "[":
+        choices: list[tuple[str, ...]] = []
+        cursor = index + 1
+        if cursor >= len(fragment) or fragment[cursor] == "^":
+            return None
+        while cursor < len(fragment) and fragment[cursor] != "]":
+            if fragment[cursor] == "\\":
+                cursor += 1
+                if cursor >= len(fragment) or fragment[cursor].isalnum():
+                    return None
+                token = fragment[cursor]
+            elif fragment[cursor] == "-":
+                return None
+            else:
+                token = fragment[cursor]
+            choice = (token,)
+            if choice not in choices:
+                choices.append(choice)
+            cursor += 1
+        if cursor >= len(fragment) or not choices:
+            return None
+        return choices, cursor + 1
+    if character.isalnum() or character in " _-'":
+        return [(character,)], index + 1
+    return None
 
 
-def _literal_optional_variants(fragment: str) -> list[tuple[str, ...]] | None:
+def _bounded_repeat(
+    fragment: str, index: int
+) -> tuple[int, int, int] | None:
+    if index < len(fragment) and fragment[index] == "?":
+        return 0, 1, index + 1
+    match = re.match(r"\{(\d+)(?:,(\d+))?\}", fragment[index:])
+    if match is None:
+        return 1, 1, index
+    minimum = int(match.group(1))
+    maximum = int(match.group(2) or match.group(1))
+    if maximum < minimum or maximum > _MAX_LITERAL_PATTERN_TOKENS:
+        return None
+    return minimum, maximum, index + match.end()
+
+
+def _repeat_literal_choices(
+    choices: list[tuple[str, ...]], minimum: int, maximum: int
+) -> list[tuple[str, ...]] | None:
+    repeated: list[tuple[str, ...]] = []
+    current: list[tuple[str, ...]] = [()]
+    if minimum == 0:
+        repeated.append(())
+    for count in range(1, maximum + 1):
+        current = [prefix + choice for prefix in current for choice in choices]
+        if (
+            len(current) > _MAX_LITERAL_PATTERN_VARIANTS
+            or any(len(tokens) > _MAX_LITERAL_PATTERN_TOKENS for tokens in current)
+        ):
+            return None
+        if count >= minimum:
+            repeated.extend(current)
+            if len(repeated) > _MAX_LITERAL_PATTERN_VARIANTS:
+                return None
+    return repeated
+
+
+def _literal_bounded_variants(fragment: str) -> list[tuple[str, ...]] | None:
     variants: list[tuple[str, ...]] = [()]
     value = _strip_group_extension(fragment)
     index = 0
     while index < len(value):
-        character = value[index]
-        if character == "\\":
-            index += 1
-            if index >= len(value) or value[index].isalnum():
-                return None
-            token = value[index]
-        elif character.isalnum() or character in " _-'":
-            token = character
-        else:
+        atom = _literal_atom_choices(value, index)
+        if atom is None:
             return None
-        optional = index + 1 < len(value) and value[index + 1] == "?"
-        extended = [variant + (token,) for variant in variants]
-        variants = variants + extended if optional else extended
-        if len(variants) > 256:
+        choices, index = atom
+        repeat = _bounded_repeat(value, index)
+        if repeat is None:
             return None
-        index += 2 if optional else 1
+        minimum, maximum, index = repeat
+        repeated_choices = _repeat_literal_choices(choices, minimum, maximum)
+        if repeated_choices is None:
+            return None
+        variants = [
+            prefix + choice for prefix in variants for choice in repeated_choices
+        ]
+        if (
+            len(variants) > _MAX_LITERAL_PATTERN_VARIANTS
+            or any(len(tokens) > _MAX_LITERAL_PATTERN_TOKENS for tokens in variants)
+        ):
+            return None
     return variants
 
 
-def _has_ambiguous_optional_paths(fragment: str) -> bool:
+def _has_ambiguous_literal_paths(fragment: str) -> bool:
     alternatives = _top_level_alternatives(_strip_redundant_groups(fragment))
-    if not any("?" in alternative for alternative in alternatives):
-        return False
     variants: list[tuple[str, ...]] = []
     for alternative in alternatives:
-        alternative_variants = _literal_optional_variants(alternative)
+        alternative_variants = _literal_bounded_variants(alternative)
         if alternative_variants is None:
             return True
         variants.extend(alternative_variants)
+        if len(variants) > _MAX_LITERAL_PATTERN_VARIANTS:
+            return True
     return any(
         not left or (len(left) <= len(right) and right[: len(left)] == left)
         for left_index, left in enumerate(variants)
         for right_index, right in enumerate(variants)
-        if left_index != right_index
-    )
-
-
-def _has_overlapping_literal_alternatives(fragment: str) -> bool:
-    alternatives = _top_level_alternatives(_strip_redundant_groups(fragment))
-    if len(alternatives) < 2:
-        return False
-    tokenized = [_literal_tokens(alternative) for alternative in alternatives]
-    if any(tokens is None or not tokens for tokens in tokenized):
-        return False
-    return any(
-        len(left) <= len(right) and right[: len(left)] == left
-        for left_index, left in enumerate(tokenized)
-        for right_index, right in enumerate(tokenized)
         if left_index != right_index
     )
 
@@ -214,8 +259,7 @@ def _pattern_has_structural_redos_risk(pattern: str) -> bool:
         body = pattern[opening + 1 : closing]
         if (
             _contains_unbounded_quantifier(body)
-            or _has_overlapping_literal_alternatives(body)
-            or _has_ambiguous_optional_paths(body)
+            or _has_ambiguous_literal_paths(body)
         ):
             return True
     return False
@@ -234,7 +278,16 @@ def _keyword_shapes_valid(schema: Mapping[str, object]) -> bool:
             return False
     if "enum" in schema:
         enum = schema["enum"]
-        if not isinstance(enum, list) or not enum:
+        if (
+            not isinstance(enum, list)
+            or not enum
+            or any(
+                _json_equal(left, right)
+                for left_index, left in enumerate(enum)
+                for right_index, right in enumerate(enum)
+                if left_index < right_index
+            )
+        ):
             return False
     if "type" in schema:
         expected = schema["type"]
