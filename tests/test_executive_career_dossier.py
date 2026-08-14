@@ -669,6 +669,10 @@ class ExecutiveCareerDossierSchemaTests(unittest.TestCase):
             "Álvaro Pérez explicó el incidente.",
             "Jörg Müller delivered reliability automation.",
             "Contexto seguro. Ana López implementó automatización.",
+            "Ana López managed reliability automation.",
+            "Ana López led reliability automation.",
+            "Zoë Šimić delivered reliability automation.",
+            "Łukasz Żółć delivered reliability automation.",
         )
         for text in rejected:
             with self.subTest(text=text):
@@ -702,6 +706,9 @@ class ExecutiveCareerDossierSchemaTests(unittest.TestCase):
             "Platform Engineering covers incident response scope.",
             "El equipo implementó automatización.",
             "Oracle Cloud delivers reliability automation.",
+            "Incident Response delivered reliability automation.",
+            "Service Reliability delivered reliability automation.",
+            "Oracle Database delivered reliability automation.",
         )
         for text in accepted:
             with self.subTest(text=text):

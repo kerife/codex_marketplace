@@ -1,6 +1,7 @@
 import copy
 import datetime as dt
 import json
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -546,6 +547,36 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
                 errors = validate_schema_instance(value, schema)
                 self.assertIn("schema keyword is invalid", errors)
 
+    def test_dependency_free_checker_rejects_complete_malformed_keyword_grammar(self):
+        malformed_keywords = (
+            ({}, {"type": "object", "required": [[]]}),
+            ({}, {"type": "object", "required": ["missing", "missing"]}),
+            (1, {"type": {}}),
+            (1, {"type": []}),
+            (1, {"type": ["integer", "unsupported"]}),
+        )
+        for value, schema in malformed_keywords:
+            with self.subTest(schema=schema):
+                try:
+                    errors = validate_schema_instance(value, schema)
+                except Exception as error:  # pragma: no cover - reports unsafe production
+                    self.fail(f"validator raised {type(error).__name__}")
+                self.assertEqual(
+                    ["schema keyword is invalid"],
+                    errors,
+                )
+
+        malformed_branches = (
+            ([], {"type": "array", "items": None}),
+            ([], {"type": "array", "contains": None}),
+        )
+        for value, schema in malformed_branches:
+            with self.subTest(schema=schema):
+                self.assertEqual(
+                    ["schema branch is invalid"],
+                    validate_schema_instance(value, schema),
+                )
+
     def test_dependency_free_checker_rejects_invalid_regex_patterns(self):
         for pattern in ("[", "(?", r"\K"):
             with self.subTest(pattern=pattern):
@@ -559,6 +590,53 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
 
         self.assertEqual(["$: pattern exceeds safe complexity limit"], errors)
 
+    def test_dependency_free_checker_rejects_structural_redos_bypasses_within_timeout(self):
+        probe = (
+            "import json,sys;"
+            "sys.path.insert(0,sys.argv[1]);"
+            "from validate_json_schema_subset import validate_schema_instance;"
+            "print(json.dumps(validate_schema_instance("
+            "sys.argv[2],{'type':'string','pattern':sys.argv[3]})))"
+        )
+        cases = (
+            ("((a+))+$", "a" * 26 + "!"),
+            ("(a|aa)+$", "a" * 38 + "!"),
+        )
+        for pattern, value in cases:
+            with self.subTest(pattern=pattern):
+                try:
+                    result = subprocess.run(
+                        [
+                            sys.executable,
+                            "-B",
+                            "-c",
+                            probe,
+                            str(ROOT / "scripts"),
+                            value,
+                            pattern,
+                        ],
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                        timeout=1.0,
+                    )
+                except subprocess.TimeoutExpired:
+                    self.fail("schema pattern validation exceeded safe timeout")
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual(
+                    ["$: pattern exceeds safe complexity limit"],
+                    json.loads(result.stdout),
+                )
+
+        for pattern, value in (("^(a|b)+$", "abba"), ("^((ab))+$", "abab")):
+            with self.subTest(pattern=pattern, control="safe"):
+                self.assertEqual(
+                    [],
+                    validate_schema_instance(
+                        value, {"type": "string", "pattern": pattern}
+                    ),
+                )
+
     def test_dependency_free_checker_rejects_cyclic_json_values_without_recursion_error(self):
         value = []
         value.append(value)
@@ -566,6 +644,20 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         errors = validate_schema_instance(value, {"const": value})
 
         self.assertEqual([], errors)
+
+    def test_dependency_free_checker_resolves_root_reference_and_rejects_bad_pointer_escapes(self):
+        self.assertEqual(
+            ["schema validation exceeds safe evaluation limit"],
+            validate_schema_instance({}, {"$ref": "#"}),
+        )
+        malformed_pointer = {
+            "$defs": {"~2escaped": {"const": "accepted-only-if-pointer-is-wrong"}},
+            "$ref": "#/$defs/~2escaped",
+        }
+        self.assertEqual(
+            ["schema reference is invalid"],
+            validate_schema_instance("accepted-only-if-pointer-is-wrong", malformed_pointer),
+        )
 
     def test_dependency_free_checker_bounds_deep_values(self):
         value: object = "leaf"
@@ -626,6 +718,43 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
                 errors = validate_schema_instance({key: "x"}, schema)
                 self.assertEqual([f"$: unsupported field {expected}"], errors)
                 self.assertNotIn("\nINJECTED", "\n".join(errors))
+
+    def test_schema_diagnostics_do_not_echo_task_one_sentinels_in_keys_or_required_paths(self):
+        sentinels = (
+            ("/etc/passwd", "<redacted-field>"),
+            ("/opt/data/profile.json", "<redacted-field>"),
+            (r"D:\work\candidate\profile.json", "<redacted-field>"),
+            (r"\\server\share\profile.json", "<redacted-field>"),
+            (
+                "ordinary\x1b[31mINJECTED\nLINE",
+                r"ordinary\u001b[31mINJECTED\u000aLINE",
+            ),
+        )
+        closed_schema = {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        }
+        for sentinel, expected in sentinels:
+            with self.subTest(sentinel=sentinel, location="instance"):
+                errors = validate_schema_instance({sentinel: "x"}, closed_schema)
+                self.assertEqual([f"$: unsupported field {expected}"], errors)
+                self.assertNotIn(sentinel, "\n".join(errors))
+                self.assertNotIn("\x1b", "\n".join(errors))
+
+            with self.subTest(sentinel=sentinel, location="required"):
+                required_schema = {"type": "object", "required": [sentinel]}
+                errors = validate_schema_instance({}, required_schema)
+                self.assertEqual([f"$: missing required field {expected}"], errors)
+                self.assertNotIn(sentinel, "\n".join(errors))
+                self.assertNotIn("\x1b", "\n".join(errors))
+
+        for relative_key in (r"relative\profile.json", "foo/opt/data/profile.json"):
+            with self.subTest(relative_key=relative_key):
+                self.assertEqual(
+                    [f"$: unsupported field {relative_key}"],
+                    validate_schema_instance({relative_key: "x"}, closed_schema),
+                )
 
     def test_dependency_free_checker_enforces_strict_json_types_and_const(self):
         self.assertEqual(

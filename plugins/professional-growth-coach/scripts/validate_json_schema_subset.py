@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import datetime as dt
 import re
-import unicodedata
 from collections.abc import Mapping
+
+from private_prose_safety import safe_diagnostic_field_name
 
 
 MAX_SCHEMA_VALIDATION_DEPTH = 64
@@ -22,40 +23,210 @@ _NESTED_QUANTIFIER = re.compile(
 )
 
 
-_SUSPICIOUS_FIELD = re.compile(
-    r"@|://|~[\\/]|[.]{1,2}[\\/]|"
-    r"(?:^|[\\/])(?:users|private|tmp|home)[\\/] |"
-    r"(?:www\.|linkedin\.com/)|"
-    r"(?:token|secret|password|credential|api[_-]?key|access[_-]?key|auth|cookie|private)",
-    re.IGNORECASE | re.VERBOSE,
+_SUPPORTED_TYPES = frozenset(
+    {"object", "array", "string", "boolean", "integer", "number", "null"}
 )
+
+
+def _group_spans(pattern: str) -> list[tuple[int, int]]:
+    spans: list[tuple[int, int]] = []
+    stack: list[int] = []
+    escaped = False
+    in_character_class = False
+    for index, character in enumerate(pattern):
+        if escaped:
+            escaped = False
+            continue
+        if character == "\\":
+            escaped = True
+            continue
+        if character == "[" and not in_character_class:
+            in_character_class = True
+            continue
+        if character == "]" and in_character_class:
+            in_character_class = False
+            continue
+        if in_character_class:
+            continue
+        if character == "(":
+            stack.append(index)
+        elif character == ")" and stack:
+            spans.append((stack.pop(), index))
+    return spans
+
+
+def _is_repeated_group(pattern: str, closing_index: int) -> bool:
+    suffix = pattern[closing_index + 1 :]
+    return bool(
+        suffix.startswith(("+", "*"))
+        or re.match(r"\{\d+(?:,\d*)?\}", suffix)
+    )
+
+
+def _contains_quantifier(fragment: str) -> bool:
+    escaped = False
+    in_character_class = False
+    for index, character in enumerate(fragment):
+        if escaped:
+            escaped = False
+            continue
+        if character == "\\":
+            escaped = True
+            continue
+        if character == "[" and not in_character_class:
+            in_character_class = True
+            continue
+        if character == "]" and in_character_class:
+            in_character_class = False
+            continue
+        if in_character_class:
+            continue
+        if character in "+*{" or (
+            character == "?" and index > 0 and fragment[index - 1] != "("
+        ):
+            return True
+    return False
+
+
+def _strip_group_extension(fragment: str) -> str:
+    extension = re.match(r"^\?(?:[aiLmsux-]+)?:", fragment)
+    return fragment[extension.end() :] if extension else fragment
+
+
+def _strip_redundant_groups(fragment: str) -> str:
+    value = _strip_group_extension(fragment)
+    while value.startswith("(") and any(
+        start == 0 and end == len(value) - 1 for start, end in _group_spans(value)
+    ):
+        value = _strip_group_extension(value[1:-1])
+    return value
+
+
+def _top_level_alternatives(fragment: str) -> list[str]:
+    alternatives: list[str] = []
+    start = 0
+    depth = 0
+    escaped = False
+    in_character_class = False
+    for index, character in enumerate(fragment):
+        if escaped:
+            escaped = False
+            continue
+        if character == "\\":
+            escaped = True
+            continue
+        if character == "[" and not in_character_class:
+            in_character_class = True
+            continue
+        if character == "]" and in_character_class:
+            in_character_class = False
+            continue
+        if in_character_class:
+            continue
+        if character == "(":
+            depth += 1
+        elif character == ")" and depth:
+            depth -= 1
+        elif character == "|" and depth == 0:
+            alternatives.append(fragment[start:index])
+            start = index + 1
+    alternatives.append(fragment[start:])
+    return alternatives
+
+
+def _literal_tokens(fragment: str) -> tuple[str, ...] | None:
+    tokens: list[str] = []
+    index = 0
+    while index < len(fragment):
+        character = fragment[index]
+        if character == "\\":
+            index += 1
+            if index >= len(fragment) or fragment[index].isalnum():
+                return None
+            tokens.append(fragment[index])
+        elif character.isalnum() or character in " _-'":
+            tokens.append(character)
+        else:
+            return None
+        index += 1
+    return tuple(tokens)
+
+
+def _has_overlapping_literal_alternatives(fragment: str) -> bool:
+    alternatives = _top_level_alternatives(_strip_redundant_groups(fragment))
+    if len(alternatives) < 2:
+        return False
+    tokenized = [_literal_tokens(alternative) for alternative in alternatives]
+    if any(tokens is None or not tokens for tokens in tokenized):
+        return False
+    return any(
+        left != right
+        and len(left) <= len(right)
+        and right[: len(left)] == left
+        for left in tokenized
+        for right in tokenized
+    )
+
+
+def _pattern_has_structural_redos_risk(pattern: str) -> bool:
+    for opening, closing in _group_spans(pattern):
+        if not _is_repeated_group(pattern, closing):
+            continue
+        body = pattern[opening + 1 : closing]
+        if _contains_quantifier(body) or _has_overlapping_literal_alternatives(body):
+            return True
+    return False
 
 
 def _keyword_shapes_valid(schema: Mapping[str, object]) -> bool:
     if "properties" in schema and not isinstance(schema["properties"], Mapping):
         return False
-    for keyword in ("required", "enum"):
-        if keyword in schema and not isinstance(schema[keyword], list):
+    if "required" in schema:
+        required = schema["required"]
+        if (
+            not isinstance(required, list)
+            or not all(isinstance(field, str) for field in required)
+            or len(required) != len(set(required))
+        ):
+            return False
+    if "enum" in schema and not isinstance(schema["enum"], list):
+        return False
+    if "type" in schema:
+        expected = schema["type"]
+        if isinstance(expected, str):
+            if expected not in _SUPPORTED_TYPES:
+                return False
+        elif (
+            not isinstance(expected, list)
+            or not expected
+            or not all(
+                isinstance(option, str) and option in _SUPPORTED_TYPES
+                for option in expected
+            )
+            or len(expected) != len(set(expected))
+        ):
             return False
     for keyword in ("minimum", "maximum"):
-        value = schema.get(keyword)
-        if value is not None and (
-            not isinstance(value, (int, float)) or isinstance(value, bool)
-        ):
-            return False
+        if keyword in schema:
+            value = schema[keyword]
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                return False
     for keyword in ("minLength", "maxLength", "minItems", "maxItems"):
-        value = schema.get(keyword)
-        if value is not None and (
-            not isinstance(value, int) or isinstance(value, bool) or value < 0
-        ):
-            return False
+        if keyword in schema:
+            value = schema[keyword]
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                return False
     if "pattern" in schema and not isinstance(schema["pattern"], str):
         return False
     return True
 
 
 def _pattern_error(pattern: str) -> str | None:
-    if len(pattern) > MAX_SCHEMA_PATTERN_LENGTH or _NESTED_QUANTIFIER.search(pattern):
+    if (
+        len(pattern) > MAX_SCHEMA_PATTERN_LENGTH
+        or _NESTED_QUANTIFIER.search(pattern)
+        or _pattern_has_structural_redos_risk(pattern)
+    ):
         return SCHEMA_PATTERN_COMPLEXITY_ERROR
     try:
         re.compile(pattern)
@@ -64,25 +235,19 @@ def _pattern_error(pattern: str) -> str | None:
     return None
 
 
-def _escape_diagnostic_controls(value: str) -> str:
-    return "".join(
-        f"\\u{ord(character):04x}"
-        if unicodedata.category(character) in {"Cc", "Cf", "Cs", "Zl", "Zp"}
-        else character
-        for character in value
-    )
-
-
 def _safe_diagnostic_field_name(value: object) -> str:
-    text = str(value)
-    if _SUSPICIOUS_FIELD.search(text):
-        return "<redacted-field>"
-    return _escape_diagnostic_controls(text)
+    return safe_diagnostic_field_name(str(value))
 
 
 def _pointer(root: Mapping[str, object], reference: str) -> Mapping[str, object]:
+    if reference == "#":
+        return root
+    if not reference.startswith("#/"):
+        raise ValueError("unsupported schema reference")
     value: object = root
-    for part in reference.removeprefix("#/").split("/"):
+    for part in reference[2:].split("/"):
+        if re.search(r"~(?:[^01]|$)", part):
+            raise ValueError("invalid JSON Pointer escape")
         value = value[part.replace("~1", "/").replace("~0", "~")]  # type: ignore[index]
     return value  # type: ignore[return-value]
 
@@ -168,7 +333,15 @@ def _validate(
                 not isinstance(branch, Mapping) for branch in branches
             ):
                 return ["schema branch is invalid"]
-    for branch_name in ("if", "then", "else", "not"):
+    properties = schema.get("properties", {})
+    if isinstance(properties, Mapping) and any(
+        not isinstance(branch, Mapping) for branch in properties.values()
+    ):
+        return ["schema branch is invalid"]
+    definitions = schema.get("$defs", {})
+    if not isinstance(definitions, Mapping):
+        return ["schema branch is invalid"]
+    for branch_name in ("items", "contains", "if", "then", "else", "not"):
         if branch_name in schema and not isinstance(schema[branch_name], Mapping):
             return ["schema branch is invalid"]
     if budget[0] <= 0:
@@ -181,7 +354,7 @@ def _validate(
             return ["schema reference is invalid"]
         try:
             target = _pointer(root, reference)
-        except (KeyError, TypeError, AttributeError, IndexError):
+        except (KeyError, TypeError, AttributeError, IndexError, ValueError):
             return ["schema reference is invalid"]
         if not isinstance(target, Mapping):
             return ["schema reference is invalid"]

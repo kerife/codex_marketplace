@@ -454,6 +454,10 @@ class DossierRecruiterPracticeHandoffTests(unittest.TestCase):
             "Ana de la Cruz delivered reliability automation.",
             "José Luis García delivered reliability automation.",
             "Contexto seguro. Ana María López delivered reliability automation.",
+            "Ana López managed reliability automation.",
+            "Ana López led reliability automation.",
+            "Zoë Šimić delivered reliability automation.",
+            "Łukasz Żółć delivered reliability automation.",
         ):
             with self.subTest(rejected=value):
                 self.assertFalse(is_identity_free_handoff_text(value, 500))
@@ -461,6 +465,9 @@ class DossierRecruiterPracticeHandoffTests(unittest.TestCase):
             "Senior Engineer leads incident response.",
             "Platform Engineering covers incident response scope.",
             "Oracle Cloud delivers reliability automation.",
+            "Incident Response delivered reliability automation.",
+            "Service Reliability delivered reliability automation.",
+            "Oracle Database delivered reliability automation.",
         ):
             with self.subTest(accepted=value):
                 self.assertTrue(is_identity_free_handoff_text(value, 500))
@@ -836,6 +843,39 @@ class DossierRecruiterPracticeHandoffTests(unittest.TestCase):
                     self.fixture["source_snapshot"],
                 )
         self.assertNotIn(private_diagnostic, str(raised.exception))
+
+    def test_real_handoff_schema_consumer_does_not_echo_task_one_sentinels(self):
+        schema = json.loads(
+            (ROOT / "schemas/dossier-recruiter-practice-handoff-v1.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        handoff = copy.deepcopy(self.fixture["expected"])
+        sentinels = (
+            "/etc/passwd",
+            "/opt/data/profile.json",
+            r"D:\work\candidate\profile.json",
+            r"\\server\share\profile.json",
+            "ordinary\x1b[31mINJECTED\nLINE",
+        )
+        for sentinel in sentinels:
+            with self.subTest(sentinel=sentinel, location="instance"):
+                mutated = copy.deepcopy(handoff)
+                mutated[sentinel] = "x"
+                rendered = "\n".join(
+                    handoff_builder.validate_schema_instance(mutated, schema)
+                )
+                self.assertNotIn(sentinel, rendered)
+                self.assertNotIn("\x1b", rendered)
+
+            with self.subTest(sentinel=sentinel, location="required"):
+                required_schema = copy.deepcopy(schema)
+                required_schema["required"].append(sentinel)
+                rendered = "\n".join(
+                    handoff_builder.validate_schema_instance(handoff, required_schema)
+                )
+                self.assertNotIn(sentinel, rendered)
+                self.assertNotIn("\x1b", rendered)
 
     def test_sidecar_schema_enforces_one_to_ten_source_references(self):
         schema = json.loads(

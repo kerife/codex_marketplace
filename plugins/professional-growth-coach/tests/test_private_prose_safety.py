@@ -56,6 +56,7 @@ class PrivateProseSafetyTests(unittest.TestCase):
             r"D:\work\kevinriosferrer\profile.json": "<redacted-field>",
             r"\\server\share\kevinriosferrer\profile.json": "<redacted-field>",
             r"relative\profile.json": r"relative\profile.json",
+            "foo/opt/data/profile.json": "foo/opt/data/profile.json",
             "ordinary\x1b[31mINJECTED\nLINE": r"ordinary\u001b[31mINJECTED\u000aLINE",
             "www.example.invalid/profile": "<redacted-field>",
             "linkedin.com/in/synthetic": "<redacted-field>",

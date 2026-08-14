@@ -44,19 +44,68 @@ _FORBIDDEN_NAME = re.compile(
 
 _FORBIDDEN_CONTROL = re.compile(r"[\u0000-\u001f\u007f-\u009f\u200b-\u200d\u2060\ufeff]")
 
-_UNLABELLED_PERSON_INTRO = re.compile(
-    r"(?:^|[:.!?]\s+)"
-    r"(?!(?i:senior|principal|lead|staff|software|platform|data|product|engineering|"
-    r"cloud|security|technical|solutions|project|program|people|talent|customer|"
-    r"account|enterprise|sales|marketing|finance|operations|strategy|user|ux|ui|"
-    r"oracle\s+cloud)\s+)"
-    r"[A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'-]+"
-    r"(?:\s+(?:(?i:de\s+la|de\s+las|de\s+los|de|del|da|das|do|dos|la|las|los|van|von|y)\s+)?"
-    r"[A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'-]+){1,3}\s+"
-    r"(?i:reports?|describes?|works?|has|joined|deliver(?:s|ed)?|explains?|reported|"
-    r"reporta|describe|trabaja|tiene|entreg[aoó]|explica|explic[óo]|reduce|reduj[oe]|"
-    r"lider[óo]|construy[óo]|implement[óo]|diseñ[óo]|menciona|coment[aoó]?)\b"
+_SENTENCE_START = re.compile(r"(?:^|[:.!?]\s+)")
+_UNICODE_WORD = re.compile(r"[^\W\d_]+(?:['’\-][^\W\d_]+)*", re.UNICODE)
+_NAME_PARTICLES = frozenset(
+    {"da", "das", "de", "del", "do", "dos", "la", "las", "los", "van", "von", "y"}
 )
+_ROLE_OR_DOMAIN_QUALIFIERS = frozenset(
+    {
+        "account", "cloud", "customer", "data", "engineering", "enterprise",
+        "finance", "lead", "marketing", "operations", "people", "platform",
+        "principal", "product", "program", "project", "sales", "security",
+        "senior", "software", "solutions", "staff", "strategy", "talent",
+        "technical", "ui", "user", "ux",
+    }
+)
+# A capitalized noun phrase ending in one of these domain/organization heads is
+# a technical subject, not a person name. This avoids phrase-by-phrase exceptions.
+_NON_PERSON_SUBJECT_HEADS = frozenset(
+    {
+        "automation", "cloud", "company", "corporation", "database",
+        "engineering", "infrastructure", "operations", "organization",
+        "platform", "product", "program", "project", "reliability", "response",
+        "security", "service", "services", "software", "system", "systems",
+        "team", "technology",
+    }
+)
+_MAX_IDENTITY_SCAN_CHARS = 4_096
+
+
+def _sentence_subject_words(value: str, start: int) -> tuple[str, ...]:
+    significant: list[str] = []
+    has_predicate = False
+    cursor = start
+    for _ in range(7):
+        word_match = _UNICODE_WORD.match(value, cursor)
+        if word_match is None:
+            break
+        word = word_match.group(0)
+        folded = word.casefold()
+        if folded in _NAME_PARTICLES and significant:
+            pass
+        elif word[0].isupper():
+            significant.append(word)
+            if len(significant) > 4:
+                return ()
+        else:
+            has_predicate = True
+            break
+        separator = re.match(r"\s+", value[word_match.end() :])
+        if separator is None:
+            break
+        cursor = word_match.end() + separator.end()
+    return tuple(significant) if has_predicate else ()
+
+
+def _looks_like_person_subject(words: tuple[str, ...]) -> bool:
+    if not 2 <= len(words) <= 4:
+        return False
+    folded = tuple(word.casefold() for word in words)
+    return (
+        folded[0] not in _ROLE_OR_DOMAIN_QUALIFIERS
+        and folded[-1] not in _NON_PERSON_SUBJECT_HEADS
+    )
 
 
 def is_safe_handoff_text(value: object, maximum: int) -> bool:
@@ -74,9 +123,17 @@ def is_safe_handoff_text(value: object, maximum: int) -> bool:
 
 def has_unlabelled_person_intro(value: object) -> bool:
     """Return whether prose begins a sentence with an ordinary person name."""
-    return isinstance(value, str) and _UNLABELLED_PERSON_INTRO.search(
-        unicodedata.normalize("NFKC", value)
-    ) is not None
+    if not isinstance(value, str):
+        return False
+    normalized = unicodedata.normalize("NFKC", value)
+    if len(normalized) > _MAX_IDENTITY_SCAN_CHARS:
+        return True
+    return any(
+        _looks_like_person_subject(
+            _sentence_subject_words(normalized, sentence_start.end())
+        )
+        for sentence_start in _SENTENCE_START.finditer(normalized)
+    )
 
 
 def is_identity_free_handoff_text(value: object, maximum: int) -> bool:
