@@ -115,6 +115,7 @@ MARKET_CLAIM_LANGUAGE = re.compile(
     r"demanda|oportunidades\s+laborales|sought|solicitad[oa]s?|scarce|escas[oa]s?|"
     r"outpaces?\s+supply|supera\s+la\s+oferta|difficult\s+for\s+employers?\s+to\s+fill|"
     r"dificil(?:es)?\s+de\s+cubrir|eager\s+to\s+hire|compete\s+for\s+(?:this\s+)?talent|"
+    r"employers?\b[^.!?\n]{0,48}\bhir(?:e|ing)\b|"
     r"scarcity|escasez|escasea|(?:candidate|talent)\s+shortage|"
     r"open\s+roles?\s+exceed\s+available\s+candidates?|"
     r"(?:are|aren\s+t|are\s+not)\s+enough\s+(?:candidates?|talent)|"
@@ -206,7 +207,7 @@ UNSUPPORTED_DEMAND_LANGUAGE = re.compile(
     r"\b(?:many|numerous|plenty\s+of|lots\s+of)\s+(?:vacancies|openings|jobs)\b|"
     r"\b(?:muchas?|numerosas?)\s+vacantes\b|"
     r"\bemployers?\b[^.!?\n]{0,48}\b(?:actively\s+)?(?:seek|search\s+for|"
-    r"look\s+for|want|hire|demand)\b|"
+    r"look\s+for|want|hir(?:e|ing)|demand)\b|"
     r"\b(?:empleadores?|reclutadores?)\b[^.!?\n]{0,48}\b(?:buscan|"
     r"contratan|demandan|necesitan)\b",
     re.I,
@@ -1174,13 +1175,24 @@ def extract_ready_expertise_terms(value: object) -> tuple[str, ...]:
     return tuple(terms)
 
 
-def _validate_private_action(value: object, path: str, errors: list[str]) -> None:
+def _validate_explicit_external_action(
+    value: object, path: str, errors: list[str]
+) -> bool:
     if not isinstance(value, str):
-        return
+        return False
     if (
         PRIVATE_EXTERNAL_ACTION.search(value.strip())
-        or candidate_text_has_external_action(value)
+        or NORMALIZED_LIVE_EXTERNAL_STATE.search(normalize_candidate_text(value))
     ):
+        errors.append(f"{path} must remain a private review action")
+        return True
+    return False
+
+
+def _validate_private_action(value: object, path: str, errors: list[str]) -> None:
+    if _validate_explicit_external_action(value, path, errors):
+        return
+    if isinstance(value, str) and candidate_text_has_external_action(value):
         errors.append(f"{path} must remain a private review action")
 
 
