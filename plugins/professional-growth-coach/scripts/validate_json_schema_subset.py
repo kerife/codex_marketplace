@@ -63,7 +63,7 @@ def _is_repeated_group(pattern: str, closing_index: int) -> bool:
     )
 
 
-def _contains_quantifier(fragment: str) -> bool:
+def _contains_unbounded_quantifier(fragment: str) -> bool:
     escaped = False
     in_character_class = False
     for index, character in enumerate(fragment):
@@ -81,9 +81,7 @@ def _contains_quantifier(fragment: str) -> bool:
             continue
         if in_character_class:
             continue
-        if character in "+*{" or (
-            character == "?" and index > 0 and fragment[index - 1] != "("
-        ):
+        if character in "+*{":
             return True
     return False
 
@@ -152,6 +150,48 @@ def _literal_tokens(fragment: str) -> tuple[str, ...] | None:
     return tuple(tokens)
 
 
+def _literal_optional_variants(fragment: str) -> list[tuple[str, ...]] | None:
+    variants: list[tuple[str, ...]] = [()]
+    value = _strip_group_extension(fragment)
+    index = 0
+    while index < len(value):
+        character = value[index]
+        if character == "\\":
+            index += 1
+            if index >= len(value) or value[index].isalnum():
+                return None
+            token = value[index]
+        elif character.isalnum() or character in " _-'":
+            token = character
+        else:
+            return None
+        optional = index + 1 < len(value) and value[index + 1] == "?"
+        extended = [variant + (token,) for variant in variants]
+        variants = variants + extended if optional else extended
+        if len(variants) > 256:
+            return None
+        index += 2 if optional else 1
+    return variants
+
+
+def _has_ambiguous_optional_paths(fragment: str) -> bool:
+    alternatives = _top_level_alternatives(_strip_redundant_groups(fragment))
+    if not any("?" in alternative for alternative in alternatives):
+        return False
+    variants: list[tuple[str, ...]] = []
+    for alternative in alternatives:
+        alternative_variants = _literal_optional_variants(alternative)
+        if alternative_variants is None:
+            return True
+        variants.extend(alternative_variants)
+    return any(
+        not left or (len(left) <= len(right) and right[: len(left)] == left)
+        for left_index, left in enumerate(variants)
+        for right_index, right in enumerate(variants)
+        if left_index != right_index
+    )
+
+
 def _has_overlapping_literal_alternatives(fragment: str) -> bool:
     alternatives = _top_level_alternatives(_strip_redundant_groups(fragment))
     if len(alternatives) < 2:
@@ -160,11 +200,10 @@ def _has_overlapping_literal_alternatives(fragment: str) -> bool:
     if any(tokens is None or not tokens for tokens in tokenized):
         return False
     return any(
-        left != right
-        and len(left) <= len(right)
-        and right[: len(left)] == left
-        for left in tokenized
-        for right in tokenized
+        len(left) <= len(right) and right[: len(left)] == left
+        for left_index, left in enumerate(tokenized)
+        for right_index, right in enumerate(tokenized)
+        if left_index != right_index
     )
 
 
@@ -173,7 +212,11 @@ def _pattern_has_structural_redos_risk(pattern: str) -> bool:
         if not _is_repeated_group(pattern, closing):
             continue
         body = pattern[opening + 1 : closing]
-        if _contains_quantifier(body) or _has_overlapping_literal_alternatives(body):
+        if (
+            _contains_unbounded_quantifier(body)
+            or _has_overlapping_literal_alternatives(body)
+            or _has_ambiguous_optional_paths(body)
+        ):
             return True
     return False
 
@@ -189,8 +232,10 @@ def _keyword_shapes_valid(schema: Mapping[str, object]) -> bool:
             or len(required) != len(set(required))
         ):
             return False
-    if "enum" in schema and not isinstance(schema["enum"], list):
-        return False
+    if "enum" in schema:
+        enum = schema["enum"]
+        if not isinstance(enum, list) or not enum:
+            return False
     if "type" in schema:
         expected = schema["type"]
         if isinstance(expected, str):
@@ -217,6 +262,16 @@ def _keyword_shapes_valid(schema: Mapping[str, object]) -> bool:
             if not isinstance(value, int) or isinstance(value, bool) or value < 0:
                 return False
     if "pattern" in schema and not isinstance(schema["pattern"], str):
+        return False
+    if "additionalProperties" in schema and not isinstance(
+        schema["additionalProperties"], bool
+    ):
+        return False
+    if "uniqueItems" in schema and not isinstance(schema["uniqueItems"], bool):
+        return False
+    if "format" in schema and schema["format"] != "date":
+        return False
+    if "$ref" in schema and not isinstance(schema["$ref"], str):
         return False
     return True
 
@@ -250,6 +305,94 @@ def _pointer(root: Mapping[str, object], reference: str) -> Mapping[str, object]
             raise ValueError("invalid JSON Pointer escape")
         value = value[part.replace("~1", "/").replace("~0", "~")]  # type: ignore[index]
     return value  # type: ignore[return-value]
+
+
+def _preflight_schema(
+    schema: object,
+    root: Mapping[str, object],
+    *,
+    _depth: int = 0,
+    budget: list[int],
+    active_schema_nodes: set[int] | None = None,
+    checked_schema_nodes: set[int] | None = None,
+) -> list[str]:
+    """Validate the complete supported schema grammar before instance traversal."""
+    if _depth > MAX_SCHEMA_VALIDATION_DEPTH:
+        return [SCHEMA_DEPTH_ERROR]
+    if budget[0] <= 0:
+        return [SCHEMA_EVALUATION_LIMIT_ERROR]
+    budget[0] -= 1
+    if not isinstance(schema, Mapping):
+        return ["schema branch is invalid"]
+    if active_schema_nodes is None:
+        active_schema_nodes = set()
+    if checked_schema_nodes is None:
+        checked_schema_nodes = set()
+    schema_identity = id(schema)
+    if schema_identity in active_schema_nodes:
+        return [SCHEMA_EVALUATION_LIMIT_ERROR]
+    if schema_identity in checked_schema_nodes:
+        return []
+    if not _keyword_shapes_valid(schema):
+        return [SCHEMA_KEYWORD_INVALID_ERROR]
+    if "pattern" in schema:
+        pattern_error = _pattern_error(schema["pattern"])
+        if pattern_error is not None:
+            if pattern_error == SCHEMA_PATTERN_COMPLEXITY_ERROR:
+                return [f"$: {pattern_error}"]
+            return [pattern_error]
+
+    properties = schema.get("properties", {})
+    definitions = schema.get("$defs", {})
+    if not isinstance(properties, Mapping) or not isinstance(definitions, Mapping):
+        return ["schema branch is invalid"]
+    if not all(isinstance(name, str) for name in (*properties, *definitions)):
+        return ["schema branch is invalid"]
+
+    child_schemas: list[object] = [*properties.values(), *definitions.values()]
+    for combinator in ("oneOf", "anyOf", "allOf"):
+        if combinator not in schema:
+            continue
+        branches = schema[combinator]
+        if (
+            not isinstance(branches, list)
+            or not branches
+            or any(not isinstance(branch, Mapping) for branch in branches)
+        ):
+            return ["schema branch is invalid"]
+        child_schemas.extend(branches)
+    for branch_name in ("items", "contains", "if", "then", "else", "not"):
+        if branch_name in schema:
+            branch = schema[branch_name]
+            if not isinstance(branch, Mapping):
+                return ["schema branch is invalid"]
+            child_schemas.append(branch)
+
+    if "$ref" in schema:
+        try:
+            target = _pointer(root, schema["$ref"])
+        except (KeyError, TypeError, AttributeError, IndexError, ValueError):
+            return ["schema reference is invalid"]
+        if not isinstance(target, Mapping):
+            return ["schema reference is invalid"]
+
+    active_schema_nodes.add(schema_identity)
+    try:
+        for child_schema in child_schemas:
+            child_errors = _preflight_schema(
+                child_schema,
+                root,
+                _depth=_depth + 1,
+                budget=budget,
+                active_schema_nodes=active_schema_nodes,
+                checked_schema_nodes=checked_schema_nodes,
+            )
+            if child_errors:
+                return child_errors
+    finally:
+        active_schema_nodes.remove(schema_identity)
+    checked_schema_nodes.add(schema_identity)
+    return []
 
 
 def _type_ok(value: object, expected: object) -> bool:
@@ -363,15 +506,17 @@ def _validate(
             return [SCHEMA_EVALUATION_LIMIT_ERROR]
         active_ref_targets.add(target_identity)
         try:
-            return _validate(
-                value,
-                target,
-                root,
-                path,
-                collect=collect,
-                _depth=_depth + 1,
-                budget=budget,
-                active_ref_targets=active_ref_targets,
+            errors.extend(
+                _validate(
+                    value,
+                    target,
+                    root,
+                    path,
+                    collect=collect,
+                    _depth=_depth + 1,
+                    budget=budget,
+                    active_ref_targets=active_ref_targets,
+                )
             )
         finally:
             active_ref_targets.remove(target_identity)
@@ -547,6 +692,9 @@ def validate_schema_instance(
 ) -> list[str]:
     """Return bounded schema errors for the supported keyword subset."""
     budget = [MAX_SCHEMA_EVALUATIONS]
+    preflight_errors = _preflight_schema(schema, schema, budget=budget)
+    if preflight_errors:
+        return sorted(set(preflight_errors))
     errors = _validate(value, schema, schema, "$", budget=budget)
     if budget[0] <= 0:
         errors.append(SCHEMA_EVALUATION_LIMIT_ERROR)

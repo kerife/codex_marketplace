@@ -62,20 +62,52 @@ _ROLE_OR_DOMAIN_QUALIFIERS = frozenset(
 # a technical subject, not a person name. This avoids phrase-by-phrase exceptions.
 _NON_PERSON_SUBJECT_HEADS = frozenset(
     {
-        "automation", "cloud", "company", "corporation", "database",
-        "engineering", "infrastructure", "operations", "organization",
-        "platform", "product", "program", "project", "reliability", "response",
-        "security", "service", "services", "software", "system", "systems",
-        "team", "technology",
+        "actions", "automation", "cloud", "cluster", "company", "corporation",
+        "database", "engine", "engineering", "infrastructure", "integration",
+        "intelligence", "learning", "management", "operations", "organization",
+        "platform", "product", "program", "project", "recovery", "reliability",
+        "response", "security", "service", "services", "software", "system",
+        "systems", "team", "technology",
     }
 )
 _MAX_IDENTITY_SCAN_CHARS = 4_096
+_OPENING_SUBJECT_PUNCTUATION = frozenset({"'", '"', "‘", "“", "«", "‹", "(", "[", "{"})
+_CLOSING_SUBJECT_PUNCTUATION = frozenset({"'", '"', "’", "”", "»", "›", ")", "]", "}"})
+_SUBJECT_LABEL_PUNCTUATION = frozenset({":", "—", "–"})
+
+
+def _is_cjk_name_token(word: str) -> bool:
+    return 1 <= len(word) <= 3 and all(
+        "CJK UNIFIED IDEOGRAPH" in unicodedata.name(character, "")
+        for character in word
+    )
+
+
+def _skip_subject_opening_punctuation(value: str, cursor: int) -> int:
+    while cursor < len(value) and value[cursor] in _OPENING_SUBJECT_PUNCTUATION:
+        cursor += 1
+    return cursor
+
+
+def _subject_separator(value: str, cursor: int) -> tuple[int, bool]:
+    while cursor < len(value) and value[cursor] in _CLOSING_SUBJECT_PUNCTUATION:
+        cursor += 1
+    if cursor < len(value) and value[cursor] in _SUBJECT_LABEL_PUNCTUATION:
+        cursor += 1
+        separator = re.match(r"\s*", value[cursor:])
+        return cursor + separator.end(), True
+    if cursor < len(value) and value[cursor] == ",":
+        cursor += 1
+    separator = re.match(r"\s+", value[cursor:])
+    if separator is None:
+        return cursor, False
+    return cursor + separator.end(), False
 
 
 def _sentence_subject_words(value: str, start: int) -> tuple[str, ...]:
     significant: list[str] = []
     has_predicate = False
-    cursor = start
+    cursor = _skip_subject_opening_punctuation(value, start)
     for _ in range(7):
         word_match = _UNICODE_WORD.match(value, cursor)
         if word_match is None:
@@ -84,17 +116,18 @@ def _sentence_subject_words(value: str, start: int) -> tuple[str, ...]:
         folded = word.casefold()
         if folded in _NAME_PARTICLES and significant:
             pass
-        elif word[0].isupper():
+        elif word[0].isupper() or _is_cjk_name_token(word):
             significant.append(word)
             if len(significant) > 4:
                 return ()
         else:
             has_predicate = True
             break
-        separator = re.match(r"\s+", value[word_match.end() :])
-        if separator is None:
+        cursor, is_label = _subject_separator(value, word_match.end())
+        if is_label:
+            has_predicate = True
+        if cursor == word_match.end():
             break
-        cursor = word_match.end() + separator.end()
     return tuple(significant) if has_predicate else ()
 
 

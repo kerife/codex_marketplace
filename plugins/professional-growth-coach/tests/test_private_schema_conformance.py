@@ -577,6 +577,52 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
                     validate_schema_instance(value, schema),
                 )
 
+    def test_dependency_free_checker_preflights_the_complete_schema_grammar(self):
+        malformed_keywords = (
+            ({}, {"properties": {"absent": {"required": [[]]}}}, "schema keyword is invalid"),
+            ({}, {"properties": {"absent": {"pattern": "["}}}, "schema pattern is invalid"),
+            ({}, {"enum": []}, "schema keyword is invalid"),
+            ({}, {"additionalProperties": "false"}, "schema keyword is invalid"),
+            ([], {"uniqueItems": "false"}, "schema keyword is invalid"),
+            ("2026-08-14", {"format": "datetime"}, "schema keyword is invalid"),
+            ("2026-08-14", {"format": 1}, "schema keyword is invalid"),
+        )
+        for value, schema, expected in malformed_keywords:
+            with self.subTest(schema=schema):
+                try:
+                    errors = validate_schema_instance(value, schema)
+                except Exception as error:  # pragma: no cover - reports unsafe production
+                    self.fail(f"validator raised {type(error).__name__}")
+                self.assertEqual([expected], errors)
+
+        malformed_branches = (
+            ({}, {"$defs": {"unused": None}}),
+            ({}, {"allOf": []}),
+            ({}, {"oneOf": []}),
+            ({}, {"anyOf": []}),
+        )
+        for value, schema in malformed_branches:
+            with self.subTest(schema=schema):
+                self.assertEqual(
+                    ["schema branch is invalid"],
+                    validate_schema_instance(value, schema),
+                )
+
+        safe_schemas = (
+            ({}, {"type": "object", "properties": {"absent": {"required": ["field"]}}}),
+            ({}, {"type": "object", "$defs": {"unused": {"type": "string"}}}),
+            ({}, {"allOf": [{"type": "object"}]}),
+            ({}, {"oneOf": [{"type": "object"}]}),
+            ({}, {"anyOf": [{"type": "object"}]}),
+            ({}, {"enum": [{}]}),
+            ({}, {"additionalProperties": False}),
+            ([], {"type": "array", "uniqueItems": False}),
+            ("2026-08-14", {"type": "string", "format": "date"}),
+        )
+        for value, schema in safe_schemas:
+            with self.subTest(schema=schema, control="safe"):
+                self.assertEqual([], validate_schema_instance(value, schema))
+
     def test_dependency_free_checker_rejects_invalid_regex_patterns(self):
         for pattern in ("[", "(?", r"\K"):
             with self.subTest(pattern=pattern):
@@ -601,6 +647,8 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         cases = (
             ("((a+))+$", "a" * 26 + "!"),
             ("(a|aa)+$", "a" * 38 + "!"),
+            ("(a|a)+$", "a" * 38 + "!"),
+            ("(a?|a)+$", "a" * 30 + "!"),
         )
         for pattern, value in cases:
             with self.subTest(pattern=pattern):
@@ -618,7 +666,7 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
                         text=True,
                         capture_output=True,
                         check=False,
-                        timeout=1.0,
+                        timeout=0.75,
                     )
                 except subprocess.TimeoutExpired:
                     self.fail("schema pattern validation exceeded safe timeout")
@@ -628,7 +676,11 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
                     json.loads(result.stdout),
                 )
 
-        for pattern, value in (("^(a|b)+$", "abba"), ("^((ab))+$", "abab")):
+        for pattern, value in (
+            ("^(a|b)+$", "abba"),
+            ("^((ab))+$", "abab"),
+            ("^(?:ab?c)+$", "acabcac"),
+        ):
             with self.subTest(pattern=pattern, control="safe"):
                 self.assertEqual(
                     [],
@@ -657,6 +709,19 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         self.assertEqual(
             ["schema reference is invalid"],
             validate_schema_instance("accepted-only-if-pointer-is-wrong", malformed_pointer),
+        )
+
+    def test_dependency_free_checker_applies_ref_sibling_keywords(self):
+        schema = {
+            "$defs": {"number": {"type": "integer"}},
+            "$ref": "#/$defs/number",
+            "minimum": 5,
+        }
+
+        self.assertEqual([], validate_schema_instance(5, schema))
+        self.assertEqual(
+            ["$: number below minimum"],
+            validate_schema_instance(3, schema),
         )
 
     def test_dependency_free_checker_bounds_deep_values(self):

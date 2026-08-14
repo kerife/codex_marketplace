@@ -673,6 +673,12 @@ class ExecutiveCareerDossierSchemaTests(unittest.TestCase):
             "Ana López led reliability automation.",
             "Zoë Šimić delivered reliability automation.",
             "Łukasz Żółć delivered reliability automation.",
+            "Ana López, who managed reliability automation.",
+            "“Ana López managed reliability automation.”",
+            "Ana López:",
+            "Ana López: managed reliability automation.",
+            "Ana López—managed reliability automation.",
+            "李 雷 managed reliability automation.",
         )
         for text in rejected:
             with self.subTest(text=text):
@@ -709,6 +715,14 @@ class ExecutiveCareerDossierSchemaTests(unittest.TestCase):
             "Incident Response delivered reliability automation.",
             "Service Reliability delivered reliability automation.",
             "Oracle Database delivered reliability automation.",
+            "Change Management improved delivery.",
+            "Machine Learning improved delivery.",
+            "Disaster Recovery improved delivery.",
+            "GitHub Actions improved delivery.",
+            "Oracle Kubernetes Engine improved delivery.",
+            "Artificial Intelligence enabled automation.",
+            "Continuous Integration improved delivery.",
+            "Kubernetes Cluster improved reliability.",
         )
         for text in accepted:
             with self.subTest(text=text):
