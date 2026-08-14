@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/professional-growth-coach/candidate-market-alignment-v1.schema.json",
+  "title": "Candidate Market Alignment v1",
+  "type": "object",
+  "required": ["schema_version", "research_snapshot", "executive_dossier_snapshot", "signal_bindings", "privacy_boundary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "candidate-market-alignment-v1"},
+    "research_snapshot": {"type": "string", "pattern": "^snap-market-sha256-[0-9a-f]{64}$"},
+    "executive_dossier_snapshot": {"type": "string", "pattern": "^snap-dossier-sha256-[0-9a-f]{64}$"},
+    "signal_bindings": {
+      "type": "array",
+      "maxItems": 150,
+      "items": {"$ref": "#/$defs/signal_binding"}
+    },
+    "privacy_boundary": {"const": "identity_free_evidence_references_only"}
+  },
+  "$defs": {
+    "signal_binding": {
+      "type": "object",
+      "required": ["signal", "support_state", "evidence_ids"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "support_state": {"const": "unknown"},
+                "evidence_ids": {"maxItems": 0}
+              }
+            },
+            {
+              "properties": {
+                "support_state": {"enum": ["verified_match", "candidate_reported_match", "adjacent_evidence", "explicit_gap"]},
+                "evidence_ids": {"minItems": 1}
+              }
+            }
+          ]
+        }
+      ],
+      "properties": {
+        "signal": {"type": "string", "minLength": 1, "maxLength": 120},
+        "support_state": {"enum": ["verified_match", "candidate_reported_match", "adjacent_evidence", "explicit_gap", "unknown"]},
+        "evidence_ids": {
+          "type": "array",
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^E-[0-9]{3}$"}
+        }
+      }
+    }
+  }
+}

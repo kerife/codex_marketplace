@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/professional-growth-coach/career-market-learning-dossier-v1.schema.json",
+  "title": "Career Market Learning Dossier v1",
+  "type": "object",
+  "required": ["schema_version", "locale", "as_of_date", "state", "source_research_snapshot", "source_executive_dossier_snapshot", "search_summary", "vacancies", "matrix_rows", "recurrence_rows", "learning_state", "learning_decisions", "methodology_boundaries", "privacy_boundary", "no_external_action"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "career-market-learning-dossier-v1"},
+    "locale": {"enum": ["es", "en"]},
+    "as_of_date": {"type": "string", "format": "date"},
+    "state": {"enum": ["complete", "limited_market_evidence", "market_evidence_unavailable"]},
+    "source_research_snapshot": {"type": "string", "pattern": "^snap-market-sha256-[0-9a-f]{64}$"},
+    "source_executive_dossier_snapshot": {"type": "string", "pattern": "^snap-dossier-sha256-[0-9a-f]{64}$"},
+    "search_summary": {"$ref": "#/$defs/search_summary"},
+    "vacancies": {"type": "array", "maxItems": 5, "items": {"$ref": "#/$defs/vacancy"}},
+    "matrix_rows": {"type": "array", "maxItems": 150, "items": {"$ref": "#/$defs/matrix_row"}},
+    "recurrence_rows": {"type": "array", "maxItems": 150, "items": {"$ref": "#/$defs/recurrence_row"}},
+    "learning_state": {"const": "not_evaluated"},
+    "learning_decisions": {"type": "array", "maxItems": 0},
+    "methodology_boundaries": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "enum": [
+          "directional_documented_evidence_not_hiring_fit",
+          "no_keyword_or_prose_match_inference",
+          "no_sample_wide_score",
+          "unknown_preserved_separately_from_explicit_gap"
+        ]
+      }
+    },
+    "privacy_boundary": {"const": "public_vacancy_metadata_and_identity_free_evidence_references_only"},
+    "no_external_action": {"const": true}
+  },
+  "$defs": {
+    "search_summary": {
+      "type": "object",
+      "required": ["locale", "as_of_date", "state", "vacancy_count", "maximum_vacancies", "bounded_queries_run", "limit_reason", "limitation"],
+      "additionalProperties": false,
+      "properties": {
+        "locale": {"enum": ["es", "en"]},
+        "as_of_date": {"type": "string", "format": "date"},
+        "state": {"enum": ["complete", "limited_market_evidence", "market_evidence_unavailable"]},
+        "vacancy_count": {"type": "integer", "minimum": 0, "maximum": 5},
+        "maximum_vacancies": {"const": 5},
+        "bounded_queries_run": {"type": "integer", "minimum": 0, "maximum": 1000},
+        "limit_reason": {"enum": ["target_reached", "bounded_search_exhausted", "market_evidence_unavailable"]},
+        "limitation": {"type": "string", "minLength": 1, "maxLength": 500}
+      }
+    },
+    "vacancy": {
+      "type": "object",
+      "required": ["vacancy_id", "employer_id", "employer", "title", "role_family", "location", "arrangement", "geographic_compatibility", "source_kind", "source_url", "official_referrer_url", "source_state", "access_date", "publication_date", "freshness_status", "earned_points", "maximum_points", "known_points", "alignment_percent", "evidence_coverage_percent", "interpretation", "qualitative_band"],
+      "additionalProperties": false,
+      "properties": {
+        "vacancy_id": {"type": "string", "pattern": "^V-[0-9]{3}$"},
+        "employer_id": {"type": "string", "pattern": "^EMP-[0-9]{3}$"},
+        "employer": {"type": "string", "minLength": 1, "maxLength": 500},
+        "title": {"type": "string", "minLength": 1, "maxLength": 500},
+        "role_family": {"enum": ["site_reliability_engineering", "platform_engineering", "devops_engineering"]},
+        "location": {"type": "string", "minLength": 1, "maxLength": 500},
+        "arrangement": {"enum": ["onsite", "hybrid", "remote", "flexible"]},
+        "geographic_compatibility": {"enum": ["explicit_mexico", "stated_remote_unknown_eligibility"]},
+        "source_kind": {"enum": ["official_employer", "employer_operated_ats", "linkedin_jobs_backup"]},
+        "source_url": {"type": "string", "minLength": 1, "maxLength": 500},
+        "official_referrer_url": {"type": ["string", "null"], "maxLength": 500},
+        "source_state": {"const": "active"},
+        "access_date": {"type": "string", "format": "date"},
+        "publication_date": {"type": ["string", "null"], "format": "date"},
+        "freshness_status": {"enum": ["current", "unknown"]},
+        "earned_points": {"type": "integer", "minimum": 0},
+        "maximum_points": {"type": "integer", "minimum": 0},
+        "known_points": {"type": "integer", "minimum": 0},
+        "alignment_percent": {"type": "integer", "minimum": 0, "maximum": 100},
+        "evidence_coverage_percent": {"type": "integer", "minimum": 0, "maximum": 100},
+        "interpretation": {"const": "directional_documented_evidence_not_hiring_fit"},
+        "qualitative_band": {"enum": ["insufficient_evidence", "higher_documented_alignment", "moderate_documented_alignment", "lower_documented_alignment"]}
+      }
+    },
+    "matrix_row": {
+      "type": "object",
+      "required": ["signal", "support_state", "evidence_ids", "cells"],
+      "additionalProperties": false,
+      "properties": {
+        "signal": {"type": "string", "minLength": 1, "maxLength": 120},
+        "support_state": {"enum": ["verified_match", "candidate_reported_match", "adjacent_evidence", "explicit_gap", "unknown"]},
+        "evidence_ids": {"type": "array", "maxItems": 20, "uniqueItems": true, "items": {"type": "string", "pattern": "^E-[0-9]{3}$"}},
+        "cells": {"type": "array", "maxItems": 5, "items": {"$ref": "#/$defs/matrix_cell"}}
+      }
+    },
+    "matrix_cell": {
+      "type": "object",
+      "required": ["vacancy_id", "required", "requirements"],
+      "additionalProperties": false,
+      "properties": {
+        "vacancy_id": {"type": "string", "pattern": "^V-[0-9]{3}$"},
+        "required": {"type": "boolean"},
+        "requirements": {"type": "array", "maxItems": 30, "items": {"$ref": "#/$defs/matrix_requirement"}}
+      }
+    },
+    "matrix_requirement": {
+      "type": "object",
+      "required": ["requirement_id", "importance", "source_paraphrase"],
+      "additionalProperties": false,
+      "properties": {
+        "requirement_id": {"type": "string", "pattern": "^V-[0-9]{3}-R-[0-9]{2}$"},
+        "importance": {"enum": ["must_have", "preferred", "responsibility_only"]},
+        "source_paraphrase": {"type": "string", "minLength": 1, "maxLength": 500}
+      }
+    },
+    "recurrence_row": {
+      "type": "object",
+      "required": ["signal", "occurrences", "sample_size", "display_fraction", "support_state", "evidence_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "signal": {"type": "string", "minLength": 1, "maxLength": 120},
+        "occurrences": {"type": "integer", "minimum": 0, "maximum": 5},
+        "sample_size": {"type": "integer", "minimum": 1, "maximum": 5},
+        "display_fraction": {"type": "string", "pattern": "^[0-5]/[1-5]$"},
+        "support_state": {"enum": ["verified_match", "candidate_reported_match", "adjacent_evidence", "explicit_gap", "unknown"]},
+        "evidence_ids": {"type": "array", "maxItems": 20, "uniqueItems": true, "items": {"type": "string", "pattern": "^E-[0-9]{3}$"}}
+      }
+    }
+  }
+}

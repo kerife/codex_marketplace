@@ -49,6 +49,52 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
     def _schema(self, name):
         return json.loads((ROOT / "schemas" / name).read_text(encoding="utf-8"))
 
+    def test_career_market_dossier_schemas_accept_closed_synthetic_states(self):
+        alignment_schema = self._schema("candidate-market-alignment-v1.schema.json")
+        valid_alignment = {
+            "schema_version": "candidate-market-alignment-v1",
+            "research_snapshot": "snap-market-sha256-" + "0" * 64,
+            "executive_dossier_snapshot": "snap-dossier-sha256-" + "1" * 64,
+            "signal_bindings": [
+                {
+                    "signal": "kubernetes",
+                    "support_state": "verified_match",
+                    "evidence_ids": ["E-004"],
+                }
+            ],
+            "privacy_boundary": "identity_free_evidence_references_only",
+        }
+        self.assertEqual([], validate_schema_instance(valid_alignment, alignment_schema))
+        bad_alignment = copy.deepcopy(valid_alignment)
+        bad_alignment["signal_bindings"][0]["unexpected"] = True
+        self.assertTrue(validate_schema_instance(bad_alignment, alignment_schema))
+        unknown_with_evidence = copy.deepcopy(valid_alignment)
+        unknown_with_evidence["signal_bindings"][0]["support_state"] = "unknown"
+        self.assertTrue(validate_schema_instance(unknown_with_evidence, alignment_schema))
+        verified_without_evidence = copy.deepcopy(valid_alignment)
+        verified_without_evidence["signal_bindings"][0]["evidence_ids"] = []
+        self.assertTrue(validate_schema_instance(verified_without_evidence, alignment_schema))
+
+        dossier_schema = self._schema("career-market-learning-dossier-v1.schema.json")
+        fixture_root = ROOT.parent.parent / "tests/evals/with-skill/fixtures/career-market-learning-dossier"
+        for name in ("complete-five-es.json", "limited-four-en.json", "unavailable-es.json"):
+            with self.subTest(name=name):
+                value = json.loads((fixture_root / name).read_text(encoding="utf-8"))
+                self.assertEqual([], validate_schema_instance(value, dossier_schema))
+                with_snapshot_copies = copy.deepcopy(value)
+                with_snapshot_copies["search_summary"]["source_research_snapshot"] = value[
+                    "source_research_snapshot"
+                ]
+                with_snapshot_copies["search_summary"][
+                    "source_executive_dossier_snapshot"
+                ] = value["source_executive_dossier_snapshot"]
+                self.assertTrue(
+                    validate_schema_instance(with_snapshot_copies, dossier_schema)
+                )
+        invalid = json.loads((fixture_root / "complete-five-es.json").read_text(encoding="utf-8"))
+        invalid["unexpected"] = True
+        self.assertTrue(validate_schema_instance(invalid, dossier_schema))
+
     def test_target_vacancy_research_schema_accepts_closed_synthetic_states(self):
         schema = self._schema("target-vacancy-research-v1.schema.json")
         fixture_root = ROOT.parent.parent / "tests/evals/with-skill/fixtures/target-vacancy-research"
