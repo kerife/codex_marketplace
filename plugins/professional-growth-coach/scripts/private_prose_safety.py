@@ -67,6 +67,8 @@ def contains_candidate_identity(value: object, *, vacancy_title: bool = False) -
     for index, token in enumerate(tokens):
         if token not in _CANDIDATE_MARKERS:
             continue
+        if vacancy_title and index + 1 < len(tokens) and tokens[index + 1] in _IDENTITY_LABELS:
+            return True
         before = tokens[max(0, index - 2):index]
         after_start = index + 1
         has_identity_label = False
