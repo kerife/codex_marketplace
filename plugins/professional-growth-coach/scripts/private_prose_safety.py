@@ -22,9 +22,9 @@ _ABSOLUTE_DIAGNOSTIC_PATH = re.compile(r"^(?:/|[A-Za-z]:[\\/]|\\\\|//)")
 _IDENTITY_TOKEN = re.compile(r"[^\W\d_]{2,}(?:['’][^\W\d_]{2,})*|[^\W\d_](?:\.)?", re.UNICODE)
 _CANDIDATE_MARKERS = frozenset({"candidate", "applicant", "candidato", "candidata"})
 _ROLE_TITLE_HEADS = frozenset({"architect", "developer", "engineer", "engineering", "manager", "specialist", "sre"})
-_ROLE_TITLE_TECHNICAL_MODIFIERS = frozenset({"analytics", "api", "automation", "cloud", "data", "devops", "infrastructure", "operations", "platform", "product", "reliability", "search", "software", "workflow"})
 _IDENTITY_LABELS = frozenset({"identity", "identidad", "name", "named", "nombre", "perfil", "profile", "llamado", "llamada"})
 _ROLE_PRODUCT_TERMS = frozenset({"acquisition", "architect", "career", "careers", "cloud", "developer", "development", "devops", "engineer", "engineering", "experience", "index", "infrastructure", "jobs", "management", "manager", "operations", "platform", "portal", "product", "products", "reliability", "role", "search", "service", "services", "site", "software", "specialist", "sre", "success", "systems", "talent", "team", "workflow", "automation"})
+_ROLE_TITLE_TECHNICAL_MODIFIERS = _ROLE_PRODUCT_TERMS | frozenset({"analytics", "api", "architecture", "data", "gateway", "journey", "mesh", "principal", "security"})
 _PUBLIC_RESEARCH_TERMS = frozenset({"evidence", "free", "match", "material", "only", "reference", "references", "reported", "supplied"})
 _SAFE_STANDALONE_TERMS = _ROLE_PRODUCT_TERMS | _PUBLIC_RESEARCH_TERMS
 
@@ -45,12 +45,13 @@ def _looks_like_name_pair(tokens: Sequence[str]) -> bool:
 
 def _is_role_shaped_title(tokens: Sequence[str], marker_index: int) -> bool:
     suffix = tokens[marker_index + 1:]
+    modifiers = [token.rstrip(".") for token in suffix[:-1]]
     return (
         marker_index == 0
-        and len(suffix) >= 3
+        and bool(modifiers)
         and suffix[-1].rstrip(".") in _ROLE_TITLE_HEADS
         and not any(token in _IDENTITY_LABELS for token in suffix)
-        and any(token in _ROLE_TITLE_TECHNICAL_MODIFIERS for token in suffix[:2])
+        and all(token in _ROLE_TITLE_TECHNICAL_MODIFIERS for token in modifiers)
     )
 
 
@@ -74,6 +75,10 @@ def contains_candidate_identity(value: object, *, vacancy_title: bool = False) -
             after_start += 1
         after = tokens[after_start:after_start + 2]
         if _looks_like_name_pair(before):
+            return True
+        if vacancy_title and not has_identity_label and index == 0 and tokens[after_start:] and tokens[-1].rstrip(".") in _ROLE_TITLE_HEADS:
+            if _is_role_shaped_title(tokens, index):
+                continue
             return True
         if _looks_like_name_pair(after):
             if vacancy_title and not has_identity_label and _is_role_shaped_title(tokens, index):

@@ -80,6 +80,13 @@ CANDIDATE_IDENTITY_VARIANTS = (
     "Candidate Kevin Rios Specialist",
     "Candidate Kevin Rios SRE",
     "Candidate Kevin Rios Cloud Platform Engineer",
+    "Candidate DevOps Kevin Rios Engineer",
+    "candidate devops kevin rios engineer",
+    "CANDIDATE DEVOPS KEVIN RIOS ENGINEER",
+    "Candidate Kevin Cloud Engineer",
+    "candidate kevin cloud engineer",
+    "Candidate Rios Data Engineer",
+    "Kevin Rios Candidate DevOps Engineer",
 )
 ROLE_AND_PRODUCT_TITLE_CONTROLS = (
     "Candidate Experience Platform Engineer",
