@@ -963,16 +963,66 @@ _VISIBLE_EXTERNAL_TARGET = re.compile(
     re.I,
 )
 
+_VISIBLE_PRIVACY_FAIL_CLOSED = (
+    "client report contains forbidden unlabelled candidate identity",
+)
+_VISIBLE_SINGLE_WORD_LABEL = re.compile(
+    r"(?m)(^|[.!?;\n]\s*)([^\W\d_]+)(?=:\s)",
+    re.UNICODE,
+)
+_MAX_VISIBLE_PRIVACY_FRAGMENTS = 512
+_MAX_VISIBLE_PRIVACY_TOTAL_CHARS = 65_536
+_MAX_VISIBLE_PRIVACY_BOUNDARY_CHARS = 512
+
+
+def _candidate_visible_text_fragment_privacy_errors(value: str) -> tuple[str, ...]:
+    normalized = normalize_candidate_label_text(value)
+    errors = set(
+        candidate_text_privacy_errors(
+            _VISIBLE_NEGATED_PRIVACY_NOTICE.sub(" ", normalized)
+        )
+    )
+    identity_text = _VISIBLE_NEGATED_PRIVACY_NOTICE.sub(" ", value)
+    identity_text = _VISIBLE_SINGLE_WORD_LABEL.sub(
+        lambda match: match.group(1) + match.group(2).casefold(),
+        identity_text,
+    )
+    if has_unlabelled_person_intro(identity_text):
+        errors.add(_VISIBLE_PRIVACY_FAIL_CLOSED[0])
+    return tuple(sorted(errors))
+
 
 def candidate_visible_text_privacy_errors(value: object) -> tuple[str, ...]:
-    """Apply privacy checks to public text while allowing the fixed negated notice."""
+    """Apply privacy checks to bounded public-text fragments and their boundaries."""
 
-    if not isinstance(value, str):
-        return ()
-    normalized = normalize_candidate_label_text(value)
-    return candidate_text_privacy_errors(
-        _VISIBLE_NEGATED_PRIVACY_NOTICE.sub(" ", normalized)
-    )
+    if isinstance(value, str):
+        return _candidate_visible_text_fragment_privacy_errors(value)
+    if not isinstance(value, (list, tuple)) or not value:
+        return _VISIBLE_PRIVACY_FAIL_CLOSED
+    if len(value) > _MAX_VISIBLE_PRIVACY_FRAGMENTS:
+        return _VISIBLE_PRIVACY_FAIL_CLOSED
+
+    errors: set[str] = set()
+    total_chars = 0
+    boundary_tail = ""
+    for fragment in value:
+        if not isinstance(fragment, str):
+            return _VISIBLE_PRIVACY_FAIL_CLOSED
+        total_chars += len(fragment)
+        if total_chars > _MAX_VISIBLE_PRIVACY_TOTAL_CHARS:
+            return _VISIBLE_PRIVACY_FAIL_CLOSED
+        errors.update(_candidate_visible_text_fragment_privacy_errors(fragment))
+        if boundary_tail and fragment and not fragment.startswith(("\n", "\r")):
+            boundary_head = fragment[:_MAX_VISIBLE_PRIVACY_BOUNDARY_CHARS]
+            errors.update(
+                _candidate_visible_text_fragment_privacy_errors(
+                    boundary_tail + boundary_head
+                )
+            )
+        boundary_tail = re.split(r"[.!?;\n]+", boundary_tail + fragment)[-1][
+            -_MAX_VISIBLE_PRIVACY_BOUNDARY_CHARS:
+        ]
+    return tuple(sorted(errors))
 
 
 def candidate_visible_text_has_external_action(value: object) -> bool:

@@ -855,6 +855,61 @@ class ExecutiveCareerDossierSchemaTests(unittest.TestCase):
                 dossier = mutate_path(self.es_dossier, ("evidence", 0, "paraphrase"), text)
                 self.assertEqual(self.validate_dossier(dossier), [])
 
+    def test_visible_document_privacy_scans_bounded_fragments_without_weakening_scalar_limit(self) -> None:
+        diagnostic = "client report contains forbidden unlabelled candidate identity"
+        safe_prefix = "Delivery evidence remains bounded. " * 100
+        safe_suffix = "Validated scope remains bounded. " * 100
+        notice = (
+            "This dossier does not include identity, contact data, raw profile text, "
+            "or individual private analytics."
+        )
+        self.assertGreater(len(safe_prefix + safe_suffix), 4_096)
+        self.assertEqual(
+            (diagnostic,),
+            self.validator.candidate_text_privacy_errors(safe_prefix + safe_suffix),
+        )
+
+        cases = (
+            ("safe aggregate", (safe_prefix, notice, safe_suffix), ()),
+            (
+                "identity before aggregate limit",
+                ("Ana López managed reliability automation.", safe_prefix, safe_suffix),
+                (diagnostic,),
+            ),
+            (
+                "identity after aggregate limit",
+                (safe_prefix, safe_suffix, "Ana López managed reliability automation."),
+                (diagnostic,),
+            ),
+            (
+                "identity across fragment boundary",
+                (safe_prefix, "Ana", " López managed reliability automation.", safe_suffix),
+                (diagnostic,),
+            ),
+        )
+        for case, fragments, expected in cases:
+            with self.subTest(case=case):
+                errors = self.validator.candidate_visible_text_privacy_errors(fragments)
+                self.assertEqual(expected, errors)
+                self.assertNotIn("Ana López", "\n".join(errors))
+
+    def test_visible_document_privacy_fails_closed_for_malformed_or_unbounded_fragments(self) -> None:
+        diagnostic = ("client report contains forbidden unlabelled candidate identity",)
+        safe_fragment = "Delivery evidence remains bounded. " * 100
+        cases = (
+            ("malformed document", None),
+            ("malformed fragment", ("Safe delivery evidence.", object())),
+            ("fragment count", tuple("Safe." for _ in range(1_000))),
+            ("total characters", tuple(safe_fragment for _ in range(20))),
+            ("single oversized fragment", (safe_fragment + safe_fragment,)),
+        )
+        for case, fragments in cases:
+            with self.subTest(case=case):
+                self.assertEqual(
+                    diagnostic,
+                    self.validator.candidate_visible_text_privacy_errors(fragments),
+                )
+
     def test_confirmation_copy_requires_one_linked_question(self) -> None:
         mutated = copy.deepcopy(self.es_dossier)
         mutated["questions"] = []
