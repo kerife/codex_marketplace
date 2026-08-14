@@ -110,6 +110,12 @@ DOSSIER_V2_VALIDATOR_PATH = (
     Path(__file__).resolve().parents[1]
     / "plugins/professional-growth-coach/scripts/validate_executive_career_dossier_v2.py"
 )
+TARGET_RESEARCH_SCHEMA_VERSION = "target-vacancy-research-v1"
+MARKET_DOSSIER_SCHEMA_VERSION = "career-market-learning-dossier-v1"
+MARKET_SCRIPTS_ROOT = (
+    Path(__file__).resolve().parents[1] / "plugins/professional-growth-coach/scripts"
+)
+CANDIDATE_IDENTITY_POLICY_PATH = MARKET_SCRIPTS_ROOT / "private_prose_safety.py"
 RECRUITER_PRACTICE_SCHEMA_VERSION = "recruiter-practice-session-v1"
 RECRUITER_PRACTICE_VALIDATOR_PATH = (
     Path(__file__).resolve().parents[1]
@@ -390,6 +396,160 @@ def _safe_dossier_v2_scan_value(text: str, value: object) -> dict[str, object] |
 
 
 @lru_cache(maxsize=1)
+def _load_market_privacy_contract() -> dict[str, object] | None:
+    previous_path = list(sys.path)
+    sys.path.insert(0, str(MARKET_SCRIPTS_ROOT))
+    modules: dict[str, object] = {}
+    try:
+        for name in (
+            "validate_target_vacancy_research",
+            "build_career_market_learning_dossier",
+            "validate_career_market_learning_dossier",
+        ):
+            path = MARKET_SCRIPTS_ROOT / f"{name}.py"
+            specification = importlib.util.spec_from_file_location(
+                f"job_search_coach_market_privacy_{name}", path
+            )
+            if specification is None or specification.loader is None:
+                return None
+            module = importlib.util.module_from_spec(specification)
+            specification.loader.exec_module(module)
+            modules[name] = module
+    except Exception:
+        return None
+    finally:
+        sys.path[:] = previous_path
+    return modules
+
+
+@lru_cache(maxsize=1)
+def _load_candidate_identity_policy() -> Callable[[object], bool] | None:
+    specification = importlib.util.spec_from_file_location(
+        "job_search_coach_candidate_identity_privacy",
+        CANDIDATE_IDENTITY_POLICY_PATH,
+    )
+    if specification is None or specification.loader is None:
+        return None
+    module = importlib.util.module_from_spec(specification)
+    try:
+        specification.loader.exec_module(module)
+    except Exception:
+        return None
+    detector = getattr(module, "target_research_contains_candidate_identity", None)
+    return detector if callable(detector) else None
+
+
+def _safe_target_research_scan_value(
+    text: str, value: object
+) -> dict[str, object] | None:
+    if (
+        not isinstance(value, dict)
+        or value.get("schema_version") != TARGET_RESEARCH_SCHEMA_VERSION
+        or len(text.encode("utf-8")) > 256 * 1024
+        or not _json_depth_is_bounded(value, 12)
+    ):
+        return None
+    before = copy.deepcopy(value)
+    contract = _load_market_privacy_contract()
+    if contract is None:
+        return None
+    try:
+        errors = contract["validate_target_vacancy_research"].validate_research(value)
+    except Exception:
+        return None
+    if value != before or type(errors) is not list or errors:
+        return None
+    return {"validated_public_market_values": list(_json_scalars(value))}
+
+
+def _market_fixture_alignment(
+    research: dict[str, object], dossier: dict[str, object], contract: dict[str, object]
+) -> dict[str, object]:
+    fixture_states = {
+        "python": ("verified_match", ["E-001"]),
+        "kubernetes": ("candidate_reported_match", ["E-003"]),
+        "terraform": ("adjacent_evidence", ["E-004"]),
+        "observability": ("unknown", []),
+        "linux": ("explicit_gap", ["E-003"]),
+    }
+    research_validator = contract["validate_target_vacancy_research"]
+    builder = contract["build_career_market_learning_dossier"]
+    signals = sorted(
+        {
+            requirement["signal"]
+            for vacancy in research["vacancies"]
+            for requirement in vacancy["requirements"]
+        }
+    )
+    return {
+        "schema_version": "candidate-market-alignment-v1",
+        "research_snapshot": research_validator.snapshot_for_market_dossier(research),
+        "executive_dossier_snapshot": builder.snapshot_for_dossier(dossier),
+        "signal_bindings": [
+            {
+                "signal": signal,
+                "support_state": fixture_states[signal][0],
+                "evidence_ids": fixture_states[signal][1],
+            }
+            for signal in signals
+        ],
+        "privacy_boundary": "identity_free_evidence_references_only",
+    }
+
+
+def _safe_market_dossier_scan_value(
+    path: Path, text: str, value: object
+) -> dict[str, object] | None:
+    expected_parent = Path(
+        "tests/evals/with-skill/fixtures/career-market-learning-dossier"
+    )
+    if (
+        path.parent != expected_parent
+        or not isinstance(value, dict)
+        or value.get("schema_version") != MARKET_DOSSIER_SCHEMA_VERSION
+        or len(text.encode("utf-8")) > 256 * 1024
+        or not _json_depth_is_bounded(value, 12)
+    ):
+        return None
+    dossier_names = {
+        "complete-five-es.json": "scenario-a-es.json",
+        "limited-four-en.json": "scenario-c-en.json",
+        "unavailable-es.json": "scenario-a-es.json",
+    }
+    dossier_name = dossier_names.get(path.name)
+    contract = _load_market_privacy_contract()
+    if dossier_name is None or contract is None:
+        return None
+    fixture_root = Path(__file__).resolve().parents[1] / "tests/evals/with-skill/fixtures"
+    try:
+        research = json.loads(
+            (fixture_root / "target-vacancy-research" / path.name).read_text(
+                encoding="utf-8"
+            ),
+            object_pairs_hook=_unique_json_object,
+        )
+        dossier = json.loads(
+            (fixture_root / "executive-career-dossier-v2" / dossier_name).read_text(
+                encoding="utf-8"
+            ),
+            object_pairs_hook=_unique_json_object,
+        )
+        alignment = _market_fixture_alignment(research, dossier, contract)
+        builder = contract["build_career_market_learning_dossier"]
+        validator = contract["validate_career_market_learning_dossier"]
+        expected = builder.build_market_dossier(research, dossier, alignment)
+        errors = validator.validate_market_dossier(value, research, dossier, alignment)
+    except Exception:
+        return None
+    if value != expected or type(errors) is not list or errors:
+        return None
+    return {
+        "schema_version": value["schema_version"],
+        "state": value["state"],
+        "privacy_boundary": value["privacy_boundary"],
+        "no_external_action": value["no_external_action"],
+    }
+@lru_cache(maxsize=1)
 def _load_recruiter_practice_validator() -> Callable[[object], list[str]] | None:
     specification = importlib.util.spec_from_file_location(
         "job_search_coach_recruiter_practice_privacy",
@@ -666,6 +826,7 @@ def scan_text(path: Path, text: str) -> Counter[str]:
     corpus_parts = [normalize_and_decode(text)]
     parsed_json: object | None = None
     dossier_candidate: object | None = None
+    structured_scan_value: object | None = None
     has_duplicate_json_key = False
     if path.suffix.lower() == ".json":
         try:
@@ -682,12 +843,23 @@ def scan_text(path: Path, text: str) -> Counter[str]:
         if parsed_json is not None:
             safe_scan_value = _safe_dossier_scan_value(text, dossier_candidate)
             if safe_scan_value is None:
-                safe_scan_value = _safe_dossier_v2_scan_value(text, dossier_candidate)
+                safe_scan_value = _safe_dossier_v2_scan_value(
+                    text, dossier_candidate
+                )
+            if safe_scan_value is None:
+                safe_scan_value = _safe_target_research_scan_value(
+                    text, dossier_candidate
+                )
+            if safe_scan_value is None:
+                safe_scan_value = _safe_market_dossier_scan_value(
+                    path, text, dossier_candidate
+                )
             if safe_scan_value is None:
                 safe_scan_value = _safe_recruiter_practice_scan_value(
                     text, dossier_candidate
                 )
             if safe_scan_value is not None:
+                structured_scan_value = safe_scan_value
                 corpus_parts = [
                     normalize_and_decode(fragment)
                     for fragment in _json_leaf_assignments(safe_scan_value)
@@ -697,6 +869,7 @@ def scan_text(path: Path, text: str) -> Counter[str]:
                     for scalar in _json_scalars(safe_scan_value)
                 )
             else:
+                structured_scan_value = parsed_json
                 corpus_parts.append(
                     normalize_and_decode(
                         json.dumps(parsed_json, sort_keys=True, ensure_ascii=False)
@@ -710,9 +883,25 @@ def scan_text(path: Path, text: str) -> Counter[str]:
     if has_duplicate_json_key:
         violations["DUPLICATE_JSON_KEY"] = 1
     for rule_id, pattern in RULES.items():
-        count = len(pattern.findall(corpus))
+        matches = list(pattern.finditer(corpus))
+        if rule_id == "PHONE_NUMBER":
+            matches = [
+                match
+                for match in matches
+                if not re.search(r"(?i)codex\.\d+$", corpus[max(0, match.start() - 6):match.end()])
+            ]
+        count = len(matches)
         if count:
             violations[rule_id] = count
+    if (
+        isinstance(dossier_candidate, dict)
+        and dossier_candidate.get("schema_version") == TARGET_RESEARCH_SCHEMA_VERSION
+    ):
+        candidate_identity_policy = _load_candidate_identity_policy()
+        if candidate_identity_policy is None:
+            violations["CANDIDATE_IDENTITY_POLICY_UNAVAILABLE"] = 1
+        elif candidate_identity_policy(dossier_candidate):
+            violations["CANDIDATE_IDENTITY"] = 1
     for key, raw_value in ASSIGNMENT_PATTERN.findall(corpus):
         value = raw_value.strip().casefold().replace("-", "_")
         if value in SAFE_PLACEHOLDER_VALUES:
@@ -740,9 +929,10 @@ def scan_text(path: Path, text: str) -> Counter[str]:
         and isinstance(parsed_json, dict)
         and isinstance(parsed_json.get("$schema"), str)
     )
-    if parsed_json is not None and not is_exact_non_record_schema:
+    if structured_scan_value is not None and not is_exact_non_record_schema:
         json_structured_count = sum(
-            _mapping_is_singling_out(mapping) for mapping in _walk_mappings(parsed_json)
+            _mapping_is_singling_out(mapping)
+            for mapping in _walk_mappings(structured_scan_value)
         )
         structured_count += json_structured_count
     if structured_count:

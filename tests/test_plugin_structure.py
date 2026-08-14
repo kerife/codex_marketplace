@@ -1102,5 +1102,131 @@ raise SystemExit(64)
         )
 
 
+    def test_market_package_requires_regular_non_link_paths(self) -> None:
+        checker = load_static_checker()
+        self.assertEqual([], checker.validate_market_dossier_package(PLUGIN_ROOT, REPO_ROOT))
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            plugin = root / "plugins" / "professional-growth-coach"
+            shutil.copytree(PLUGIN_ROOT, plugin)
+            fixture_root = root / "tests" / "evals" / "with-skill" / "fixtures"
+            shutil.copytree(REPO_ROOT / "tests" / "evals" / "with-skill" / "fixtures", fixture_root)
+
+            css = plugin / "assets" / "career-market-learning-dossier-v1.css"
+            css.unlink()
+            css.symlink_to(PLUGIN_ROOT / "assets" / "career-market-learning-dossier-v1.css")
+            errors = checker.validate_market_dossier_package(plugin, root)
+            self.assertTrue(any("cannot traverse a symlink" in error for error in errors), errors)
+
+            css.unlink()
+            os.mkfifo(css)
+            errors = checker.validate_market_dossier_package(plugin, root)
+            self.assertTrue(any("regular package file" in error for error in errors), errors)
+
+    def test_market_package_checker_is_total_for_malformed_regular_schema(self) -> None:
+        checker = load_static_checker()
+        marker = "review-sensitive-schema-value"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            plugin = root / "plugins" / "professional-growth-coach"
+            shutil.copytree(PLUGIN_ROOT, plugin)
+            fixture_root = root / "tests" / "evals" / "with-skill" / "fixtures"
+            shutil.copytree(
+                REPO_ROOT / "tests" / "evals" / "with-skill" / "fixtures",
+                fixture_root,
+            )
+            schema_path = (
+                plugin / "schemas" / "candidate-market-alignment-v1.schema.json"
+            )
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            schema["required"] = None
+            schema["title"] = marker
+            schema_path.write_text(json.dumps(schema), encoding="utf-8")
+
+            errors = checker.validate_market_dossier_package(plugin, root)
+
+        diagnostic = "\n".join(errors)
+        self.assertIn(
+            "schemas/candidate-market-alignment-v1.schema.json: invalid closed market schema",
+            errors,
+        )
+        self.assertLessEqual(len(diagnostic.encode("utf-8")), 16 * 1024)
+        self.assertNotIn(marker, diagnostic)
+        self.assertNotIn("Traceback", diagnostic)
+
+    def test_market_package_checker_requires_callable_interfaces_and_string_render(self) -> None:
+        checker = load_static_checker()
+        marker = "review-sensitive-runtime-value"
+        interfaces = (
+            ("validate_target_vacancy_research.py", "validate_research"),
+            ("validate_target_vacancy_research.py", "snapshot_for_market_dossier"),
+            ("build_career_market_learning_dossier.py", "build_market_dossier"),
+            ("build_career_market_learning_dossier.py", "snapshot_for_dossier"),
+            ("validate_career_market_learning_dossier.py", "validate_market_dossier"),
+            ("render_executive_career_dossier_v2.py", "render_dossier_html"),
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_root = Path(temporary_directory)
+            for index, (script_name, interface_name) in enumerate(interfaces):
+                with self.subTest(interface=interface_name):
+                    root = temporary_root / str(index)
+                    plugin = root / "plugins" / "professional-growth-coach"
+                    shutil.copytree(PLUGIN_ROOT, plugin)
+                    fixture_root = root / "tests" / "evals" / "with-skill" / "fixtures"
+                    shutil.copytree(
+                        REPO_ROOT / "tests" / "evals" / "with-skill" / "fixtures",
+                        fixture_root,
+                    )
+                    script = plugin / "scripts" / script_name
+                    script.write_text(
+                        script.read_text(encoding="utf-8")
+                        + f"\n_REVIEW_MARKER = {marker!r}\n"
+                        + "if __name__.startswith('_pgc_market_package_'):\n"
+                        + f"    del {interface_name}\n",
+                        encoding="utf-8",
+                    )
+
+                    errors = checker.validate_market_dossier_package(plugin, root)
+
+                    diagnostic = "\n".join(errors)
+                    self.assertTrue(
+                        any(
+                            "missing required market runtime interface" in error
+                            for error in errors
+                        ),
+                        errors,
+                    )
+                    self.assertLessEqual(len(diagnostic.encode("utf-8")), 16 * 1024)
+                    self.assertNotIn(marker, diagnostic)
+                    self.assertNotIn("Traceback", diagnostic)
+
+            root = temporary_root / "invalid-render"
+            plugin = root / "plugins" / "professional-growth-coach"
+            shutil.copytree(PLUGIN_ROOT, plugin)
+            fixture_root = root / "tests" / "evals" / "with-skill" / "fixtures"
+            shutil.copytree(
+                REPO_ROOT / "tests" / "evals" / "with-skill" / "fixtures",
+                fixture_root,
+            )
+            renderer = plugin / "scripts" / "render_executive_career_dossier_v2.py"
+            renderer.write_text(
+                renderer.read_text(encoding="utf-8")
+                + f"\n_REVIEW_MARKER = {marker!r}\n"
+                + "render_dossier_html = lambda *args, **kwargs: [_REVIEW_MARKER]\n",
+                encoding="utf-8",
+            )
+
+            errors = checker.validate_market_dossier_package(plugin, root)
+
+        self.assertTrue(
+            any("market renderer returned invalid output" in error for error in errors),
+            errors,
+        )
+        diagnostic = "\n".join(errors)
+        self.assertLessEqual(len(diagnostic.encode("utf-8")), 16 * 1024)
+        self.assertNotIn(marker, diagnostic)
+        self.assertNotIn("Traceback", diagnostic)
+
 if __name__ == "__main__":
     unittest.main()

@@ -22,6 +22,10 @@ Keep one `candidate_id` per case. Coach mode must split combined requests into s
 
 The plugin can prepare drafts, plans, rubrics, and analyses. It must ask again before editing LinkedIn, publishing content, sending messages, applying to jobs, uploading files, or sharing candidate work with a third party.
 
+By default, a normal local LinkedIn dossier also performs a read-only bounded search for up to five current SRE, Platform Engineering, or DevOps vacancies in Mexico or a stated remote arrangement. It searches five distinct recognized employers first, prioritizes official employer or employer-operated ATS pages, and uses LinkedIn Jobs only as a labelled backup. Every included posting is opened and confirmed active with an access date. One through four verified postings remain a documented limited sample; zero becomes unavailable; the plugin never pads with expired, duplicate, inaccessible, or incompatible postings and never infers work authorization or remote eligibility.
+
+The private dossier shows reproducible evidence alignment and `k/N` recurrence over the actual included sample. This does not change the LinkedIn profile score, predict hiring fit, or authorize applying, messaging, connecting, following, publishing, enrolling, or purchasing. Course and certification recommendations remain unevaluated until the separate learning step.
+
 ## Installation
 
 This source tree is repo-local at `plugins/professional-growth-coach`. Source edits do not update the installed plugin cache. A separate explicitly authorized installation is required to publish a source increment into the local marketplace cache; existing chats may continue using their loaded version, so verify the new installation from a fresh chat. Use the repo-local marketplace workflow only after the exact target and command are approved.

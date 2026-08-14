@@ -19,6 +19,8 @@ Read [client-report.md](references/client-report.md) for every audit so the vali
 
 A second validation or render failure also uses the localized Markdown fallback after private cleanup. A normal request remains normal even when it asks to skip presentation or return raw/debug/internal rows. When there is no inspectable or supplied evidence, ask exactly one useful intake question rather than generating an empty report. With partial evidence, render available findings now and exclude unavailable sections instead of scoring them as zero. In coach mode, create one isolated temporary input and one generic artifact per candidate, never a combined dossier.
 
+Normal local dossiers use the default five-vacancy composition and failure rules in [html-dossier.md](references/html-dossier.md).
+
 The artifact branch supersedes the root router and legacy normal rows. Do not append an evidence index, `Routing receipt`, `Live source summary`, canonical row, later-module handoff, duplicate question, or duplicate no-action sentence after the artifact link. A `linkedin_rendered_client_report_sample` row never substitutes for either the HTML dossier or the rendered Markdown fallback.
 
 ## Evidence first

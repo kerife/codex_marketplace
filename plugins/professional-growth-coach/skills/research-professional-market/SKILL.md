@@ -13,6 +13,32 @@ Market demand and compensation are time-sensitive: browse current sources for ev
 
 Read [source-policy.md](references/source-policy.md) before researching. Read [market-brief.md](references/market-brief.md) before returning a brief.
 
+## Default five-vacancy run
+
+For every live professional-profile dossier, browse current sources at generation time and attempt a bounded sample of five active vacancies for Site Reliability Engineering, Platform Engineering, or DevOps Engineering in Mexico or a stated remote arrangement. Search five distinct objectively qualified employers first. Start with an official employer careers page or employer-operated ATS; use LinkedIn Jobs only as an explicitly labelled backup when the posting itself is inspectable and active. Search snippets are discovery leads only and never become evidence.
+
+Use this closed execution contract:
+
+```text
+default_vacancy_target=5
+maximum_vacancies=5
+target_role_families=site_reliability_engineering,platform_engineering,devops_engineering
+geography_scope=mexico_or_stated_remote
+distinct_employers_first=5
+source_priority=official_employer,employer_operated_ats,linkedin_jobs_backup
+active_verification_required=true
+access_date_required=true
+limited_counts=1,2,3,4
+unavailable_count=0
+no_padding=true
+recurrence_denominator=actual_included_vacancy_count
+no_eligibility_inference=work_authorization,internal_mobility,eor,remote_eligibility
+external_actions_forbidden=apply,message,connect,follow,publish,enroll,purchase
+learning_state=not_evaluated
+```
+
+Include only postings opened and confirmed active on the recorded access date. Reject expired, inaccessible, duplicate, redirected-to-search, or incompatible postings. Five verified postings produce `complete`; one through four produce `limited_market_evidence` with the real count and one bounded limitation; zero produces `market_evidence_unavailable`. Never pad a sample. Calculate recurrence as `k/N` over the actual included vacancies, not as a broad market-demand claim. Keep work authorization, internal mobility, relocation, contractor/EOR availability, and remote eligibility `unknown` unless the source explicitly resolves the narrower gate. This run is read-only and cannot apply, message, connect, follow, publish, enroll, or purchase.
+
 Start with current employer vacancy pages for the supplied role. Use government sources and transparent salary studies only as secondary context. Record each source URL, `as_of_date`, `source_date`, `source_age_days`, `freshness_window_days`, `freshness_status`, and `source_state`: `active`, `stale`, `expired`, or `unavailable`. `active` means the direct source was reachable and role-matched at the stated crawl date; `stale` means the observation is old for this decision; `expired` means the employer identifies the vacancy as closed; `unavailable` means the cited direct source cannot be verified (for example, HTTP 404). Record publication date when visible, otherwise crawl date and an explicit `unknown:` publication date. Do not treat a search-result timestamp as a publication date. Use `freshness_window_days=90` by default for vacancy compensation unless the request defines a stricter or broader decision window.
 
 For every source, record a `compensation_observation`: the source-specific raw amount and basis, or `unknown`. Also record `compensation_components`, `component_gaps`, `employer_or_publisher`, `source_id`, `independent_observation_id`, `comparable_group_id`, `comparability_status`, `comparability_check`, `range_method`, `conversion_basis`, geography, currency, compensation basis, seniority, employment arrangement, and sample context. Keep Mexico employee, Mexico-based international contractor/EOR, US work-authorized employee, and remote international arrangements separate. Remote is not a geography or proof of work authorization, contractor/EOR availability, tax eligibility, or benefit eligibility.

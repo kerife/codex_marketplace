@@ -17,6 +17,12 @@ Use this workflow for a normal LinkedIn audit when local filesystem and command 
 
 Resolve both scripts relative to the installed plugin location, not the repository working directory. Keep the temporary JSON and renderer receipt out of the final answer. The private output always preserves `action_state=not_executed`.
 
+## Default market composition
+
+After the profile dossier validates, run the current bounded five-vacancy workflow from `research-professional-market`. Normalize the public research without candidate identity, create the identity-free alignment from the validated dossier evidence IDs/states, build the derived market dossier, and validate all four artifacts together. Pass the derived artifact, normalized research, and alignment as one all-or-none renderer group through `--market-dossier`, `--market-research`, and `--market-alignment`. Keep the output collision-safe and mode 600.
+
+Five verified postings render the complete five-column matrix. One through four render exactly `N` columns and one bounded reason, with no padding. Zero renders the validated unavailable state without percentages or recurrence. Use `k/N` only over the actual sample. Keep `learning_state=not_evaluated`; do not add course or certification copy in this increment. If the market group cannot validate, preserve the valid profile dossier and render the bounded unavailable state rather than inventing or retaining rejected values.
+
 ## Branch table
 
 | Trigger | Required outcome |
@@ -32,6 +38,7 @@ Resolve both scripts relative to the installed plugin location, not the reposito
 | `analytics not consented` | Set analytics to `not_requested`; consent from another report or candidate does not carry forward. |
 | `analytics unavailable` | Set analytics to `unavailable` and include no invented measures. |
 | `market not researched` | Set market context to `not_researched` and make no demand, salary, fit, or skill-gap claim. |
+| `market run unavailable` | Preserve the valid profile dossier, render `market_evidence_unavailable` with one bounded reason, and make no vacancy score, recurrence, demand, salary, fit, or skill-gap claim. |
 
 With local execution and at least one supplied or inspectable section, partial or unavailable visual evidence remains a valid HTML artifact case: represent unavailable visual sections in the validated dossier, do not choose Markdown fallback, and use the dossier locale.
 

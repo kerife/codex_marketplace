@@ -36,6 +36,7 @@ PrivateInputError = _loader.PrivateInputError
 read_bounded_bytes = _loader.read_bounded_bytes
 format_bounded_diagnostics = _prose.format_bounded_diagnostics
 contains_unicode_controls = _prose.contains_unicode_controls
+target_research_contains_candidate_identity = _prose.target_research_contains_candidate_identity
 validate_secondary_source_url = _linkedin_safety.validate_secondary_source_url
 
 SCHEMA_VERSION = "target-vacancy-research-v1"
@@ -343,7 +344,7 @@ def validate_research(value: object) -> list[str]:
         as_of = _date(value.get("as_of_date"))
         if as_of is None: errors.append("research has invalid as_of_date")
         _validate_scope(value, errors); limit = _validate_limit(value, errors); identities = _validate_employers(value, as_of, errors); _validate_vacancies(value, as_of, identities, limit, errors); _validate_state_count(value, limit, errors)
-        if _scan_privacy(value) or _candidate_identity_in_gates(value): errors.append("research contains forbidden private or raw content")
+        if _scan_privacy(value) or _candidate_identity_in_gates(value) or target_research_contains_candidate_identity(value): errors.append("research contains forbidden private or raw content")
         return sorted(set(errors))
     except (RecursionError, TypeError, ValueError):
         return ["research has malformed structure"]

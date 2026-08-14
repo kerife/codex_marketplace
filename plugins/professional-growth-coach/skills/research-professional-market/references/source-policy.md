@@ -1,10 +1,20 @@
 # Source policy
 
+## Five-vacancy sample policy
+
+For the default dossier sample, search five distinct qualified employers first and keep at most five unique active postings. Use this priority: `official_employer`, `employer_operated_ats`, then `linkedin_jobs_backup`. A LinkedIn Jobs backup must be the inspectable active posting itself and must be labelled as backup; a search snippet, cached preview, redirect to a results page, or another aggregator is only a discovery lead.
+
+Open every included posting on the run date and record its `access_date`, `source_state=active`, exact `source_kind`, and current URL. Exclude stale, expired, inaccessible, duplicate, or role/geography-incompatible results. Stop at five or at the documented bounded-search limit. A complete sample has exactly five; a limited sample has one through four with no padding; zero is unavailable. Recurrence uses only the actual included denominator `N`.
+
+Do not infer work authorization, internal mobility, relocation, contractor/EOR availability, tax status, or remote eligibility. Unknown eligibility is not a candidate deficit. Research is read-only: no application, message, connection, follow, publication, enrollment, purchase, or retention of browser cookies/session data.
+
 ## Source hierarchy
 
 1. Current, direct employer vacancy pages: use for role title, seniority, geography, employment context, compensation disclosures, and observed requirements.
-2. Government sources: use only for dated occupational context, with the occupation, geography, sample definition, and mismatch to the requested role disclosed.
-3. Transparent salary studies: use only where the publisher states date, geography, currency, compensation basis, sample, and methodology. Mark them secondary.
+2. Employer-operated ATS pages: use when the employer identifies the posting and the direct page remains active.
+3. LinkedIn Jobs: use only as the explicitly labelled backup described above.
+4. Government sources: use only for dated occupational context, with the occupation, geography, sample definition, and mismatch to the requested role disclosed.
+5. Transparent salary studies: use only where the publisher states date, geography, currency, compensation basis, sample, and methodology. Mark them secondary.
 
 Job-board reposts, snippets, crowdsourced salary pages, and undated articles are discovery leads rather than a sufficient basis for compensation or demand conclusions. A direct employer page is still only an observation, not a market-wide conclusion.
 

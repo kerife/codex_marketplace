@@ -342,6 +342,27 @@ class FullPluginIntegrationTests(unittest.TestCase):
             ),
             checker_module.EXECUTIVE_DOSSIER_V2_PACKAGE_PATHS,
         )
+        self.assertEqual(
+            (
+                "schemas/candidate-market-alignment-v1.schema.json",
+                "schemas/career-market-learning-dossier-v1.schema.json",
+                "scripts/validate_target_vacancy_research.py",
+                "scripts/build_career_market_learning_dossier.py",
+                "scripts/validate_career_market_learning_dossier.py",
+                "assets/career-market-learning-dossier-v1.css",
+                "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
+                "tests/evals/with-skill/fixtures/target-vacancy-research/limited-four-en.json",
+                "tests/evals/with-skill/fixtures/target-vacancy-research/unavailable-es.json",
+                "tests/evals/with-skill/fixtures/career-market-learning-dossier/complete-five-es.json",
+                "tests/evals/with-skill/fixtures/career-market-learning-dossier/limited-four-en.json",
+                "tests/evals/with-skill/fixtures/career-market-learning-dossier/unavailable-es.json",
+            ),
+            checker_module.MARKET_DOSSIER_PACKAGE_PATHS,
+        )
+        self.assertEqual(
+            [],
+            checker_module.validate_market_dossier_package(PLUGIN_ROOT, REPO_ROOT),
+        )
 
     def test_dossier_practice_handoff_harness_rejects_malformed_or_zero_test_summaries(self) -> None:
         checker = load_static_checker()

@@ -204,6 +204,20 @@ EXECUTIVE_DOSSIER_V2_PACKAGE_PATHS = (
     "tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-a-es.json",
     "tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-c-en.json",
 )
+MARKET_DOSSIER_PACKAGE_PATHS = (
+    "schemas/candidate-market-alignment-v1.schema.json",
+    "schemas/career-market-learning-dossier-v1.schema.json",
+    "scripts/validate_target_vacancy_research.py",
+    "scripts/build_career_market_learning_dossier.py",
+    "scripts/validate_career_market_learning_dossier.py",
+    "assets/career-market-learning-dossier-v1.css",
+    "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
+    "tests/evals/with-skill/fixtures/target-vacancy-research/limited-four-en.json",
+    "tests/evals/with-skill/fixtures/target-vacancy-research/unavailable-es.json",
+    "tests/evals/with-skill/fixtures/career-market-learning-dossier/complete-five-es.json",
+    "tests/evals/with-skill/fixtures/career-market-learning-dossier/limited-four-en.json",
+    "tests/evals/with-skill/fixtures/career-market-learning-dossier/unavailable-es.json",
+)
 EXECUTIVE_DOSSIER_OFFLINE_TOKENS = (
     "http://",
     "https://",
@@ -702,6 +716,273 @@ def validate_executive_dossier_package(
     return sorted(set(errors))
 
 
+def _load_market_package_modules(plugin_root: Path) -> dict[str, object]:
+    scripts_root = plugin_root / "scripts"
+    previous_path = list(sys.path)
+    if str(scripts_root) not in sys.path:
+        sys.path.insert(0, str(scripts_root))
+    modules: dict[str, object] = {}
+    try:
+        for name in (
+            "validate_target_vacancy_research",
+            "build_career_market_learning_dossier",
+            "validate_career_market_learning_dossier",
+            "render_executive_career_dossier_v2",
+        ):
+            path = scripts_root / f"{name}.py"
+            specification = importlib.util.spec_from_file_location(
+                f"_pgc_market_package_{name}", path
+            )
+            if specification is None or specification.loader is None:
+                raise RuntimeError("market runtime module is unavailable")
+            module = importlib.util.module_from_spec(specification)
+            specification.loader.exec_module(module)
+            modules[name] = module
+    finally:
+        sys.path[:] = previous_path
+    return modules
+
+
+def _fixture_alignment(
+    research: dict[str, object],
+    dossier: dict[str, object],
+    research_validator: object,
+    builder: object,
+) -> dict[str, object]:
+    fixture_states = {
+        "python": ("verified_match", ["E-001"]),
+        "kubernetes": ("candidate_reported_match", ["E-003"]),
+        "terraform": ("adjacent_evidence", ["E-004"]),
+        "observability": ("unknown", []),
+        "linux": ("explicit_gap", ["E-003"]),
+    }
+    signals = sorted(
+        {
+            requirement["signal"]
+            for vacancy in research["vacancies"]
+            for requirement in vacancy["requirements"]
+        }
+    )
+    return {
+        "schema_version": "candidate-market-alignment-v1",
+        "research_snapshot": research_validator.snapshot_for_market_dossier(research),
+        "executive_dossier_snapshot": builder.snapshot_for_dossier(dossier),
+        "signal_bindings": [
+            {
+                "signal": signal,
+                "support_state": fixture_states[signal][0],
+                "evidence_ids": fixture_states[signal][1],
+            }
+            for signal in signals
+        ],
+        "privacy_boundary": "identity_free_evidence_references_only",
+    }
+
+
+def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[str]:
+    """Validate market package inventory, exact provenance, and offline composition."""
+
+    errors: list[str] = []
+    safe_paths: set[str] = set()
+    for relative_path in MARKET_DOSSIER_PACKAGE_PATHS:
+        root = repo_root if relative_path.startswith("tests/") else plugin_root
+        if _package_path_traverses_symlink(root, relative_path):
+            errors.append(f"{relative_path}: market package path cannot traverse a symlink")
+        elif not (root / relative_path).is_file():
+            errors.append(f"{relative_path}: market path must be a regular package file")
+        else:
+            safe_paths.add(relative_path)
+    if len(safe_paths) != len(MARKET_DOSSIER_PACKAGE_PATHS):
+        return sorted(set(errors))
+
+    schema_requirements = {
+        "schemas/candidate-market-alignment-v1.schema.json": "research_snapshot",
+        "schemas/career-market-learning-dossier-v1.schema.json": "source_research_snapshot",
+    }
+    for relative_path, required_field in schema_requirements.items():
+        try:
+            schema = json.loads((plugin_root / relative_path).read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            errors.append(f"{relative_path}: invalid JSON")
+            continue
+        required = schema.get("required") if isinstance(schema, dict) else None
+        if not (
+            isinstance(schema, dict)
+            and schema.get("type") == "object"
+            and schema.get("additionalProperties") is False
+            and isinstance(required, list)
+            and all(isinstance(field, str) for field in required)
+            and required_field in required
+        ):
+            errors.append(f"{relative_path}: invalid closed market schema")
+
+    css_relative = "assets/career-market-learning-dossier-v1.css"
+    try:
+        css = (plugin_root / css_relative).read_text(encoding="utf-8").casefold()
+    except (OSError, UnicodeError):
+        errors.append(f"{css_relative}: market asset is not readable UTF-8")
+    else:
+        if any(token in css for token in EXECUTIVE_DOSSIER_OFFLINE_TOKENS):
+            errors.append(f"{css_relative}: remote or network token in market asset")
+        if re.search(r"</?(?:style|script)\b", css, re.I):
+            errors.append(f"{css_relative}: unsafe inline asset boundary")
+
+    try:
+        modules = _load_market_package_modules(plugin_root)
+    except Exception:
+        errors.append("market runtime package import failed")
+        return sorted(set(errors))
+    required_interfaces = {
+        "validate_target_vacancy_research": (
+            "validate_research",
+            "snapshot_for_market_dossier",
+        ),
+        "build_career_market_learning_dossier": (
+            "build_market_dossier",
+            "snapshot_for_dossier",
+        ),
+        "validate_career_market_learning_dossier": ("validate_market_dossier",),
+        "render_executive_career_dossier_v2": ("render_dossier_html",),
+    }
+    for module_name, interfaces in required_interfaces.items():
+        module = modules.get(module_name)
+        if any(
+            not callable(getattr(module, interface, None))
+            for interface in interfaces
+        ):
+            errors.append(
+                f"scripts/{module_name}.py: missing required market runtime interface"
+            )
+    if errors:
+        return sorted(set(errors))
+    research_validator = modules["validate_target_vacancy_research"]
+    builder = modules["build_career_market_learning_dossier"]
+    market_validator = modules["validate_career_market_learning_dossier"]
+    renderer = modules["render_executive_career_dossier_v2"]
+
+    fixture_root = repo_root / "tests/evals/with-skill/fixtures"
+    cases = (
+        ("complete-five-es.json", "scenario-a-es.json"),
+        ("limited-four-en.json", "scenario-c-en.json"),
+        ("unavailable-es.json", "scenario-a-es.json"),
+    )
+    for market_name, dossier_name in cases:
+        research_path = fixture_root / "target-vacancy-research" / market_name
+        market_path = fixture_root / "career-market-learning-dossier" / market_name
+        dossier_path = fixture_root / "executive-career-dossier-v2" / dossier_name
+        try:
+            research = json.loads(research_path.read_text(encoding="utf-8"))
+            expected_market = json.loads(market_path.read_text(encoding="utf-8"))
+            dossier = json.loads(dossier_path.read_text(encoding="utf-8"))
+            if not all(
+                isinstance(value, dict)
+                for value in (research, expected_market, dossier)
+            ):
+                raise ValueError("market fixture root must be an object")
+            alignment = _fixture_alignment(
+                research, dossier, research_validator, builder
+            )
+            built_market = builder.build_market_dossier(research, dossier, alignment)
+            research_validation_errors = research_validator.validate_research(research)
+            validation_errors = market_validator.validate_market_dossier(
+                expected_market, research, dossier, alignment
+            )
+            rendered = renderer.render_dossier_html(
+                dossier,
+                expected_market,
+                market_research=research,
+                market_alignment=alignment,
+            )
+        except Exception:
+            errors.append(f"{market_name}: market fixture composition failed")
+            continue
+        if (
+            not isinstance(research_validation_errors, list)
+            or any(not isinstance(error, str) for error in research_validation_errors)
+            or research_validation_errors
+        ):
+            errors.append(f"{market_name}: research validator rejected package fixture")
+        if expected_market != built_market:
+            errors.append(f"{market_name}: market fixture does not reproduce from exact sources")
+        if (
+            not isinstance(validation_errors, list)
+            or any(not isinstance(error, str) for error in validation_errors)
+            or validation_errors
+        ):
+            errors.append(f"{market_name}: trusted market provenance validation failed")
+        if not isinstance(rendered, str):
+            errors.append(f"{market_name}: market renderer returned invalid output")
+        else:
+            if not (
+                len(re.findall(r"<style\b", rendered, re.I)) == 1
+                and len(re.findall(r"</style\s*>", rendered, re.I)) == 1
+                and len(re.findall(r"<script\b", rendered, re.I)) == 1
+                and len(re.findall(r"</script\s*>", rendered, re.I)) == 1
+            ):
+                errors.append(f"{market_name}: market render has unsafe inline boundaries")
+            errors.extend(
+                _dossier_security_errors(rendered, f"{market_name}: market render")
+            )
+            forbidden = (
+                expected_market.get("source_research_snapshot"),
+                expected_market.get("source_executive_dossier_snapshot"),
+            )
+            if any(isinstance(value, str) and value in rendered for value in forbidden):
+                errors.append(f"{market_name}: source snapshot disclosed in market render")
+            for vacancy in research.get("vacancies", []):
+                if vacancy.get("source_url") in rendered:
+                    errors.append(f"{market_name}: source URL disclosed in market render")
+                for requirement in vacancy.get("requirements", []):
+                    if requirement.get("source_paraphrase") in rendered:
+                        errors.append(
+                            f"{market_name}: raw requirement paraphrase disclosed in render"
+                        )
+
+        try:
+            with tempfile.TemporaryDirectory() as temporary_directory:
+                runtime_root = Path(temporary_directory)
+                alignment_path = runtime_root / "alignment.json"
+                alignment_path.write_text(json.dumps(alignment), encoding="utf-8")
+                output_path = runtime_root / "dossier.html"
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        "-B",
+                        str(plugin_root / "scripts/render_executive_career_dossier_v2.py"),
+                        str(dossier_path),
+                        "--market-dossier",
+                        str(market_path),
+                        "--market-research",
+                        str(research_path),
+                        "--market-alignment",
+                        str(alignment_path),
+                        "--output",
+                        str(output_path),
+                    ],
+                    cwd=runtime_root,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=20,
+                )
+                output_mode = (
+                    stat.S_IMODE(output_path.stat().st_mode)
+                    if output_path.is_file()
+                    else None
+                )
+        except (OSError, subprocess.TimeoutExpired):
+            errors.append(f"{market_name}: market CLI composition failed")
+        else:
+            if result.returncode != 0 or output_mode != 0o600:
+                errors.append(f"{market_name}: market CLI did not write a mode-600 artifact")
+            try:
+                receipt = json.loads(result.stdout)
+            except (TypeError, json.JSONDecodeError):
+                receipt = None
+            if not isinstance(receipt, dict) or receipt.get("artifact_type") != "text/html":
+                errors.append(f"{market_name}: market CLI receipt is invalid")
+
+    return sorted(set(errors))
 def score_executive_dossier_pressure_sample(
     raw_output: str,
     case_id: str | None = None,
@@ -16567,6 +16848,9 @@ def main() -> int:
         return 1
     errors.extend(
         validate_executive_dossier_package(PLUGIN_ROOT, PLUGIN_ROOT.parents[1])
+    )
+    errors.extend(
+        validate_market_dossier_package(PLUGIN_ROOT, PLUGIN_ROOT.parents[1])
     )
     errors.extend(validate_renderer_asset_paths())
     errors.extend(validate_design_token_palette())

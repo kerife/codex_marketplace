@@ -5046,6 +5046,67 @@ class ResearchTargetJobMarketContractTests(unittest.TestCase):
             r"\b(?:highest-paying|best paid|top paying|guaranteed|ranked #?1|current market range)\b",
         )
 
+    def test_default_five_vacancy_research_and_profile_composition_contract(self) -> None:
+        research_root = PLUGIN_ROOT / "skills" / "research-professional-market"
+        profile_root = PLUGIN_ROOT / "skills" / "optimize-professional-profile"
+        research_skill = (research_root / "SKILL.md").read_text(encoding="utf-8")
+        source_policy = (research_root / "references" / "source-policy.md").read_text(
+            encoding="utf-8"
+        )
+        market_brief = (research_root / "references" / "market-brief.md").read_text(
+            encoding="utf-8"
+        )
+        profile_skill = (profile_root / "SKILL.md").read_text(encoding="utf-8")
+        html_dossier = (profile_root / "references" / "html-dossier.md").read_text(
+            encoding="utf-8"
+        )
+        profile_audit = (profile_root / "references" / "profile-audit.md").read_text(
+            encoding="utf-8"
+        )
+        research_contract = "\n".join((research_skill, source_policy, market_brief)).casefold()
+        profile_contract = "\n".join((profile_skill, html_dossier, profile_audit)).casefold()
+
+        for literal in (
+            "default_vacancy_target=5",
+            "maximum_vacancies=5",
+            "target_role_families=site_reliability_engineering,platform_engineering,devops_engineering",
+            "geography_scope=mexico_or_stated_remote",
+            "distinct_employers_first=5",
+            "source_priority=official_employer,employer_operated_ats,linkedin_jobs_backup",
+            "active_verification_required=true",
+            "access_date_required=true",
+            "limited_counts=1,2,3,4",
+            "unavailable_count=0",
+            "no_padding=true",
+            "recurrence_denominator=actual_included_vacancy_count",
+            "learning_state=not_evaluated",
+        ):
+            with self.subTest(literal=literal):
+                self.assertIn(literal, research_contract)
+
+        self.assertIn(
+            "no_eligibility_inference=work_authorization,internal_mobility,eor,remote_eligibility",
+            research_contract,
+        )
+        self.assertIn(
+            "external_actions_forbidden=apply,message,connect,follow,publish,enroll,purchase",
+            research_contract,
+        )
+        self.assertIn("search snippets are discovery leads only", research_contract)
+        for flag in ("--market-dossier", "--market-research", "--market-alignment"):
+            self.assertIn(flag, profile_contract)
+        for literal in (
+            "validate all four artifacts together",
+            "identity-free alignment",
+            "collision-safe",
+            "learning_state=not_evaluated",
+            "one bounded reason",
+            "cookies",
+            "session data",
+        ):
+            with self.subTest(literal=literal):
+                self.assertIn(literal, profile_contract)
+
 
 class OptimizeJobSearchAssetsContractTests(unittest.TestCase):
     def test_asset_optimizer_keeps_rewrites_truthful_and_ats_feedback_actionable(self) -> None:

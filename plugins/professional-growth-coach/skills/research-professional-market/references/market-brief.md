@@ -1,5 +1,9 @@
 # Market brief template
 
+For a profile dossier, create the normalized `target-vacancy-research-v1` artifact before the narrative brief. It must preserve the closed default contract from the skill, record the real sample state/count, and include only active verified postings. Pair it with `candidate-market-alignment-v1`; build `career-market-learning-dossier-v1` from validated sources rather than hand-calculating percentages or recurrence. Keep `learning_state=not_evaluated` and `learning_decisions=[]` until the separate learning increment.
+
+Report the sample boundary in plain language: five verified postings is complete, one through four is limited with one bounded reason, and zero is unavailable. Use `k/N` with the actual sample denominator. Never add empty columns or infer eligibility, fit, hiring probability, broad demand, or absence of a skill from `unknown` evidence.
+
 Use one entry for each role plus geography and employment arrangement. A comparable set is optional; do not force one.
 
 ```text

@@ -7,6 +7,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -62,6 +63,29 @@ DOSSIER_SOURCE_INVENTORY_PATHS = (
     Path("plugins/professional-growth-coach/assets/executive-career-dossier-v1.css"),
     Path("tests/test_executive_career_dossier.py"),
 )
+CANDIDATE_IDENTITY_VARIANTS = (
+    "candidate kevin rios",
+    "Candidate KEVIN RIOS",
+    "Kevin Rios candidate",
+    "Candidate K. Rios",
+    "Candidate Kevin O’Neil",
+    "Candidate profile Kevin Rios",
+    "Candidate's profile Kevin Rios",
+    "Candidate’s profile Kevin Rios",
+    "CANDIDATA PERFIL JOSE\u0301 O’NEIL",
+)
+ROLE_AND_PRODUCT_TITLE_CONTROLS = (
+    "Candidate Experience Platform Engineer",
+    "Candidate Management Product SRE",
+    "Candidate Search Index Platform Engineer",
+    "Candidate Workflow Automation Engineer",
+    "Candidate Data Mesh Platform Engineer",
+    "Candidate Journey Analytics Engineer",
+    "Candidate API Gateway Platform Engineer",
+    "O’Neil Cloud Platform Engineer",
+    "Kevin Platform Candidate Experience",
+    "CANDIDATO SEARCH INDEX PLATFORM ENGINEER",
+)
 
 
 def load_scanner():
@@ -73,6 +97,65 @@ def load_scanner():
     module = importlib.util.module_from_spec(specification)
     specification.loader.exec_module(module)
     return module
+
+
+def load_market_runtime() -> dict[str, object]:
+    scripts = REPO_ROOT / "plugins" / "professional-growth-coach" / "scripts"
+    previous_path = list(sys.path)
+    sys.path.insert(0, str(scripts))
+    loaded: dict[str, object] = {}
+    try:
+        for name in (
+            "validate_target_vacancy_research",
+            "build_career_market_learning_dossier",
+            "render_executive_career_dossier_v2",
+        ):
+            path = scripts / f"{name}.py"
+            spec = importlib.util.spec_from_file_location(
+                f"repository_privacy_{name}", path
+            )
+            if spec is None or spec.loader is None:
+                raise RuntimeError(f"cannot load market runtime: {path}")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            loaded[name] = module
+    finally:
+        sys.path[:] = previous_path
+    return loaded
+
+
+def market_alignment(
+    research: dict[str, object], dossier: dict[str, object], runtime: dict[str, object]
+) -> dict[str, object]:
+    validator = runtime["validate_target_vacancy_research"]
+    builder = runtime["build_career_market_learning_dossier"]
+    state_by_signal = {
+        "python": ("verified_match", ["E-001"]),
+        "kubernetes": ("candidate_reported_match", ["E-003"]),
+        "terraform": ("adjacent_evidence", ["E-004"]),
+        "observability": ("unknown", []),
+        "linux": ("explicit_gap", ["E-003"]),
+    }
+    return {
+        "schema_version": "candidate-market-alignment-v1",
+        "research_snapshot": validator.snapshot_for_market_dossier(research),
+        "executive_dossier_snapshot": builder.snapshot_for_dossier(dossier),
+        "signal_bindings": [
+            {
+                "signal": signal,
+                "support_state": state_by_signal[signal][0],
+                "evidence_ids": state_by_signal[signal][1],
+            }
+            for signal in sorted(
+                {
+                    requirement["signal"]
+                    for vacancy in research["vacancies"]
+                    for requirement in vacancy["requirements"]
+                }
+            )
+        ],
+        "privacy_boundary": "identity_free_evidence_references_only",
+    }
 
 
 def replaced_paths() -> tuple[Path, ...]:
@@ -861,6 +944,386 @@ class RepositoryPrivacyTests(unittest.TestCase):
         for line in result.stdout.splitlines():
             self.assertRegex(line, r"^[^:]+: [A-Z0-9_]+: count=\d+$")
 
+
+    def test_market_research_rejects_private_or_renderable_source_content(self) -> None:
+        runtime = load_market_runtime()
+        validator = runtime["validate_target_vacancy_research"]
+        fixture_path = (
+            REPO_ROOT
+            / "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json"
+        )
+        fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+        mutations: list[dict[str, object]] = []
+
+        for field, value in (
+            ("display_name", "<script>company-injection</script>"),
+            ("official_source_url", "https://127.0.0.1/private"),
+        ):
+            mutated = copy.deepcopy(fixture)
+            mutated["employers"][0][field] = value
+            mutations.append(mutated)
+        for field, value in (
+            ("title", "<img src=x onerror=title-injection>"),
+            ("source_url", "file:///private/local-vacancy.html"),
+        ):
+            mutated = copy.deepcopy(fixture)
+            mutated["vacancies"][0][field] = value
+            mutations.append(mutated)
+        for field, value in (
+            ("candidate_name", "Synthetic Candidate Identity"),
+            ("raw_vacancy_html", "<p>raw vacancy dump</p>"),
+        ):
+            mutated = copy.deepcopy(fixture)
+            mutated["vacancies"][0][field] = value
+            mutations.append(mutated)
+
+        for mutated in mutations:
+            with self.subTest(value=list(mutated["vacancies"][0].keys())[-1]):
+                self.assertTrue(validator.validate_research(mutated))
+
+    def test_market_loader_fails_closed_for_descriptor_and_json_attacks(self) -> None:
+        runtime = load_market_runtime()
+        validator = runtime["validate_target_vacancy_research"]
+        fixture_path = (
+            REPO_ROOT
+            / "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json"
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            valid = root / "valid.json"
+            valid.write_bytes(fixture_path.read_bytes())
+
+            symlink = root / "symlink.json"
+            symlink.symlink_to(valid)
+            fifo = root / "fifo.json"
+            os.mkfifo(fifo)
+            oversized = root / "oversized.json"
+            oversized.write_bytes(b"{" + b" " * (256 * 1024))
+            duplicate = root / "duplicate.json"
+            duplicate.write_text('{"schema_version":"one","schema_version":"two"}', encoding="utf-8")
+            recursive = root / "recursive.json"
+            recursive.write_text("[" * 14 + "0" + "]" * 14, encoding="utf-8")
+            invalid_utf8 = root / "invalid-utf8.json"
+            invalid_utf8.write_bytes(b"\xff\xfe")
+
+            for path in (symlink, fifo, oversized, duplicate, recursive, invalid_utf8):
+                with self.subTest(path=path.name):
+                    with self.assertRaises(ValueError):
+                        validator.load_research(path)
+
+            private_marker = "private-person@example.invalid"
+            diagnostic = root / "diagnostic.json"
+            diagnostic.write_text(
+                json.dumps({"schema_version": private_marker}), encoding="utf-8"
+            )
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                self.assertEqual(2, validator._cli([str(diagnostic)]))
+            message = stderr.getvalue()
+            self.assertLessEqual(len(message.encode("utf-8")), 16 * 1024)
+            self.assertNotIn(private_marker, message)
+            self.assertNotIn("Traceback", message)
+
+    def test_composed_market_html_does_not_disclose_source_bindings(self) -> None:
+        runtime = load_market_runtime()
+        validator = runtime["validate_target_vacancy_research"]
+        builder = runtime["build_career_market_learning_dossier"]
+        renderer = runtime["render_executive_career_dossier_v2"]
+        fixture_root = REPO_ROOT / "tests/evals/with-skill/fixtures"
+        research = json.loads(
+            (fixture_root / "target-vacancy-research/complete-five-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        dossier = json.loads(
+            (fixture_root / "executive-career-dossier-v2/scenario-a-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        state_by_signal = {
+            "python": ("verified_match", ["E-001"]),
+            "kubernetes": ("candidate_reported_match", ["E-003"]),
+            "terraform": ("adjacent_evidence", ["E-004"]),
+            "observability": ("unknown", []),
+            "linux": ("explicit_gap", ["E-003"]),
+        }
+        alignment = {
+            "schema_version": "candidate-market-alignment-v1",
+            "research_snapshot": validator.snapshot_for_market_dossier(research),
+            "executive_dossier_snapshot": builder.snapshot_for_dossier(dossier),
+            "signal_bindings": [
+                {
+                    "signal": signal,
+                    "support_state": state_by_signal[signal][0],
+                    "evidence_ids": state_by_signal[signal][1],
+                }
+                for signal in sorted(
+                    {
+                        requirement["signal"]
+                        for vacancy in research["vacancies"]
+                        for requirement in vacancy["requirements"]
+                    }
+                )
+            ],
+            "privacy_boundary": "identity_free_evidence_references_only",
+        }
+        market = builder.build_market_dossier(research, dossier, alignment)
+
+        html = renderer.render_dossier_html(
+            dossier,
+            market,
+            market_research=research,
+            market_alignment=alignment,
+        )
+
+        for forbidden in (
+            market["source_research_snapshot"],
+            market["source_executive_dossier_snapshot"],
+            research["vacancies"][0]["source_url"],
+            research["vacancies"][0]["requirements"][0]["source_paraphrase"],
+            "E-001",
+            "V-001-R-01",
+        ):
+            self.assertNotIn(forbidden, html)
+
+    def test_market_fixture_privacy_elision_requires_exact_closed_validation(self) -> None:
+        scanner = load_scanner()
+        fixture_root = REPO_ROOT / "tests/evals/with-skill/fixtures"
+        for directory in (
+            "target-vacancy-research",
+            "career-market-learning-dossier",
+        ):
+            for path in sorted((fixture_root / directory).glob("*.json")):
+                relative = path.relative_to(REPO_ROOT)
+                with self.subTest(path=str(relative)):
+                    self.assertEqual(
+                        {}, scanner.scan_text(relative, path.read_text(encoding="utf-8"))
+                    )
+
+        research_path = fixture_root / "target-vacancy-research/complete-five-es.json"
+        research = json.loads(research_path.read_text(encoding="utf-8"))
+        research["employers"][0]["display_name"] = "<script>unsafe-company</script>"
+        research_violations = scanner.scan_text(
+            research_path.relative_to(REPO_ROOT), json.dumps(research)
+        )
+        self.assertTrue(research_violations)
+
+        market_path = fixture_root / "career-market-learning-dossier/complete-five-es.json"
+        market = json.loads(market_path.read_text(encoding="utf-8"))
+        market["source_research_snapshot"] = "snap-market-sha256-" + "0" * 64
+        market_violations = scanner.scan_text(
+            market_path.relative_to(REPO_ROOT), json.dumps(market)
+        )
+        self.assertTrue(market_violations)
+
+    def test_candidate_identity_in_allowed_market_fields_is_scanned_and_cannot_compose(self) -> None:
+        scanner = load_scanner()
+        runtime = load_market_runtime()
+        validator = runtime["validate_target_vacancy_research"]
+        builder = runtime["build_career_market_learning_dossier"]
+        fixture_root = REPO_ROOT / "tests/evals/with-skill/fixtures"
+        research_path = fixture_root / "target-vacancy-research/complete-five-es.json"
+        research = json.loads(research_path.read_text(encoding="utf-8"))
+        dossier = json.loads(
+            (fixture_root / "executive-career-dossier-v2/scenario-a-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        relative_path = research_path.relative_to(REPO_ROOT)
+        identity = "Candidate Kevin Rios"
+        identity_url = "https://www.rfc-editor.org/Candidate-Kevin-Rios"
+        mutations = (
+            ("search limitation", ("search_limit", "limitation"), identity),
+            ("employer display name", ("employers", 0, "display_name"), identity),
+            (
+                "employer qualification observation",
+                ("employers", 0, "qualification_observation"),
+                identity,
+            ),
+            (
+                "employer source title",
+                ("employers", 0, "official_source_title"),
+                identity,
+            ),
+            (
+                "employer source URL",
+                ("employers", 0, "official_source_url"),
+                identity_url,
+            ),
+            ("vacancy title", ("vacancies", 0, "title"), identity),
+            ("vacancy location", ("vacancies", 0, "location"), identity),
+            ("vacancy source URL", ("vacancies", 0, "source_url"), identity_url),
+            (
+                "vacancy referrer URL",
+                ("vacancies", 0, "official_referrer_url"),
+                identity_url,
+            ),
+            (
+                "eligibility observation",
+                ("vacancies", 0, "eligibility_gates", 0, "observed_condition"),
+                identity,
+            ),
+            (
+                "requirement paraphrase",
+                ("vacancies", 0, "requirements", 0, "source_paraphrase"),
+                identity,
+            ),
+        )
+
+        for label, path, value in mutations:
+            with self.subTest(field=label):
+                mutated = copy.deepcopy(research)
+                target = mutated
+                for component in path[:-1]:
+                    target = target[component]
+                target[path[-1]] = value
+                self.assertIn(
+                    "research contains forbidden private or raw content",
+                    validator.validate_research(mutated),
+                )
+                violations = scanner.scan_text(relative_path, json.dumps(mutated))
+                self.assertGreater(violations["CANDIDATE_IDENTITY"], 0)
+                with self.assertRaises(ValueError):
+                    builder.build_market_dossier(
+                        mutated,
+                        dossier,
+                        market_alignment(mutated, dossier, runtime),
+                    )
+
+    def test_candidate_identity_variants_are_rejected_by_market_validator(self) -> None:
+        runtime = load_market_runtime()
+        validator = runtime["validate_target_vacancy_research"]
+        fixture_root = REPO_ROOT / "tests/evals/with-skill/fixtures"
+        research = json.loads(
+            (fixture_root / "target-vacancy-research/complete-five-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        for identity in CANDIDATE_IDENTITY_VARIANTS:
+            with self.subTest(identity=identity):
+                mutated = copy.deepcopy(research)
+                mutated["vacancies"][0]["title"] = identity
+                errors = validator.validate_research(mutated)
+                self.assertIn(
+                    "research contains forbidden private or raw content",
+                    errors,
+                )
+                self.assertNotIn(identity, "\n".join(errors))
+
+    def test_candidate_identity_variants_are_detected_by_repository_scanner(self) -> None:
+        scanner = load_scanner()
+        fixture_root = REPO_ROOT / "tests/evals/with-skill/fixtures"
+        research_path = fixture_root / "target-vacancy-research/complete-five-es.json"
+        research = json.loads(research_path.read_text(encoding="utf-8"))
+        relative_path = research_path.relative_to(REPO_ROOT)
+
+        for identity in CANDIDATE_IDENTITY_VARIANTS:
+            with self.subTest(identity=identity):
+                mutated = copy.deepcopy(research)
+                mutated["vacancies"][0]["title"] = identity
+                violations = scanner.scan_text(relative_path, json.dumps(mutated))
+                self.assertGreater(violations["CANDIDATE_IDENTITY"], 0)
+
+    def test_candidate_identity_variants_cannot_build_market_composition(self) -> None:
+        runtime = load_market_runtime()
+        builder = runtime["build_career_market_learning_dossier"]
+        fixture_root = REPO_ROOT / "tests/evals/with-skill/fixtures"
+        research = json.loads(
+            (fixture_root / "target-vacancy-research/complete-five-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        dossier = json.loads(
+            (fixture_root / "executive-career-dossier-v2/scenario-a-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        for identity in CANDIDATE_IDENTITY_VARIANTS:
+            with self.subTest(identity=identity):
+                mutated = copy.deepcopy(research)
+                mutated["vacancies"][0]["title"] = identity
+                with self.assertRaises(ValueError) as raised:
+                    builder.build_market_dossier(
+                        mutated,
+                        dossier,
+                        market_alignment(mutated, dossier, runtime),
+                    )
+                self.assertNotIn(identity, str(raised.exception))
+
+    def test_candidate_identity_variants_cannot_reach_market_render(self) -> None:
+        runtime = load_market_runtime()
+        builder = runtime["build_career_market_learning_dossier"]
+        renderer = runtime["render_executive_career_dossier_v2"]
+        fixture_root = REPO_ROOT / "tests/evals/with-skill/fixtures"
+        research = json.loads(
+            (fixture_root / "target-vacancy-research/complete-five-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        dossier = json.loads(
+            (fixture_root / "executive-career-dossier-v2/scenario-a-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        baseline_alignment = market_alignment(research, dossier, runtime)
+        market = builder.build_market_dossier(research, dossier, baseline_alignment)
+
+        for identity in CANDIDATE_IDENTITY_VARIANTS:
+            with self.subTest(identity=identity):
+                mutated = copy.deepcopy(research)
+                mutated["vacancies"][0]["title"] = identity
+                mutated_alignment = market_alignment(mutated, dossier, runtime)
+                mutated_market = copy.deepcopy(market)
+                mutated_market["source_research_snapshot"] = mutated_alignment[
+                    "research_snapshot"
+                ]
+                for vacancy in mutated_market["vacancies"]:
+                    if vacancy["vacancy_id"] == "V-001":
+                        vacancy["title"] = identity
+
+                with self.assertRaises(ValueError) as raised:
+                    renderer.render_dossier_html(
+                        dossier,
+                        mutated_market,
+                        market_research=mutated,
+                        market_alignment=mutated_alignment,
+                    )
+                self.assertNotIn(identity, str(raised.exception))
+
+    def test_candidate_identity_policy_preserves_role_and_product_titles(self) -> None:
+        scanner = load_scanner()
+        runtime = load_market_runtime()
+        validator = runtime["validate_target_vacancy_research"]
+        builder = runtime["build_career_market_learning_dossier"]
+        renderer = runtime["render_executive_career_dossier_v2"]
+        fixture_root = REPO_ROOT / "tests/evals/with-skill/fixtures"
+        research_path = fixture_root / "target-vacancy-research/complete-five-es.json"
+        research = json.loads(research_path.read_text(encoding="utf-8"))
+        dossier = json.loads(
+            (fixture_root / "executive-career-dossier-v2/scenario-a-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        relative_path = research_path.relative_to(REPO_ROOT)
+
+        for title in ROLE_AND_PRODUCT_TITLE_CONTROLS:
+            with self.subTest(title=title):
+                controlled = copy.deepcopy(research)
+                controlled["vacancies"][0]["title"] = title
+                self.assertEqual([], validator.validate_research(controlled))
+                violations = scanner.scan_text(relative_path, json.dumps(controlled))
+                self.assertEqual(0, violations["CANDIDATE_IDENTITY"])
+                alignment = market_alignment(controlled, dossier, runtime)
+                market = builder.build_market_dossier(controlled, dossier, alignment)
+                rendered = renderer.render_dossier_html(
+                    dossier,
+                    market,
+                    market_research=controlled,
+                    market_alignment=alignment,
+                )
+                self.assertIn(title, rendered)
 
 if __name__ == "__main__":
     unittest.main()
