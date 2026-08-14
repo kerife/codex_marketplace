@@ -70,6 +70,18 @@ class PrivateAssetBoundaryTests(unittest.TestCase):
         )
         self.assertIn(".section-coverage-list", content)
 
+    def test_market_css_extension_is_a_canonical_private_asset(self) -> None:
+        helper = load_helper()
+        relative = "assets/career-market-learning-dossier-v1.css"
+
+        self.assertIn(relative, helper.CANONICAL_RENDERER_ASSETS)
+        content = helper.read_private_asset(
+            REPO_ROOT / "plugins" / "professional-growth-coach",
+            REPO_ROOT / "plugins" / "professional-growth-coach" / relative,
+        )
+        self.assertIn(".market-matrix", content)
+        self.assertIn(".gap-closure-route", content)
+
     def test_direct_symlink_is_rejected_without_echoing_target(self) -> None:
         helper = load_helper()
 

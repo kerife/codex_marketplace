@@ -40,6 +40,39 @@ def _contrast(first: str, second: str) -> float:
 
 
 class DarkModeAccessibilityTests(unittest.TestCase):
+    def test_market_extension_has_mobile_dark_forced_color_and_non_scroll_contracts(self) -> None:
+        css = (ASSETS / "career-market-learning-dossier-v1.css").read_text(encoding="utf-8")
+        compact = css[css.index("@media (max-width: 680px)"):css.index("@media print")]
+        self.assertIn(".market-matrix thead", compact)
+        self.assertIn("clip-path: inset(50%)", compact)
+        self.assertNotIn("display: none", compact)
+        self.assertIn('content: attr(data-label)', compact)
+        cell_rules = re.findall(r"\.market-matrix td\s*\{([^}]*)\}", compact)
+        grid_rules = [rule for rule in cell_rules if "grid-template-columns" in rule]
+        self.assertEqual(1, len(grid_rules))
+        self.assertIn(
+            "grid-template-columns: minmax(0, .45fr) minmax(0, 1fr)",
+            grid_rules[0],
+        )
+        self.assertNotRegex(
+            grid_rules[0], r"grid-template-columns:[^;]*minmax\([1-9]"
+        )
+        self.assertNotRegex(
+            css, r"overflow-x:\s*(?:auto|scroll)|min-width:\s*[7-9][0-9]{2}px|white-space:\s*nowrap"
+        )
+        dark = css[
+            css.index("@media screen and (prefers-color-scheme: dark)"):
+            css.index("@media (max-width: 680px)")
+        ]
+        self.assertNotRegex(dark, r"#[0-9a-fA-F]{3,8}")
+        for token in ("var(--surface)", "var(--paper)", "var(--ink)", "var(--forest)", "var(--line)"):
+            self.assertIn(token, dark)
+        forced = css[css.index("@media (forced-colors: active)"):]
+        for system_color in ("Canvas", "CanvasText", "Highlight"):
+            self.assertIn(system_color, forced)
+        for selector in (".matrix-state-symbol", ".market-matrix-state-cell", ".recurrence-row"):
+            self.assertIn(selector, forced)
+
     def test_dossier_v2_extension_reuses_tokens_across_accessibility_modes(self) -> None:
         css = (ASSETS / "executive-career-dossier-v2.css").read_text(encoding="utf-8")
         dark = css[css.index("@media screen and (prefers-color-scheme: dark)"):css.index("@media (max-width: 640px)")]

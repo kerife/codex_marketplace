@@ -19,6 +19,32 @@ FOOTERS = {
 
 
 class PrintContinuityFooterIntegrityTests(unittest.TestCase):
+    def test_market_print_restores_table_semantics_and_keeps_key_cards_and_recurrence_atomic(self) -> None:
+        css = (ASSETS / "career-market-learning-dossier-v1.css").read_text(encoding="utf-8")
+        print_css = css[css.index("@media print"):css.index("@media (forced-colors: active)")]
+        for contract in (
+            ".market-vacancy-key",
+            ".market-matrix-row",
+            ".vacancy-alignment-card",
+            ".recurrence-row",
+            "display: table-header-group",
+            "display: table-row-group",
+            "display: table-row",
+            "display: table-cell",
+            "break-inside: avoid",
+            "page-break-inside: avoid",
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, print_css)
+        self.assertRegex(
+            print_css,
+            r"\.market-vacancy-key\s*\{[^}]*break-after:\s*avoid;[^}]*page-break-after:\s*avoid;",
+        )
+        self.assertNotRegex(
+            print_css,
+            r"\.market-matrix-group\s*\{[^}]*break-inside:\s*avoid;",
+        )
+
     def test_dossier_v2_rows_and_coaching_cards_remain_atomic_in_print(self) -> None:
         css = (ASSETS / "executive-career-dossier-v2.css").read_text(encoding="utf-8")
         print_css = css[css.index("@media print"):css.index("@media (forced-colors: active)")]

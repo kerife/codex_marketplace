@@ -31,3 +31,26 @@ The shipped HTML/CSS assets under `plugins/professional-growth-coach/assets/`
 are the source of truth. `.superdesign/init/layouts.md` and
 `.superdesign/init/theme.md` mirror those files byte-for-byte where marked;
 parity tests must fail if either artifact drifts.
+
+The composed market region is source-aware and all-or-none: its derived market
+dossier, normalized research, and identity-free alignment must validate
+together before any market UI renders. Legacy dossier renders with no optional
+market inputs keep the existing generic placeholder. A validated unavailable
+bundle instead shows its bounded limitation without exposing snapshots, URLs,
+referrers, internal vacancy/employer/evidence/requirement IDs, raw requirement
+paraphrases, or inferred eligibility.
+
+Vacancy alignment uses one native `progress` per vacancy, labelled by the
+vacancy heading and its visible `N de 100` / `N out of 100` score. Recurrence
+uses a second native progress family labelled by the visible signal and exact
+`k/N` fraction; this always describes the validated sample only. The semantic
+matrix keeps a caption, scoped row/column headers, stable header relationships,
+short V1–VN headers with visually hidden full labels, and a complete adjacent
+key. Every state combines a visible symbol and text. At 680px and below, the
+table remains in the DOM while rows stack and each data cell exposes its full
+`data-label`; the header is visually clipped, never removed. Print restores the
+table/header-group display model and keeps the full vacancy key with the table.
+Dark, grayscale, high-contrast, and forced-colors modes preserve the same text
+and symbols without color-only meaning. The four-stage gap route remains a
+non-interactive evidence workflow and recommends no course or certification
+while `learning_state=not_evaluated`.

@@ -1297,3 +1297,212 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   .coach-priority-card { border-top-width: 5px; }
 }
 ```
+
+### `plugins/professional-growth-coach/assets/career-market-learning-dossier-v1.css`
+
+```css
+.market-summary,
+.market-summary-card,
+.market-vacancy-section,
+.market-matrix-section,
+.market-matrix-group,
+.market-recurrence,
+.gap-closure-route { min-width: 0; }
+
+.market-summary-card,
+.market-matrix-group,
+.market-recurrence,
+.gap-closure-route {
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid var(--forest-soft);
+  background: var(--surface);
+}
+
+.market-summary-card { border-top: 4px solid var(--gold); }
+.market-summary-heading { font-family: var(--serif); font-size: 1.35rem; font-weight: 700; }
+.market-limitation { padding-left: 1rem; border-left: 4px solid var(--gold); }
+.market-vacancy-section,
+.market-matrix-section,
+.market-recurrence,
+.gap-closure-route { margin-top: 1rem; }
+
+.vacancy-alignment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: .75rem;
+}
+
+.vacancy-alignment-card {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--forest-soft);
+  border-top: 4px solid var(--forest);
+  background: var(--surface);
+}
+
+.vacancy-alignment-card h3 { margin: .2rem 0 0; font-size: 1.1rem; }
+.vacancy-key-label,
+.vacancy-employer { margin: 0; }
+.vacancy-key-label { color: var(--forest); font-weight: 800; }
+.vacancy-employer { font-size: .875rem; }
+.vacancy-alignment-score { margin: .8rem 0 0; color: var(--forest); font-family: var(--serif); font-size: 1.5rem; font-weight: 700; }
+.vacancy-score-boundary { margin: .65rem 0 0; font-size: .875rem; }
+
+.market-vacancy-key { margin: .5rem 0 1rem; padding-left: 1.5rem; }
+.market-vacancy-key-item + .market-vacancy-key-item { margin-top: .35rem; }
+.market-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: .925rem;
+}
+
+.market-matrix caption { padding-bottom: .75rem; text-align: left; font-weight: 700; }
+.market-matrix th,
+.market-matrix td {
+  min-width: 0;
+  padding: .65rem;
+  border-bottom: 1px solid var(--muted);
+  hyphens: auto;
+  overflow-wrap: anywhere;
+  text-align: left;
+  vertical-align: top;
+}
+
+.market-matrix th { color: var(--forest); }
+.market-matrix .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  border: 0;
+}
+
+.market-matrix-state-cell { border-left: 2px solid var(--muted); }
+.matrix-state-symbol { display: inline-block; width: 1.35em; font-weight: 800; }
+.matrix-state-text { font-weight: 600; }
+
+.recurrence-list { margin-top: .75rem; }
+.recurrence-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) minmax(8rem, .65fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: .75rem 0;
+  border-bottom: 1px solid var(--muted);
+}
+
+.recurrence-progress { margin-top: 0; }
+.recurrence-fraction { font-family: var(--serif); font-size: 1.15rem; font-weight: 700; }
+.gap-closure-route { border-left: 4px solid var(--coral); }
+.gap-closure-route ol { margin-bottom: 0; padding-left: 1.5rem; }
+.gap-closure-route li + li { margin-top: .5rem; }
+
+@media screen and (prefers-color-scheme: dark) {
+  .market-summary-card,
+  .vacancy-alignment-card,
+  .market-matrix-group,
+  .market-recurrence,
+  .gap-closure-route { border-color: var(--line); background: var(--surface); color: var(--ink); }
+  .market-limitation { border-left-color: var(--gold); background: var(--paper); }
+  .market-matrix th,
+  .vacancy-key-label,
+  .vacancy-alignment-score { color: var(--forest); }
+  .market-matrix-state-cell,
+  .recurrence-row { border-color: var(--line); }
+}
+
+@media (max-width: 680px) {
+  .vacancy-alignment-grid { grid-template-columns: 1fr; }
+  .market-matrix,
+  .market-matrix tbody,
+  .market-matrix tr,
+  .market-matrix th,
+  .market-matrix td { display: block; width: 100%; }
+  .market-matrix thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    border: 0;
+  }
+  .market-matrix tr { padding: .75rem 0; border-bottom: 1px solid var(--muted); }
+  .market-matrix th,
+  .market-matrix td { border-bottom: 0; }
+  .market-matrix td {
+    display: grid;
+    grid-template-columns: minmax(0, .45fr) minmax(0, 1fr);
+    gap: .5rem;
+    border-left: 0;
+  }
+  .market-matrix td::before { content: attr(data-label); color: var(--forest); font-weight: 700; }
+  .recurrence-row { grid-template-columns: 1fr; gap: .35rem; }
+}
+
+@media print {
+  .market-summary { font-size: 10.5pt; }
+  .vacancy-alignment-card,
+  .market-matrix-row,
+  .recurrence-row,
+  .gap-closure-route { break-inside: avoid; page-break-inside: avoid; }
+  .market-vacancy-key { break-after: avoid; page-break-after: avoid; }
+  .market-matrix { display: table; width: 100%; table-layout: fixed; }
+  .market-matrix thead {
+    display: table-header-group;
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+  }
+  .market-matrix tbody { display: table-row-group; }
+  .market-matrix tr { display: table-row; }
+  .market-matrix th,
+  .market-matrix td { display: table-cell; width: auto; padding: .35rem; }
+  .market-matrix td::before { content: none; }
+}
+
+@media (forced-colors: active) {
+  .market-summary-card,
+  .vacancy-alignment-card,
+  .market-matrix-group,
+  .market-matrix-state-cell,
+  .market-recurrence,
+  .recurrence-row,
+  .gap-closure-route { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .market-limitation,
+  .gap-closure-route { border-left-color: Highlight; }
+  .matrix-state-symbol,
+  .market-matrix th,
+  .market-matrix td::before,
+  .vacancy-key-label,
+  .vacancy-alignment-score { color: CanvasText; }
+  .vacancy-alignment-progress,
+  .recurrence-progress { border: 1px solid CanvasText; background: Canvas; color: Highlight; }
+  .vacancy-alignment-progress::-webkit-progress-bar,
+  .recurrence-progress::-webkit-progress-bar { background: Canvas; }
+  .vacancy-alignment-progress::-webkit-progress-value,
+  .recurrence-progress::-webkit-progress-value,
+  .vacancy-alignment-progress::-moz-progress-bar,
+  .recurrence-progress::-moz-progress-bar { background: Highlight; }
+}
+
+@media (prefers-contrast: more) {
+  .market-summary-card,
+  .vacancy-alignment-card,
+  .market-matrix-group,
+  .market-recurrence,
+  .gap-closure-route { border-width: 2px; }
+  .matrix-state-symbol { text-decoration: underline; text-decoration-thickness: .12em; }
+}
+```

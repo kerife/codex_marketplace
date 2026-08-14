@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import html
 import importlib.util
 import json
@@ -23,6 +24,15 @@ VALIDATOR_PATH = SCRIPTS / "validate_executive_career_dossier_v2.py"
 RENDERER_PATH = SCRIPTS / "render_executive_career_dossier_v2.py"
 FIXTURE_ROOT = REPO_ROOT / "tests" / "evals" / "with-skill" / "fixtures" / "executive-career-dossier"
 V2_FIXTURE_ROOT = FIXTURE_ROOT.with_name("executive-career-dossier-v2")
+RESEARCH_FIXTURE_ROOT = FIXTURE_ROOT.with_name("target-vacancy-research")
+MARKET_FIXTURE_ROOT = FIXTURE_ROOT.with_name("career-market-learning-dossier")
+NO_MARKET_RENDER_SNAPSHOTS = {
+    "scenario-a-es.json": (48675, "87ad9699fa114cf3b25b487a62bd93ccff5ef80ff7965ecd1624b47bcb196d7a"),
+    "scenario-c-en.json": (46730, "7ac97a6c4572af3ee04e7445aee6ea1ed4eebdbf10470a5ec99239ed7bb3ac21"),
+}
+COPY_MARKET_PLACEHOLDER_ES = (
+    "Este dossier no incluye evidencia de mercado. Continúa con la evidencia del perfil ya revisada."
+)
 
 UNSAFE_COACHING_PROSE = (
     (
@@ -159,6 +169,75 @@ def make_v2_dossier(locale: str = "es") -> dict[str, object]:
             "privacy_boundary": "no_raw_profile_text_or_private_values",
         })
     return dossier
+
+
+def load_json_fixture(path: Path) -> dict[str, object]:
+    value = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
+    if not isinstance(value, dict):
+        raise ValueError("fixture must be an object")
+    return value
+
+
+def market_alignment(
+    research: dict[str, object], dossier: dict[str, object]
+) -> dict[str, object]:
+    scripts = str(SCRIPTS)
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    from dossier_snapshot import snapshot_for_dossier
+    from validate_target_vacancy_research import snapshot_for_market_dossier
+
+    configured = {
+        "python": ("verified_match", ["E-001"]),
+        "kubernetes": ("candidate_reported_match", ["E-003"]),
+        "terraform": ("adjacent_evidence", ["E-004"]),
+        "observability": ("unknown", []),
+        "linux": ("explicit_gap", ["E-003"]),
+    }
+    signals = {
+        requirement["signal"]
+        for vacancy in research["vacancies"]
+        for requirement in vacancy["requirements"]
+    }
+    return {
+        "schema_version": "candidate-market-alignment-v1",
+        "research_snapshot": snapshot_for_market_dossier(research),
+        "executive_dossier_snapshot": snapshot_for_dossier(dossier),
+        "signal_bindings": [
+            {
+                "signal": signal,
+                "support_state": configured[signal][0],
+                "evidence_ids": configured[signal][1],
+            }
+            for signal in sorted(signals)
+        ],
+        "privacy_boundary": "identity_free_evidence_references_only",
+    }
+
+
+def market_case(
+    research_name: str, dossier_name: str
+) -> tuple[dict[str, object], dict[str, object], dict[str, object], dict[str, object]]:
+    dossier = load_json_fixture(V2_FIXTURE_ROOT / dossier_name)
+    research = load_json_fixture(RESEARCH_FIXTURE_ROOT / research_name)
+    market = load_json_fixture(MARKET_FIXTURE_ROOT / research_name)
+    return dossier, market, research, market_alignment(research, dossier)
+
+
+def build_limited_market_case(
+    count: int,
+) -> tuple[dict[str, object], dict[str, object], dict[str, object], dict[str, object]]:
+    dossier = load_json_fixture(V2_FIXTURE_ROOT / "scenario-c-en.json")
+    research = load_json_fixture(RESEARCH_FIXTURE_ROOT / "limited-four-en.json")
+    research["employers"] = research["employers"][:count]
+    research["vacancies"] = research["vacancies"][:count]
+    alignment = market_alignment(research, dossier)
+    scripts = str(SCRIPTS)
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    from build_career_market_learning_dossier import build_market_dossier
+
+    return dossier, build_market_dossier(research, dossier, alignment), research, alignment
 
 
 def load_validator() -> object:
@@ -702,6 +781,25 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 ):
                     self.assertNotIn(forbidden, text_value)
 
+    def test_no_market_bytes_are_protected_while_complete_market_requires_trusted_group(self) -> None:
+        for fixture_name, (byte_count, digest) in NO_MARKET_RENDER_SNAPSHOTS.items():
+            with self.subTest(fixture=fixture_name):
+                dossier = load_json_fixture(V2_FIXTURE_ROOT / fixture_name)
+                rendered = self.renderer.render_dossier_html(dossier)
+                self.assertEqual(byte_count, len(rendered.encode("utf-8")))
+                self.assertEqual(digest, hashlib.sha256(rendered.encode("utf-8")).hexdigest())
+
+        dossier, market, research, alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        rendered = self.renderer.render_dossier_html(
+            dossier,
+            market,
+            market_research=research,
+            market_alignment=alignment,
+        )
+        self.assertEqual(5, rendered.count('class="vacancy-alignment-card"'))
+
     def test_dated_market_state_has_a_separate_bounded_truthful_surface(self) -> None:
         source = load_v1_fixture("scenario-market-en.json")
         dossier = make_v2_dossier("en")
@@ -717,6 +815,299 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         self.assertIsNotNone(surface)
         for forbidden in ("e-008", "vacancy", "http", "score"):
             self.assertNotIn(forbidden, visible_text(surface.group(0)).casefold())
+
+    def test_complete_market_composition_has_labelled_progress_matrix_recurrence_and_gap_route(self) -> None:
+        dossier, market, research, alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+
+        rendered = self.renderer.render_dossier_html(
+            dossier,
+            market,
+            market_research=research,
+            market_alignment=alignment,
+        )
+
+        self.assertNotIn(
+            '<div class="dossier-grid section-block">\n      <section class="section-block market-summary"',
+            rendered,
+        )
+
+        cards = re.findall(
+            r'<article class="vacancy-alignment-card" aria-labelledby="([^"]+)">(.*?)</article>',
+            rendered,
+            re.DOTALL,
+        )
+        self.assertEqual(5, len(cards))
+        self.assertEqual(
+            [(row["employer"], row["title"]) for row in market["vacancies"]],
+            [
+                (
+                    re.search(r'class="vacancy-employer">([^<]+)</', card).group(1),
+                    re.search(r'<h3 id="[^"]+">([^<]+)</h3>', card).group(1),
+                )
+                for _, card in cards
+            ],
+        )
+        for index, ((labelled_by, card), vacancy) in enumerate(
+            zip(cards, market["vacancies"], strict=True), start=1
+        ):
+            employer_id = f"vacancy-alignment-employer-{index}"
+            heading_id = f"vacancy-alignment-title-{index}"
+            score_id = f"vacancy-alignment-score-{index}"
+            self.assertEqual(f"{employer_id} {heading_id}", labelled_by)
+            self.assertIn(
+                f'<p id="{employer_id}" class="vacancy-employer">', card
+            )
+            self.assertIn(f'<h3 id="{heading_id}">', card)
+            self.assertIn(
+                f'<p id="{score_id}" class="vacancy-alignment-score">'
+                f'{vacancy["alignment_percent"]} de 100</p>',
+                card,
+            )
+            self.assertRegex(
+                card,
+                rf'<progress class="vacancy-alignment-progress" value="{vacancy["alignment_percent"]}" '
+                rf'max="100" aria-labelledby="{employer_id} {heading_id} {score_id}">',
+            )
+
+        audit = DossierDOMAudit()
+        audit.feed(rendered)
+        self.assertEqual(len(audit.ids), len(set(audit.ids)))
+        self.assertEqual(set(), set(audit.references) - set(audit.ids))
+
+        self.assertEqual(1, rendered.count('<table class="market-matrix">'))
+        self.assertIn('<caption>Matriz de evidencia de la muestra</caption>', rendered)
+        self.assertIn('<th id="market-matrix-col-signal" scope="col">Señal</th>', rendered)
+        self.assertIn('<th id="market-matrix-col-profile" scope="col">Evidencia del perfil</th>', rendered)
+        vacancy_headers = re.findall(
+            r'<th id="market-matrix-col-v([1-5])" scope="col"><span aria-hidden="true">V\1</span>'
+            r'<span class="visually-hidden">([^<]+)</span></th>',
+            rendered,
+        )
+        self.assertEqual(5, len(vacancy_headers))
+        key_items = re.findall(
+            r'<li class="market-vacancy-key-item"><strong>V([1-5])</strong> — ([^<]+)</li>',
+            rendered,
+        )
+        self.assertEqual(5, len(key_items))
+        for index, vacancy in enumerate(market["vacancies"], start=1):
+            full_label = f'{vacancy["employer"]} · {vacancy["title"]}'
+            self.assertIn((str(index), full_label), key_items)
+            self.assertIn((str(index), full_label), vacancy_headers)
+            self.assertIn(
+                f'data-label="V{index} · {full_label}"', rendered
+            )
+
+        rows = re.findall(
+            r'<tr class="market-matrix-row">(.*?)</tr>', rendered, re.DOTALL
+        )
+        self.assertEqual(len(market["matrix_rows"]), len(rows))
+        for row in rows:
+            row_heading = re.search(
+                r'<th id="([^"]+)" scope="row">([^<]+)</th>', row
+            )
+            self.assertIsNotNone(row_heading)
+            cells = re.findall(r'<td ([^>]+)>(.*?)</td>', row, re.DOTALL)
+            self.assertEqual(6, len(cells))
+            for attributes, body in cells:
+                self.assertIn('data-label="', attributes)
+                self.assertIn('headers="', attributes)
+                self.assertRegex(
+                    body,
+                    r'<span class="matrix-state-symbol" aria-hidden="true">[✓●≈!?—]</span>'
+                    r'<span class="matrix-state-text">[^<]+</span>',
+                )
+
+        recurrence_rows = re.findall(
+            r'<div class="recurrence-row" aria-labelledby="([^"]+)">(.*?)</div>',
+            rendered,
+            re.DOTALL,
+        )
+        self.assertEqual(len(market["recurrence_rows"]), len(recurrence_rows))
+        for index, ((heading_id, body), row) in enumerate(
+            zip(recurrence_rows, market["recurrence_rows"], strict=True), start=1
+        ):
+            fraction_id = f"recurrence-fraction-{index}"
+            self.assertIn(f'id="{heading_id}"', body)
+            self.assertIn(
+                f'<span id="{fraction_id}" class="recurrence-fraction">'
+                f'{row["display_fraction"]}</span>',
+                body,
+            )
+            self.assertRegex(
+                body,
+                rf'<progress class="recurrence-progress" value="{row["occurrences"]}" '
+                rf'max="{row["sample_size"]}" aria-labelledby="{heading_id} {fraction_id}">',
+            )
+        self.assertNotIn("market demand", visible_text(rendered).casefold())
+
+        route = re.findall(
+            r'<section class="gap-closure-route" aria-labelledby="gap-closure-route-title">(.*?)</section>',
+            rendered,
+            re.DOTALL,
+        )
+        self.assertEqual(1, len(route))
+        self.assertEqual(4, len(re.findall(r'<li>', route[0])))
+        for priority in dossier["priorities"]:
+            self.assertEqual(1, visible_text(rendered).count(priority["why_it_matters"]))
+        market_region = rendered[
+            rendered.index('<section class="section-block market-summary"'):
+            rendered.index('<section class="section-block" aria-labelledby="copy-title">')
+        ]
+        market_text = visible_text(market_region)
+        for forbidden in ("curso", "course", "certificación", "certification"):
+            self.assertNotIn(forbidden, market_text.casefold())
+
+        self.assertNotIn("aria-live", market_region)
+        forbidden_values = {
+            market["source_research_snapshot"],
+            market["source_executive_dossier_snapshot"],
+            "Synthetic test requirement.",
+        }
+        for vacancy in research["vacancies"]:
+            forbidden_values.update(
+                {
+                    vacancy["vacancy_id"],
+                    vacancy["employer_id"],
+                    vacancy["source_url"],
+                    *[item["requirement_id"] for item in vacancy["requirements"]],
+                }
+            )
+            if vacancy["official_referrer_url"] is not None:
+                forbidden_values.add(vacancy["official_referrer_url"])
+        forbidden_values.update(
+            evidence_id
+            for row in alignment["signal_bindings"]
+            for evidence_id in row["evidence_ids"]
+        )
+        for value in forbidden_values:
+            with self.subTest(forbidden=value):
+                self.assertNotIn(value, rendered)
+
+    def test_limited_market_composition_uses_dynamic_n_without_padding(self) -> None:
+        for count in (1, 2, 3, 4):
+            with self.subTest(count=count):
+                dossier, market, research, alignment = build_limited_market_case(count)
+                rendered = self.renderer.render_dossier_html(
+                    dossier,
+                    market,
+                    market_research=research,
+                    market_alignment=alignment,
+                )
+                self.assertEqual(count, rendered.count('class="vacancy-alignment-card"'))
+                self.assertEqual(count, rendered.count('class="vacancy-alignment-progress"'))
+                self.assertEqual(count, rendered.count('class="market-vacancy-key-item"'))
+                self.assertEqual(
+                    [f"{row['occurrences']}/{count}" for row in market["recurrence_rows"]],
+                    re.findall(r'class="recurrence-fraction">([^<]+)</span>', rendered),
+                )
+                for index in range(1, count + 1):
+                    self.assertIn(f'id="market-matrix-col-v{index}"', rendered)
+                self.assertNotIn(f'id="market-matrix-col-v{count + 1}"', rendered)
+                self.assertNotIn("Synthetic test limit.", rendered)
+                self.assertEqual(
+                    1,
+                    rendered.count(
+                        "The bounded search ended before five vacancies were gathered."
+                    ),
+                )
+
+    def test_validated_unavailable_market_bundle_is_distinct_from_legacy_placeholder(self) -> None:
+        dossier, market, research, alignment = market_case(
+            "unavailable-es.json", "scenario-a-es.json"
+        )
+        legacy = self.renderer.render_dossier_html(dossier)
+        rendered = self.renderer.render_dossier_html(
+            dossier,
+            market,
+            market_research=research,
+            market_alignment=alignment,
+        )
+
+        self.assertIn(COPY_MARKET_PLACEHOLDER_ES, legacy)
+        self.assertNotIn("Synthetic test unavailability.", legacy)
+        self.assertNotIn(COPY_MARKET_PLACEHOLDER_ES, rendered)
+        self.assertNotIn("Synthetic test unavailability.", rendered)
+        self.assertEqual(
+            1,
+            rendered.count(
+                "La búsqueda acotada no produjo vacantes verificables para esta muestra."
+            ),
+        )
+        self.assertEqual(1, rendered.count('class="card market-unavailable-card span-12"'))
+        self.assertEqual(1, rendered.count('aria-labelledby="market-context-title"'))
+        self.assertEqual(0, rendered.count('class="vacancy-alignment-progress"'))
+        self.assertEqual(0, rendered.count('class="recurrence-row"'))
+        self.assertNotIn('<table class="market-matrix">', rendered)
+        unavailable_region = re.findall(
+            r'<section class="section-block market-summary" aria-labelledby="market-context-title">(.*?)</section>',
+            rendered,
+            re.DOTALL,
+        )
+        self.assertEqual(1, len(unavailable_region))
+        self.assertNotIn("<section", unavailable_region[0])
+        self.assertNotRegex(visible_text(unavailable_region[0]), r"\b\d+(?:\.\d+)?%\b")
+        for forbidden in (
+            market["source_research_snapshot"],
+            market["source_executive_dossier_snapshot"],
+        ):
+            self.assertNotIn(forbidden, rendered)
+
+    def test_market_inputs_are_all_or_none_and_trusted_composition_rejects_source_mutation(self) -> None:
+        dossier, market, research, alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        values = {
+            "market_dossier": market,
+            "market_research": research,
+            "market_alignment": alignment,
+        }
+        names = tuple(values)
+        for mask in range(1, 7):
+            kwargs = {
+                name: values[name] if mask & (1 << index) else None
+                for index, name in enumerate(names)
+            }
+            with self.subTest(partial=tuple(name for name, value in kwargs.items() if value is not None)):
+                with self.assertRaises(self.renderer.DossierValidationError):
+                    self.renderer.render_dossier_html(dossier, **kwargs)
+
+        mutations = []
+        changed_research = copy.deepcopy(research)
+        changed_research["vacancies"][0]["title"] = "Changed fixture role"
+        mutations.append((market, changed_research, alignment, "Changed fixture role"))
+        changed_alignment = copy.deepcopy(alignment)
+        changed_alignment["research_snapshot"] = "snap-market-sha256-" + "0" * 64
+        mutations.append((market, research, changed_alignment, "0" * 64))
+        for field, value in (
+            ("source_research_snapshot", "snap-market-sha256-" + "1" * 64),
+            ("source_executive_dossier_snapshot", "snap-dossier-sha256-" + "2" * 64),
+        ):
+            changed_market = copy.deepcopy(market)
+            changed_market[field] = value
+            mutations.append((changed_market, research, alignment, value))
+        changed_market = copy.deepcopy(market)
+        changed_market["matrix_rows"][0]["evidence_ids"] = ["E-999"]
+        mutations.append((changed_market, research, alignment, "E-999"))
+        changed_market = copy.deepcopy(market)
+        changed_market["matrix_rows"][0]["cells"][1]["requirements"][0]["source_paraphrase"] = "Changed paraphrase."
+        mutations.append((changed_market, research, alignment, "Changed paraphrase."))
+        changed_market = copy.deepcopy(market)
+        changed_market["vacancies"][0]["employer"] = "Changed employer"
+        mutations.append((changed_market, research, alignment, "Changed employer"))
+
+        for changed_market, changed_research, changed_alignment, sentinel in mutations:
+            with self.subTest(sentinel=sentinel):
+                with self.assertRaises(self.renderer.DossierValidationError) as context:
+                    self.renderer.render_dossier_html(
+                        dossier,
+                        changed_market,
+                        market_research=changed_research,
+                        market_alignment=changed_alignment,
+                    )
+                self.assertNotIn(sentinel, "\n".join(context.exception.errors))
+
 
     def test_shipped_fixtures_have_complete_resolved_noninteractive_dom(self) -> None:
         for name in ("scenario-a-es.json", "scenario-c-en.json"):
@@ -891,6 +1282,64 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             self.assertEqual(receipt.artifact_type, "text/html")
 
 
+    def test_writer_loads_complete_market_group_once_and_keeps_output_private(self) -> None:
+        dossier, market, research, alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = {}
+            for name, value in (
+                ("dossier", dossier),
+                ("market", market),
+                ("research", research),
+                ("alignment", alignment),
+            ):
+                path = root / f"{name}.json"
+                path.write_text(json.dumps(value), encoding="utf-8")
+                paths[name] = path
+            output = root / "dossier-with-market.html"
+            receipt = self.renderer.write_dossier_html(
+                paths["dossier"],
+                output,
+                market_dossier_path=paths["market"],
+                market_research_path=paths["research"],
+                market_alignment_path=paths["alignment"],
+            )
+
+            self.assertTrue(receipt.artifact_path.is_absolute())
+            self.assertEqual(0o600, stat.S_IMODE(output.stat().st_mode))
+            self.assertEqual(5, output.read_text(encoding="utf-8").count('class="vacancy-alignment-card"'))
+            with self.assertRaises(FileExistsError):
+                self.renderer.write_dossier_html(
+                    paths["dossier"],
+                    output,
+                    market_dossier_path=paths["market"],
+                    market_research_path=paths["research"],
+                    market_alignment_path=paths["alignment"],
+                )
+            receipt = self.renderer.write_dossier_html(
+                paths["dossier"],
+                output,
+                market_dossier_path=paths["market"],
+                market_research_path=paths["research"],
+                market_alignment_path=paths["alignment"],
+                force=True,
+            )
+            self.assertTrue(receipt.artifact_path.is_absolute())
+            self.assertTrue(os.path.samefile(output, receipt.artifact_path))
+
+    def test_writer_rejects_partial_market_path_group_before_creating_output(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "partial.html"
+            with self.assertRaises(self.renderer.DossierValidationError):
+                self.renderer.write_dossier_html(
+                    V2_FIXTURE_ROOT / "scenario-a-es.json",
+                    output,
+                    market_dossier_path=MARKET_FIXTURE_ROOT / "complete-five-es.json",
+                )
+            self.assertFalse(output.exists())
+
 class ExecutiveCareerDossierV2LoadAndCliTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -1011,3 +1460,61 @@ class ExecutiveCareerDossierV2LoadAndCliTests(unittest.TestCase):
             result = subprocess.run([sys.executable, "-B", str(VALIDATOR_PATH), str(path)], cwd=REPO_ROOT, text=True, capture_output=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stderr, "")
+
+    def test_renderer_cli_accepts_all_market_flags_and_emits_one_private_receipt_line(self) -> None:
+        dossier, _market, research, alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            alignment_path = root / "alignment.json"
+            alignment_path.write_text(json.dumps(alignment), encoding="utf-8")
+            output = root / "rendered.html"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(RENDERER_PATH),
+                    str(V2_FIXTURE_ROOT / "scenario-a-es.json"),
+                    "--output",
+                    str(output),
+                    "--market-dossier",
+                    str(MARKET_FIXTURE_ROOT / "complete-five-es.json"),
+                    "--market-research",
+                    str(RESEARCH_FIXTURE_ROOT / "complete-five-es.json"),
+                    "--market-alignment",
+                    str(alignment_path),
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertEqual(1, len(result.stdout.splitlines()))
+            receipt = json.loads(result.stdout)
+            self.assertTrue(Path(receipt["artifact_path"]).is_absolute())
+            self.assertTrue(os.path.samefile(output, receipt["artifact_path"]))
+            self.assertEqual(0o600, stat.S_IMODE(output.stat().st_mode))
+            self.assertEqual(5, output.read_text(encoding="utf-8").count('class="vacancy-alignment-card"'))
+
+            partial = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(RENDERER_PATH),
+                    str(V2_FIXTURE_ROOT / "scenario-a-es.json"),
+                    "--output",
+                    str(root / "partial.html"),
+                    "--market-research",
+                    str(RESEARCH_FIXTURE_ROOT / "complete-five-es.json"),
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(2, partial.returncode)
+            self.assertFalse((root / "partial.html").exists())
+            self.assertNotIn("Traceback", partial.stderr)

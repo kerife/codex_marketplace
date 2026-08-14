@@ -12,6 +12,7 @@ THEME = ROOT / ".superdesign" / "init" / "theme.md"
 LAYOUTS = ROOT / ".superdesign" / "init" / "layouts.md"
 ASSETS = ROOT / "plugins" / "professional-growth-coach" / "assets"
 ASSET_NAMES = (
+    "career-market-learning-dossier-v1.css",
     "executive-career-dossier-v1.css",
     "executive-career-dossier-v2.css",
     "recruiter-practice-session-v1.css",
@@ -20,6 +21,7 @@ ASSET_NAMES = (
     "private-recruiter-conversion-outcome-v1.css",
 )
 EXPECTED_THEME_ASSET_NAMES = {
+    "career-market-learning-dossier-v1.css",
     "executive-career-dossier-v1.css",
     "executive-career-dossier-v2.css",
     "recruiter-practice-session-v1.css",
