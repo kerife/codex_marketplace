@@ -1633,6 +1633,21 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                         learning_decision=invalid,
                     )
                 self.assertNotIn(unsafe_text, "\n".join(raised.exception.errors))
+        for field, unsafe_text in (
+            ("unknowns", "You are assured a job"),
+            ("unknowns", "See E-001 CAP-001"),
+        ):
+            with self.subTest(provider_field=field, unsafe_text=unsafe_text):
+                invalid = copy.deepcopy(case[4])
+                invalid["decisions"][1]["provider_source"][field] = unsafe_text
+                with self.assertRaises(self.renderer.DossierValidationError):
+                    self.renderer.render_dossier_html(
+                        case[0],
+                        case[1],
+                        market_research=case[2],
+                        market_alignment=case[3],
+                        learning_decision=invalid,
+                    )
         for invalid in ({}, "not-a-learning-mapping"):
             with self.subTest(invalid=type(invalid).__name__):
                 with self.assertRaises(self.renderer.DossierValidationError):

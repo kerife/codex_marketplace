@@ -441,6 +441,24 @@ class CareerLearningDecisionContractTests(unittest.TestCase):
         for value in mutations:
             self.assertTrue(self.validator.validate_learning_bundle(value, self.market, self.dossier, self.research))
 
+    def test_validator_guards_visible_provider_metadata_copy(self) -> None:
+        valid = _bundle(count=3)
+        for field, value in (
+            ("unknowns", "You are assured a job"),
+            ("option", "Enroll"),
+            ("source_title", "This gets an interview"),
+            ("geography", "Candidate Kevin"),
+            ("unknowns", "See E-001 CAP-001"),
+        ):
+            with self.subTest(field=field, value=value):
+                bad = copy.deepcopy(valid)
+                bad["decisions"][1]["provider_source"][field] = value
+                errors = self.validator.validate_learning_bundle(
+                    bad, self.market, self.dossier, self.research
+                )
+                self.assertTrue(errors)
+                self.assertNotIn(value, "\n".join(errors))
+
     def test_builder_binds_snapshots_orders_rows_and_preserves_provider_unknowns(self) -> None:
         decisions = _bundle(count=5)["decisions"]
         before = copy.deepcopy(decisions)

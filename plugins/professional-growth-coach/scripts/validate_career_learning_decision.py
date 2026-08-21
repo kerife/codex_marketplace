@@ -176,6 +176,7 @@ _UNSAFE_ACTION_RE = re.compile(
     r")\b",
     re.I,
 )
+_RAW_REFERENCE_RE = re.compile(r"\b(?:E-\d{3}|V-\d{3}|CAP-\d{3})\b")
 _SAFE_OUTCOME_BOUNDARY_RE = re.compile(
     r"\b(?:"
     r"without\s+(?:promising|guaranteeing|ensuring)"
@@ -388,6 +389,8 @@ def _source_metadata(
     for field in ("provider", "option", "source_title", "geography", "availability", "current_cost", "currency", "tax", "duration", "prerequisite", "renewal", "maintenance", "unknowns"):
         if not _text(source.get(field)):
             errors.append("provider source has invalid metadata")
+        elif _text_has_identity_action_or_outcome_risk(source[field]) or _RAW_REFERENCE_RE.search(source[field]):
+            errors.append("provider source contains forbidden identity, action, or outcome content")
     if not _date(source.get("source_date")) or source.get("source_date") > as_of_date:
         errors.append("provider source date is invalid")
     if not isinstance(source.get("source_state"), str) or source.get("source_state") not in {"active", "unknown", "unavailable"}:
