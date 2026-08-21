@@ -108,15 +108,15 @@ _HTML_RE = re.compile(r"<\s*/?\s*(?:script|style|html|body|div|span|iframe)\b", 
 _LOCAL_PATH_RE = re.compile(r"(?:file://|(?:^|\s)(?:/Users/|/private/|/tmp/|~/|[A-Za-z]:[\\/]))", re.I)
 _PROFILE_URL_RE = re.compile(r"https?://(?:www\.)?linkedin\.com/(?:in|pub|profile|company)/", re.I)
 _GENERIC_URL_RE = re.compile(
-    r"\b(?:(?:https?://|www\.)\S+|(?:[a-z0-9-]+\.)+(?:com|org|net|io|dev|app|edu|gov|mx)(?:[/?#][^\s]*)?)",
+    r"\b(?:(?:https?://|www\.)\S+|(?:[a-z0-9-]+\.)+(?:com|org|net|io|dev|app|edu|gov|mx|xyz)(?:[/?#][^\s]*)?)",
     re.I,
 )
 _RAW_IDENTIFIER_RE = re.compile(
     r"\b(?:"
     r"(?:profile|user)[ _-]?id"
     r"|id[-_: ]?\d{2,}"
-    r"|case[-_: ]?\d{4,}"
-    r"|private[-_: ]+id[-_: ]?[a-z0-9]{4,}"
+    r"|case[-_: ][a-z0-9]+"
+    r"|private[-_: ]+id[-_: ]?[a-z0-9]+"
     r"|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
     r")\b",
     re.I,
@@ -131,6 +131,12 @@ _UNSAFE_ACTION_RE = re.compile(
     r"|improv(?:e|es|ed|ing)\s+(?:your\s+)?chances?(?:\s+of(?:\s+getting)?\s+hired)?"
     r"|helps?\s+you\s+land\s+(?:a\s+)?role"
     r"|(?:get|find)\s+(?:a\s+)?job|secure\s+employment|career\s+advancement|boost\s+compensation|hiring\s+outcome"
+    r"|ensur(?:e|es|ed|ing)\s+(?:an?\s+)?(?:interview|offer|job|employment)"
+    r"|improv(?:e|es|ed|ing)\s+(?:your\s+)?(?:hiring\s+)?(?:odds|prospects)"
+    r"|boost(?:s|ed|ing)?\s+(?:your\s+)?hiring\s+prospects"
+    r"|results?\s+in\s+(?:an?\s+)?offer|leads?\s+to\s+employment"
+    r"|secure\s+(?:a\s+)?job|get\s+(?:an?\s+)?offer|find\s+employment"
+    r"|will\s+land\s+(?:a\s+)?role|makes?\s+you\s+interview[- ]ready"
     r"|get\s+hired\s+faster"
     r"|land\s+an?\s+interview"
     r"|secure\s+an?\s+offer"
@@ -147,14 +153,22 @@ _UNSAFE_ACTION_RE = re.compile(
     r"|esto\s+consigue\s+entrevistas?|te\s+ayuda\s+a\s+conseguir\s+empleo|conseguir[aá]s\s+trabajo"
     r"|obt[eé]n\s+una\s+oferta|te\s+contratar[aá]n|aumenta\s+tu\s+salario|[eé]xito\s+laboral"
     r"|oferta\s+garantizada|retorno\s+de\s+inversi[oó]n"
+    r"|garantiz(?:a|an|ar(?:[aá]|[aá]n)?|ado|ada|ados|adas)?\s+(?:una?\s+)?(?:empleo|contrataci[oó]n|trabajo|entrevistas?|ofertas?)"
+    r"|asegur(?:a|an|ar(?:[aá]|[aá]n)?|ado|ada|ados|adas)?\s+(?:una?\s+)?(?:empleo|contrataci[oó]n|trabajo|entrevistas?|ofertas?)"
+    r"|(?:resultado\s+de\s+)?contrataci[oó]n\s+garantizad[oa]|contrataci[oó]n\s+asegurada"
+    r"|te\s+conseguir(?:[aá]|[aá]s)\s+(?:una?\s+)?(?:oferta|empleo|trabajo)"
+    r"|conseguir\s+empleo(?:\s+al\s+terminar)?|obtendr[aá]s\s+empleo|te\s+dar[aá]\s+trabajo"
+    r"|(?:mejora|aumenta)\s+tus\s+(?:probabilidades|posibilidades)(?:\s+de\s+contrataci[oó]n)?"
+    r"|[eé]xito\s+de\s+entrevista"
     r")\b",
     re.I,
 )
 _SAFE_OUTCOME_BOUNDARY_RE = re.compile(
     r"\b(?:"
-    r"without\s+promising|does\s+not\s+(?:predict|guarantee)"
-    r"|no\s+(?:predice|promete|garantiza)"
-    r")\s+(?:a\s+)?(?:hiring\s+outcome|[eé]xito\s+laboral)\b",
+    r"without\s+(?:promising|guaranteeing|ensuring)"
+    r"|does\s+not\s+(?:predict|guarantee|ensure)"
+    r")\s+(?:an?\s+)?(?:hiring\s+outcome|interview|offer|job|employment)\b"
+    r"|\b(?:no|ni)\s+(?:predice|promete|garantiza|asegura)\s+(?:una?\s+)?(?:[eé]xito\s+laboral|empleo|contrataci[oó]n|trabajo|entrevistas?|ofertas?)\b",
     re.I,
 )
 _SAFE_CANDIDATE_CONTEXT_RE = re.compile(

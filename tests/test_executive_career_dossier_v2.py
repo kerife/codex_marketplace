@@ -1365,6 +1365,11 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             ("option_name", "Compra este curso"),
             ("decision_basis", "Te ayuda a conseguir empleo"),
             ("option_name", "case-123456"),
+            ("option_name", "case-123"),
+            ("provider_or_owner", "private-id-x"),
+            ("decision_basis", "foo.xyz/profile"),
+            ("option_name", "Ensures an interview"),
+            ("option_name", "Esta opción garantiza contratación"),
         ):
             with self.subTest(field=field, unsafe_text=unsafe_text):
                 invalid = copy.deepcopy(case[4])
