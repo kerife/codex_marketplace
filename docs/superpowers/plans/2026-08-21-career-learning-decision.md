@@ -32,12 +32,12 @@
 - Produces `validate_learning_bundle(value: object, market: Mapping[str, object], dossier: Mapping[str, object], research: Mapping[str, object]) -> list[str]`.
 - Produces `load_learning_bundle(path: Path) -> dict[str, object]` with bounded diagnostics and no echoed input.
 
-- [ ] Write RED tests for absent bundle, N=0 rejection, evaluated 3-row acceptance, 2/6 row rejection, duplicate ranks, invalid option/decision/gap enums, stale/mismatched snapshots, unbound vacancy/evidence references, missing official provider metadata, identity/raw-ID/URL echo, cycles, and unknown fields.
-- [ ] Run the focused tests and record the expected failures because the schema/module do not exist.
-- [ ] Implement the closed schema and pure validator with iterative bounded traversal and redacted static diagnostics.
-- [ ] Run focused schema/validator tests in Python 3.14 and CPython 3.11; require all GREEN before integration.
-- [ ] Add the schema to package inventory/static checks without changing existing v1 schemas.
-- [ ] Commit `feat: validate career learning decisions`.
+- [x] Write RED tests for absent bundle, N=0 rejection, evaluated 3-row acceptance, 2/6 row rejection, duplicate ranks, invalid option/decision/gap enums, stale/mismatched snapshots, unbound vacancy/evidence references, missing official provider metadata, identity/raw-ID/URL echo, cycles, and unknown fields.
+- [x] Run the focused tests and record the expected failures because the schema/module do not exist.
+- [x] Implement the closed schema and pure validator with iterative bounded traversal and redacted static diagnostics.
+- [x] Run focused schema/validator tests in Python 3.14 and CPython 3.11; require all GREEN before integration.
+- [x] Add the schema to package inventory/static checks without changing existing v1 schemas.
+- [x] Commit `feat: validate career learning decisions` and harden it in `378f6e5`.
 
 ### Task 2: Evidence-bound learning builder
 
@@ -50,11 +50,11 @@
 - Consumes validated market research, market dossier, executive dossier, and identity-free learning rows.
 - Produces `build_learning_bundle(research, market_dossier, executive_dossier, decisions) -> dict[str, object]` and `snapshot_for_learning_bundle(value) -> str`.
 
-- [ ] Write RED tests for snapshot binding, deterministic rank ordering, recurrence-to-gap binding, exact 3–5 output rows, `do_nothing_now`, project-vs-certificate alternatives, and all-or-none invalid input behavior.
-- [ ] Run the RED tests and confirm the builder import/contract failures.
-- [ ] Implement the smallest deterministic builder; preserve every provider unknown and never invent prices or eligibility.
-- [ ] Run builder/validator/conformance tests on both runtimes and verify v1 fixture deep equality.
-- [ ] Add package interface/fixture checks and commit `feat: build evidence-bound learning decisions`.
+- [x] Write RED tests for snapshot binding, deterministic rank ordering, recurrence-to-gap binding, exact 3–5 output rows, `do_nothing_now`, project-vs-certificate alternatives, and all-or-none invalid input behavior.
+- [x] Run the RED tests and confirm the builder import/contract failures.
+- [x] Implement the smallest deterministic builder; preserve every provider unknown and never invent prices or eligibility.
+- [x] Run builder/validator/conformance tests on both runtimes and verify v1 fixture deep equality.
+- [x] Add package interface/fixture checks and commit `feat: build evidence-bound learning decisions` at `9826eb1`.
 
 ### Task 3: Conversational renderer and CSS
 
@@ -69,11 +69,11 @@
 - Extends `render_dossier_html(..., learning_decision: Mapping[str, object] | None = None)` without changing existing callers.
 - Adds one internal `#learning-decision-title` anchor from `Decide ahora` only when the validated bundle is rendered.
 
-- [ ] Write RED tests for N=0 omission, N=1..5 decision rendering, one conversational heading, no external controls/IDs/raw identity, internal navigation, and mobile/print/dark/forced-colors/reduced-motion CSS.
-- [ ] Run the focused renderer tests and verify the missing-panel failures.
-- [ ] Implement the minimal validated panel after recurrence rows and before gap closure; use `do_nothing_now` when evidence is insufficient.
-- [ ] Synchronize the Superdesign CSS dump and run renderer, parity, snapshot, and no-market byte tests.
-- [ ] Commit `feat: render conversational learning decisions`.
+- [x] Write RED tests for N=0 omission, N=1..5 decision rendering, one conversational heading, no external controls/IDs/raw identity, internal navigation, and mobile/print/dark/forced-colors/reduced-motion CSS.
+- [x] Run the focused renderer tests and verify the missing-panel failures.
+- [x] Implement the minimal validated panel after recurrence rows and before gap closure; use `do_nothing_now` when evidence is insufficient.
+- [x] Synchronize the Superdesign CSS dump and run renderer, parity, snapshot, and no-market byte tests.
+- [x] Complete independent review after RED/GREEN fixes; root commit remains pending.
 
 ### Task 4: Review and release gates
 
