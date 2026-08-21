@@ -107,9 +107,32 @@ _PHONE_RE = re.compile(r"(?:^|\s)\+?\d[\d .()_-]{6,}\d(?:$|\s)")
 _HTML_RE = re.compile(r"<\s*/?\s*(?:script|style|html|body|div|span|iframe)\b", re.I)
 _LOCAL_PATH_RE = re.compile(r"(?:file://|(?:^|\s)(?:/Users/|/private/|/tmp/|~/|[A-Za-z]:[\\/]))", re.I)
 _PROFILE_URL_RE = re.compile(r"https?://(?:www\.)?linkedin\.com/(?:in|pub|profile|company)/", re.I)
+_GENERIC_URL_RE = re.compile(
+    r"\b(?:(?:https?://|www\.)\S+|(?:[a-z0-9-]+\.)+(?:com|org|net|io|dev|app|edu|gov|mx)(?:[/?#][^\s]*)?)",
+    re.I,
+)
+_RAW_IDENTIFIER_RE = re.compile(
+    r"\b(?:(?:profile|user)[ _-]?id|id[-_: ]?\d{3,}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b",
+    re.I,
+)
 _UNSAFE_ACTION_RE = re.compile(
-    r"\b(?:enroll\s+now|purchase\s+now|schedule\s+(?:an?\s+)?exam|will\s+get|guarantee[sd]?|"
-    r"interview\s+probability|offer\s+probability|salary\s+increase|time[- ]to[- ]hire|return\s+on\s+investment)\b",
+    r"\b(?:"
+    r"enroll\s+now|purchase\s+now|buy\s+(?:this\s+)?course|sign\s+up\s+now|apply\s+now"
+    r"|(?:schedule|book)\s+(?:an?\s+)?(?:exam|interview)|contact\s+provider|publish\s+this\s+project|please\s+enroll"
+    r"|(?:this\s+)?gets?\s+interviews?"
+    r"|helps?\s+you\s+get\s+hired"
+    r"|get\s+hired\s+faster"
+    r"|land\s+an?\s+interview"
+    r"|secure\s+an?\s+offer"
+    r"|lead\s+to\s+an?\s+offer"
+    r"|you\s+will\s+be\s+hired"
+    r"|increase\s+your\s+salary"
+    r"|hiring\s+success"
+    r"|job\s+placement"
+    r"|offer\s+after\s+completion"
+    r"|employer\s+will\s+contact\s+you"
+    r"|will\s+get|guarantee[sd]?|interview\s+probability|offer\s+probability|salary\s+increase|time[- ]to[- ]hire|return\s+on\s+investment"
+    r")\b",
     re.I,
 )
 _SAFE_CANDIDATE_CONTEXT_RE = re.compile(
@@ -163,6 +186,8 @@ def _text(value: object, maximum: int = 1000) -> bool:
         and not _HTML_RE.search(value)
         and not _LOCAL_PATH_RE.search(value)
         and not _PROFILE_URL_RE.search(value)
+        and not _GENERIC_URL_RE.search(value)
+        and not _RAW_IDENTIFIER_RE.search(value)
     )
 
 

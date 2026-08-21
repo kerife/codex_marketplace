@@ -1341,7 +1341,7 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     rendered.index('class="gap-closure-route"'),
                 )
 
-    def test_learning_panel_has_one_decide_now_internal_anchor_and_fails_closed_invalid_bundle(self) -> None:
+    def test_learning_panel_has_one_decide_now_internal_anchor_and_rejects_invalid_bundle_before_output(self) -> None:
         case = learning_case("complete-five-es.json", "scenario-a-es.json", count=3)
         rendered = self.renderer.render_dossier_html(
             case[0],
@@ -1358,19 +1358,32 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             ("option_name", "Enroll now: example course"),
             ("target_role", "candidate name Example Person Senior SRE"),
             ("decision_basis", "Guaranteed interview preparation"),
+            ("option_name", "Buy this course"),
+            ("target_role", "example.com/profile"),
+            ("provider_or_owner", "ID-12345"),
         ):
             with self.subTest(field=field, unsafe_text=unsafe_text):
                 invalid = copy.deepcopy(case[4])
                 invalid["decisions"][0][field] = unsafe_text
-                rendered_invalid = self.renderer.render_dossier_html(
-                    case[0],
-                    case[1],
-                    market_research=case[2],
-                    market_alignment=case[3],
-                    learning_decision=invalid,
-                )
-                self.assertNotIn('class="learning-decision"', rendered_invalid)
-                self.assertNotIn(unsafe_text, rendered_invalid)
+                with self.assertRaises(self.renderer.DossierValidationError) as raised:
+                    self.renderer.render_dossier_html(
+                        case[0],
+                        case[1],
+                        market_research=case[2],
+                        market_alignment=case[3],
+                        learning_decision=invalid,
+                    )
+                self.assertNotIn(unsafe_text, "\n".join(raised.exception.errors))
+        for invalid in ({}, "not-a-learning-mapping"):
+            with self.subTest(invalid=type(invalid).__name__):
+                with self.assertRaises(self.renderer.DossierValidationError):
+                    self.renderer.render_dossier_html(
+                        case[0],
+                        case[1],
+                        market_research=case[2],
+                        market_alignment=case[3],
+                        learning_decision=invalid,
+                    )
 
     def test_learning_panel_uses_dynamic_one_to_five_sample_counts(self) -> None:
         for count in range(1, 6):

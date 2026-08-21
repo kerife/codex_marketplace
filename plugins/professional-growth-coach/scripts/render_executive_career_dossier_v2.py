@@ -325,9 +325,13 @@ def _validated_learning_group(
     market_research: Mapping[str, object] | None,
     learning_decision: Mapping[str, object] | None,
 ) -> Mapping[str, object] | None:
-    """Return only a source-bound evaluated bundle; invalid input fails closed."""
-    if learning_decision is None or market_dossier is None or market_research is None:
+    """Return only a source-bound evaluated bundle and reject malformed supplied input."""
+    if learning_decision is None:
         return None
+    if not isinstance(learning_decision, Mapping):
+        raise DossierValidationError(["learning decision must be an object"])
+    if market_dossier is None or market_research is None:
+        raise DossierValidationError(["learning decision requires the validated market composition group"])
     try:
         candidate = copy.deepcopy(learning_decision)
         errors = LEARNING_VALIDATOR.validate_learning_bundle(
@@ -336,7 +340,11 @@ def _validated_learning_group(
             _plain(dossier),
             _plain(market_research),
         )
-        if errors or not isinstance(candidate, Mapping) or candidate.get("state") != "evaluated":
+        if errors:
+            raise DossierValidationError(errors)
+        if not isinstance(candidate, Mapping):
+            raise DossierValidationError(["learning decision must be an object"])
+        if candidate.get("state") != "evaluated":
             return None
         decisions = candidate.get("decisions")
         vacancies = _plain(market_dossier).get("vacancies")
@@ -346,8 +354,10 @@ def _validated_learning_group(
             return None
         frozen = BASE._freeze(candidate)
         return BASE._mapping(frozen)
+    except DossierValidationError:
+        raise
     except (AttributeError, KeyError, RecursionError, TypeError, ValueError):
-        return None
+        raise DossierValidationError(["learning decision is unavailable"]) from None
 
 
 def _learning_signal_labels(

@@ -265,6 +265,32 @@ class CareerLearningDecisionContractTests(unittest.TestCase):
             ("target_role", "candidate name Example Person Senior SRE"),
             ("provider_or_owner", "candidato nombre Ejemplo Persona"),
             ("option_name", "This credential will get an offer"),
+            ("option_name", "Buy this course"),
+            ("target_role", "Sign up now for Senior SRE"),
+            ("provider_or_owner", "Apply now"),
+            ("decision_basis", "Please enroll"),
+            ("option_name", "Schedule interview"),
+            ("provider_or_owner", "Book exam"),
+            ("portfolio_or_no_learning_alternative", "Contact provider"),
+            ("overbuying_risk", "Publish this project"),
+            ("option_name", "This gets interviews"),
+            ("decision_basis", "This helps you get hired"),
+            ("target_role", "Get hired faster as a Senior SRE"),
+            ("provider_or_owner", "Land an interview"),
+            ("option_name", "Secure an offer"),
+            ("decision_basis", "This may lead to an offer"),
+            ("target_role", "You will be hired"),
+            ("option_name", "Increase your salary"),
+            ("decision_basis", "Hiring success"),
+            ("option_name", "Job placement course"),
+            ("decision_basis", "Offer after completion"),
+            ("provider_or_owner", "Employer will contact you"),
+            ("option_name", "https://github.com/example-user"),
+            ("target_role", "example.com/profile"),
+            ("provider_or_owner", "ID-12345"),
+            ("decision_basis", "550e8400-e29b-41d4-a716-446655440000"),
+            ("option_name", "profile_id"),
+            ("provider_or_owner", "user id"),
         )
         for field, unsafe_text in cases:
             with self.subTest(field=field, unsafe_text=unsafe_text):
@@ -283,6 +309,8 @@ class CareerLearningDecisionContractTests(unittest.TestCase):
             "option_name": "Terraform and observability proof artifact",
             "provider_or_owner": "candidate-owned proof project",
             "decision_basis": "Repeated Terraform evidence supports a bounded proof artifact before a purchase.",
+            "portfolio_or_no_learning_alternative": "Build one GitHub Actions and Terraform lab locally before any paid course.",
+            "overbuying_risk": "Avoid collecting credentials before a bounded technical artifact is complete.",
         })
         self.assertEqual(
             [], self.validator.validate_learning_bundle(
