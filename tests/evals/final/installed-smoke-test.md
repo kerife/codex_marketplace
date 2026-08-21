@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-21T21:30:00Z`
+release_timestamp: `2026-08-21T22:00:00Z`
 
-installed_access_timestamp: `2026-08-21T21:30:00Z`
+installed_access_timestamp: `2026-08-21T22:00:00Z`
 
-source_commit: `c84ef7c83b3ede4228731bcd2bcbd67ffbcec7ca`
+source_commit: `cad2c3370a646d235472427b45c28b73f9099143`
 
-source_tree: `b04753bf2d639db605fe72b926c728fd1fc1f87c`
+source_tree: `d9f7232bf2e6dfd76ba85d51d9354567a6b148ab`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260821213000`
+installed_cache_version: `0.2.0+codex.20260821220000`
 
 installed_enabled: `true`
 
@@ -34,7 +34,7 @@ source_file_count: `124`
 
 installed_file_count: `124`
 
-normalized_source_cache_sha256: `4c97b59856577f606d3bd75e3753fea7508c09920d134eea875e60eafac43d62`
+normalized_source_cache_sha256: `ba335a81c74300104b75ec2c8966444195104da2c7a787cb985e6a477f17423f`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
@@ -57,6 +57,8 @@ installed_package_static_scope: `package_static_checks=passed; repository_confor
 installed_test_discovery_scope: `package_local_and_mixed_safe; repository_only_selectors_skipped_outside_source_checkout`
 
 installed_test_discovery: `172/172; errors=0; skips=31; repository_only_scope_explicit`
+
+source_provenance_gate: `passed; immutable_historical_commit_tree_ancestor_verified`
 
 installed_direct_smokes: `6/6`
 
@@ -81,6 +83,8 @@ installed_current_cycle_recurrence_boundary_aria_smokes: `9/9; ES_EN_localized_m
 installed_current_cycle_learning_boundary_aria_smokes: `10/10; ES_EN_localized_learning_render; boundary_before_cards; three_cards_described; unique_boundary_id; no_external_controls`
 
 installed_current_cycle_market_freshness_smokes: `12/12; ES_EN_localized_validated_date; semantic_time; marker_before_learning; unavailable_and_legacy_absent; no_external_controls`
+
+installed_current_cycle_limited_sample_aria_smokes: `4_states_ES_EN; limitation_id_unique; market_region_described; limitation_before_learning_and_vacancies; complete_unavailable_legacy_absent`
 
 installed_current_cycle_contrast_smokes: `3/3; muted_text_contrast; light_line_token; forced_colors_text_override`
 
