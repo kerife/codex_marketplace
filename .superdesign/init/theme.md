@@ -1461,7 +1461,8 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   .market-matrix-row,
   .recurrence-row,
   .gap-closure-route { break-inside: avoid; page-break-inside: avoid; }
-  .market-vacancy-key { break-after: avoid; page-break-after: avoid; }
+  .market-summary-card { break-inside: avoid; page-break-inside: avoid; }
+  .market-vacancy-key { break-inside: avoid; page-break-inside: avoid; break-after: avoid; page-break-after: avoid; }
   .market-matrix { display: table; width: 100%; table-layout: fixed; }
   .market-matrix thead {
     display: table-header-group;
