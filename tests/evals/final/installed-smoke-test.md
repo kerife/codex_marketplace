@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-22T00:00:00Z`
+release_timestamp: `2026-08-22T01:00:00Z`
 
-installed_access_timestamp: `2026-08-22T00:00:00Z`
+installed_access_timestamp: `2026-08-22T01:00:00Z`
 
-source_commit: `7ef81cd9ec25613d8737d5229d8666404ed5bfb5`
+source_commit: `5b8eff07337d3b3fc97550def7f3efe8f5a553e2`
 
-source_tree: `68cac61c39d33f332521bd4bb22cb5bcc9b3b953`
+source_tree: `b3e36d7c9a661556e535a40468d9f7fefce9743a`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260822000000`
+installed_cache_version: `0.2.0+codex.20260822010000`
 
 installed_enabled: `true`
 
@@ -34,7 +34,7 @@ source_file_count: `124`
 
 installed_file_count: `124`
 
-normalized_source_cache_sha256: `1e483aeeb30f4f82c3b72b92f46733d18bc37478ce9cd6b0b3cbfe61ae63e9ee`
+normalized_source_cache_sha256: `5bc2726d4c1bbba8318ccd4d7b5d997234e9e907319ef9283d4836855a092c24`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
@@ -87,6 +87,8 @@ installed_current_cycle_market_freshness_smokes: `12/12; ES_EN_localized_validat
 installed_current_cycle_limited_sample_aria_smokes: `4_states_ES_EN; limitation_id_unique; market_region_described; limitation_before_learning_and_vacancies; complete_unavailable_legacy_absent`
 
 installed_current_cycle_triage_identity_alias_smokes: `7/7; v1_v2_safe_context_packet_reentry_fail_closed; one_legitimate_candidate_fact_control_passed; diagnostics_and_renderer_no_echo`
+
+installed_current_cycle_single_token_identity_smokes: `25/25; target_research_and_learning_labels_with_nfkc_punctuation_compact_and_ranked_alias_forms_fail_closed; legitimate_candidate_prose_and_hyphen_compounds_pass; diagnostics_no_echo`
 
 installed_current_cycle_authorization_impact_smokes: `6/6; ES_EN_ranked_priority_impact; coverage_only_fallback; no_pending_absent; one_question; no_external_controls`
 
