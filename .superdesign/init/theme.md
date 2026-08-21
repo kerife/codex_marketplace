@@ -1326,6 +1326,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 .market-summary-heading { font-family: var(--serif); font-size: 1.35rem; font-weight: 700; }
 .market-limitation { padding-left: 1rem; border-left: 4px solid var(--gold); }
 .market-learning-state { margin: .75rem 0 0; padding: .65rem .85rem; border-left: 4px solid var(--gold); color: var(--muted-text); }
+.market-next-safe-action { margin: .75rem 0 0; padding: .65rem .85rem; border-left: 4px solid var(--forest); color: var(--muted-text); overflow-wrap: anywhere; }
 .market-vacancy-section,
 .market-matrix-section,
 .market-recurrence,
@@ -1491,6 +1492,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   .gap-closure-route { background: Canvas; color: CanvasText; border-color: CanvasText; }
   .market-limitation,
   .market-learning-state,
+  .market-next-safe-action,
   .gap-closure-route { border-left-color: Highlight; }
   .matrix-state-symbol,
   .market-matrix th,
@@ -1507,6 +1509,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   .recurrence-progress::-moz-progress-bar { background: Highlight; }
   .vacancy-qualitative-band { color: CanvasText; }
   .market-learning-state,
+  .market-next-safe-action,
   .decide-now-summary,
   .decide-now-target,
   .decision-trace-boundary { color: CanvasText; }

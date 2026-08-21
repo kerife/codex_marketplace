@@ -1137,6 +1137,7 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
 
         visible_text_selectors = (
             ".market-learning-state",
+            ".market-next-safe-action",
             ".decide-now-summary",
             ".decide-now-target",
             ".learning-decision-sample",
@@ -1160,6 +1161,7 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         )
         self.assertIsNotNone(forced_market)
         self.assertIn(".market-learning-state", forced_market.group(1))
+        self.assertIn(".market-next-safe-action", forced_market.group(1))
         self.assertIn(".decision-trace-boundary", forced_market.group(1))
         for selector in (
             ".learning-decision-sample",
@@ -1974,6 +1976,45 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             market["source_executive_dossier_snapshot"],
         ):
             self.assertNotIn(forbidden, rendered)
+
+    def test_unavailable_market_exposes_one_localized_safe_next_step(self) -> None:
+        cases = (
+            ("es", "Siguiente paso seguro: reunir una vacante fechada y verificable antes de reabrir la revisión."),
+            ("en", "Safe next step: bring one dated, verifiable vacancy before reopening the review."),
+        )
+        for locale, copy in cases:
+            with self.subTest(locale=locale):
+                dossier, market, research, alignment = market_case(
+                    "unavailable-es.json", "scenario-a-es.json" if locale == "es" else "scenario-c-en.json"
+                )
+                if locale == "en":
+                    market["locale"] = "en"
+                    market["search_summary"]["locale"] = "en"
+                    research["locale"] = "en"
+                    from dossier_snapshot import snapshot_for_dossier
+                    from validate_target_vacancy_research import snapshot_for_market_dossier
+
+                    dossier_snapshot = snapshot_for_dossier(dossier)
+                    research_snapshot = snapshot_for_market_dossier(research)
+                    market["source_executive_dossier_snapshot"] = dossier_snapshot
+                    market["source_research_snapshot"] = research_snapshot
+                    alignment["research_snapshot"] = research_snapshot
+                    alignment["executive_dossier_snapshot"] = dossier_snapshot
+                rendered = self.renderer.render_dossier_html(
+                    dossier, market, market_research=research, market_alignment=alignment
+                )
+                unavailable_region = re.findall(
+                    r'<section class="section-block market-summary" aria-labelledby="market-context-title">(.*?)</section>',
+                    rendered,
+                    re.DOTALL,
+                )
+                self.assertEqual(1, len(unavailable_region))
+                region = unavailable_region[0]
+                self.assertEqual(1, region.count('class="market-next-safe-action"'))
+                self.assertEqual(1, region.count(copy))
+                self.assertNotIn("href=", region)
+                self.assertNotIn("authorize", region.casefold())
+                self.assertNotIn("autoriza", region.casefold())
 
     def test_market_learning_state_is_disclosed_without_changing_legacy_placeholder(self) -> None:
         cases = (
