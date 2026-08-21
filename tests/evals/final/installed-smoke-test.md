@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-21T14:30:31Z`
+release_timestamp: `2026-08-21T15:00:00Z`
 
-installed_access_timestamp: `2026-08-21T14:30:31Z`
+installed_access_timestamp: `2026-08-21T15:00:00Z`
 
-source_commit: `da1204e94ae59c3f9bee23024d009de50d5a8b16`
+source_commit: `018db75240efa200a115a5268f8502cfb034cb85`
 
-source_tree: `51ac18c991de8e76e4f1b90d61c8ab0f92ea4404`
+source_tree: `ada876fa65bb8d279f759a8b0e080b10561b1988`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260821142944`
+installed_cache_version: `0.2.0+codex.20260821150000`
 
 installed_enabled: `true`
 
@@ -34,7 +34,7 @@ source_file_count: `124`
 
 installed_file_count: `124`
 
-normalized_source_cache_sha256: `9b9b3543d2f5171393f6f445dbe21049739fd034cc243c55c8bf733c8ab7d773`
+normalized_source_cache_sha256: `10aa14c6498b0d19600f2ab76141ae0257f6ae897fc5aa6368dcdfb59b255202`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
@@ -70,7 +70,7 @@ installed_schema_pattern_smokes: `2/2`
 
 installed_target_research_identity_smokes: `12/12; common_and_non_allowlisted_obfuscated_forms_fail_closed; diagnostics_no_echo`
 
-installed_current_cycle_obfuscated_smokes: `5/5; compact_role_tail_and_hostname_forms_fail_closed; technical_allowlist_controls_pass; diagnostics_no_echo`
+installed_current_cycle_obfuscated_smokes: `10/10; compact_role_tail_and_hostname_forms_fail_closed; technical_and_organization_controls_pass; diagnostics_no_echo`
 
 installed_current_cycle_contrast_smokes: `3/3; muted_text_contrast; light_line_token; forced_colors_text_override`
 
@@ -82,7 +82,7 @@ installed_decision_trace_layout_smokes: `2/2; desktop_two_columns; mobile_one_co
 
 installed_mobile_market_matrix_label_smokes: `source_contract=2/2; short_V1_to_VN_data_labels; full_headers_and_key_preserved`
 
-deferred_privacy_boundary: `unknown_compact_names_without_dictionary_or_role_context_need_follow_up; no length-only heuristic`
+deferred_privacy_boundary: `unknown_compact_names_without_dictionary_or_role_context_need_follow_up; no length-only heuristic; organization role-suffix URLs remain bounded allowlist`
 
 fresh_agent_smoke: `not_run_in_current_process`
 
