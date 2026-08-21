@@ -4,7 +4,7 @@ no_real_profile_mapping: true
 
 artifact_kind=deterministic-regression-fixture
 
-source_commit=f5fb367ee59f685a783f5fedd11a7c2fb8ba0b20
+source_commit=2ee9a1dd59837df17adc21add2027738062250a5
 
 source_tree=2b05865e19bc0d849f8da686b08e4cb640e825eb
 
