@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/professional-growth-coach/career-learning-decision-v1.schema.json",
+  "title": "Career Learning Decision v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "locale",
+    "as_of_date",
+    "source_market_snapshot",
+    "source_dossier_snapshot",
+    "source_research_snapshot",
+    "state",
+    "decisions",
+    "privacy_boundary",
+    "no_external_action",
+    "outcome_boundary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "career-learning-decision-v1"},
+    "locale": {"enum": ["es", "en"]},
+    "as_of_date": {"type": "string", "format": "date"},
+    "source_market_snapshot": {"type": "string", "pattern": "^snap-dossier-sha256-[0-9a-f]{64}$"},
+    "source_dossier_snapshot": {"type": "string", "pattern": "^snap-dossier-sha256-[0-9a-f]{64}$"},
+    "source_research_snapshot": {"type": "string", "pattern": "^snap-market-sha256-[0-9a-f]{64}$"},
+    "state": {"enum": ["evaluated", "unavailable"]},
+    "decisions": {"type": "array", "minItems": 0, "maxItems": 5, "items": {"$ref": "#/$defs/decision"}},
+    "privacy_boundary": {"const": "public_vacancy_metadata_and_identity_free_evidence_references_only"},
+    "no_external_action": {"const": true},
+    "outcome_boundary": {"const": "not_an_interview_offer_salary_or_roi_prediction"}
+  },
+  "$defs": {
+    "id_evidence": {"type": "string", "pattern": "^E-[0-9]{3}$"},
+    "id_vacancy": {"type": "string", "pattern": "^V-[0-9]{3}$"},
+    "text": {"type": "string", "minLength": 1, "maxLength": 1000},
+    "provider_source": {
+      "type": "object",
+      "required": [
+        "provider", "option", "source_title", "source_date", "source_state", "url",
+        "geography", "availability", "current_cost", "currency", "tax", "duration",
+        "prerequisite", "renewal", "maintenance", "unknowns"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "provider": {"$ref": "#/$defs/text"},
+        "option": {"$ref": "#/$defs/text"},
+        "source_title": {"$ref": "#/$defs/text"},
+        "source_date": {"type": "string", "format": "date"},
+        "source_state": {"enum": ["active", "unknown", "unavailable"]},
+        "url": {"type": "string", "pattern": "^https://", "maxLength": 500},
+        "geography": {"$ref": "#/$defs/text"},
+        "availability": {"$ref": "#/$defs/text"},
+        "current_cost": {"$ref": "#/$defs/text"},
+        "currency": {"$ref": "#/$defs/text"},
+        "tax": {"$ref": "#/$defs/text"},
+        "duration": {"$ref": "#/$defs/text"},
+        "prerequisite": {"$ref": "#/$defs/text"},
+        "renewal": {"$ref": "#/$defs/text"},
+        "maintenance": {"$ref": "#/$defs/text"},
+        "unknowns": {"$ref": "#/$defs/text"}
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": [
+        "decision_rank", "target_role", "gap_type", "option_type", "option_name", "provider_or_owner",
+        "source_gap_ids", "vacancy_ids", "market_evidence_state", "cost_time_band", "expected_signal_boundary",
+        "portfolio_or_no_learning_alternative", "overbuying_risk", "decision", "decision_basis", "next_action_gate",
+        "outcome_boundary", "draft_only", "no_external_action", "provider_source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "decision_rank": {"type": "integer", "minimum": 1, "maximum": 5},
+        "target_role": {"$ref": "#/$defs/text"},
+        "gap_type": {"enum": ["knowledge", "proof", "experience", "terminology", "low_return"]},
+        "option_type": {"enum": ["course", "certification", "portfolio_project", "lab", "role_search", "no_learning_yet"]},
+        "option_name": {"$ref": "#/$defs/text"},
+        "provider_or_owner": {"$ref": "#/$defs/text"},
+        "source_gap_ids": {"type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true, "items": {"$ref": "#/$defs/id_evidence"}},
+        "vacancy_ids": {"type": "array", "minItems": 1, "maxItems": 5, "uniqueItems": true, "items": {"$ref": "#/$defs/id_vacancy"}},
+        "market_evidence_state": {"$ref": "#/$defs/text"},
+        "cost_time_band": {"$ref": "#/$defs/text"},
+        "expected_signal_boundary": {"$ref": "#/$defs/text"},
+        "portfolio_or_no_learning_alternative": {"$ref": "#/$defs/text"},
+        "overbuying_risk": {"$ref": "#/$defs/text"},
+        "decision": {"enum": ["do_now", "defer", "omit", "research_first"]},
+        "decision_basis": {"$ref": "#/$defs/text"},
+        "next_action_gate": {"$ref": "#/$defs/text"},
+        "outcome_boundary": {"const": "not_an_interview_offer_salary_or_roi_prediction"},
+        "draft_only": {"const": true},
+        "no_external_action": {"const": true},
+        "provider_source": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/provider_source"}
+          ]
+        }
+      }
+    }
+  }
+}

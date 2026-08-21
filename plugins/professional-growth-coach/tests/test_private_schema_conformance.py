@@ -35,6 +35,16 @@ def _load_v2_dossier_helper():
     return module
 
 
+def _load_learning_contract_helper():
+    path = ROOT.parent.parent / "tests" / "test_career_learning_decision.py"
+    specification = importlib.util.spec_from_file_location("learning_contract_test_helper", path)
+    if specification is None or specification.loader is None:
+        raise RuntimeError("learning contract test helper is unavailable")
+    module = importlib.util.module_from_spec(specification)
+    specification.loader.exec_module(module)
+    return module
+
+
 V2_READY_ES_SNAPSHOT = (
     "snap-triage-sha256-"
     "74720a33a8bfc5e085767831e741b7cce97d45b1bb2d76b47d3ee203a2b5d6e8"
@@ -94,6 +104,21 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         invalid = json.loads((fixture_root / "complete-five-es.json").read_text(encoding="utf-8"))
         invalid["unexpected"] = True
         self.assertTrue(validate_schema_instance(invalid, dossier_schema))
+
+    def test_career_learning_decision_schema_accepts_evaluated_and_unavailable_states(self):
+        helper = _load_learning_contract_helper()
+        schema = self._schema("career-learning-decision-v1.schema.json")
+        evaluated = helper._bundle(count=3)
+        self.assertEqual([], validate_schema_instance(evaluated, schema))
+        unavailable = helper._bundle(state="unavailable")
+        self.assertEqual([], validate_schema_instance(unavailable, schema))
+
+        unknown_field = copy.deepcopy(evaluated)
+        unknown_field["decisions"][0]["unexpected"] = True
+        self.assertTrue(validate_schema_instance(unknown_field, schema))
+        missing_provider_field = copy.deepcopy(evaluated)
+        del missing_provider_field["decisions"][1]["provider_source"]["source_title"]
+        self.assertTrue(validate_schema_instance(missing_provider_field, schema))
 
     def test_target_vacancy_research_schema_accepts_closed_synthetic_states(self):
         schema = self._schema("target-vacancy-research-v1.schema.json")

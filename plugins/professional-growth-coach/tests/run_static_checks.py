@@ -207,9 +207,11 @@ EXECUTIVE_DOSSIER_V2_PACKAGE_PATHS = (
 MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/candidate-market-alignment-v1.schema.json",
     "schemas/career-market-learning-dossier-v1.schema.json",
+    "schemas/career-learning-decision-v1.schema.json",
     "scripts/validate_target_vacancy_research.py",
     "scripts/build_career_market_learning_dossier.py",
     "scripts/validate_career_market_learning_dossier.py",
+    "scripts/validate_career_learning_decision.py",
     "assets/career-market-learning-dossier-v1.css",
     "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
     "tests/evals/with-skill/fixtures/target-vacancy-research/limited-four-en.json",
@@ -727,6 +729,7 @@ def _load_market_package_modules(plugin_root: Path) -> dict[str, object]:
             "validate_target_vacancy_research",
             "build_career_market_learning_dossier",
             "validate_career_market_learning_dossier",
+            "validate_career_learning_decision",
             "render_executive_career_dossier_v2",
         ):
             path = scripts_root / f"{name}.py"
@@ -798,6 +801,7 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
     schema_requirements = {
         "schemas/candidate-market-alignment-v1.schema.json": "research_snapshot",
         "schemas/career-market-learning-dossier-v1.schema.json": "source_research_snapshot",
+        "schemas/career-learning-decision-v1.schema.json": "source_market_snapshot",
     }
     for relative_path, required_field in schema_requirements.items():
         try:
@@ -842,6 +846,10 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             "snapshot_for_dossier",
         ),
         "validate_career_market_learning_dossier": ("validate_market_dossier",),
+        "validate_career_learning_decision": (
+            "validate_learning_bundle",
+            "load_learning_bundle",
+        ),
         "render_executive_career_dossier_v2": ("render_dossier_html",),
     }
     for module_name, interfaces in required_interfaces.items():
