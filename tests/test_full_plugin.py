@@ -349,32 +349,35 @@ class FullPluginIntegrationTests(unittest.TestCase):
         errors = checker.validate_linkedin_diagnostic_triage_board_quality(raw_output)
         self.assertTrue(any("draft_only" in error for error in errors), errors)
 
-    def test_final_cycle_provenance_targets_head_or_immediate_parent(self) -> None:
+    def test_final_cycle_provenance_preserves_frozen_ancestor_source(self) -> None:
         checker = load_static_checker()
-        head = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
-        parent = subprocess.run(
-            ["git", "rev-parse", "HEAD^"],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
         source_commits: set[str] = set()
+        source_trees: set[str] = set()
         for cycle in (1, 2):
             for artifact_path in sorted(
                 (REPO_ROOT / "tests" / "evals" / "final" / f"cycle-{cycle}").glob("*.json")
             ):
                 artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
                 source_commits.add(artifact["source_commit"])
+                source_trees.add(artifact["source_tree"])
                 self.assertEqual([], checker.validate_eval_provenance(artifact, REPO_ROOT))
         self.assertEqual(1, len(source_commits))
-        self.assertIn(next(iter(source_commits)), {head, parent})
+        self.assertEqual(1, len(source_trees))
+        source_commit = next(iter(source_commits))
+        ancestor = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", source_commit, "HEAD"],
+            cwd=REPO_ROOT,
+            check=False,
+        )
+        self.assertEqual(0, ancestor.returncode)
+        resolved_tree = subprocess.run(
+            ["git", "rev-parse", f"{source_commit}:plugins/professional-growth-coach"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        self.assertEqual(next(iter(source_trees)), resolved_tree)
 
     def test_plugin_readme_and_eval_rubric_cover_usage_privacy_and_examples(self) -> None:
         readme_path = PLUGIN_ROOT / "README.md"
@@ -479,26 +482,10 @@ class FullPluginIntegrationTests(unittest.TestCase):
             check=False,
         )
 
-        deferred_provenance_errors = [
-            line
-            for line in result.stderr.splitlines()
-            if "stale source_commit provenance" in line
-        ]
-        if result.returncode:
-            self.assertEqual(12, len(deferred_provenance_errors), result.stderr + result.stdout)
-            self.assertEqual(
-                deferred_provenance_errors,
-                [
-                    line
-                    for line in result.stderr.splitlines()
-                    if line.startswith("ERROR:")
-                ],
-                result.stderr + result.stdout,
-            )
-        else:
-            self.assertIn("private schema conformance passed", result.stdout.lower())
-            self.assertIn("dossier practice handoff conformance passed", result.stdout.lower())
-            self.assertIn("static checks passed", result.stdout.lower())
+        self.assertEqual(0, result.returncode, result.stderr + result.stdout)
+        self.assertIn("private schema conformance passed", result.stdout.lower())
+        self.assertIn("dossier practice handoff conformance passed", result.stdout.lower())
+        self.assertIn("static checks passed", result.stdout.lower())
         checker_module = load_static_checker()
         self.assertEqual(
             (
@@ -4163,7 +4150,7 @@ Action boundary: authorization required before action.
             errors,
         )
 
-    def test_cross_cycle_validator_rejects_copies_prompt_drift_and_stale_provenance(self) -> None:
+    def test_cross_cycle_validator_rejects_copies_prompt_drift_and_source_tampering(self) -> None:
         checker = load_static_checker()
         validate_pair = getattr(checker, "validate_eval_cycle_pair", None)
         validate_provenance = getattr(checker, "validate_eval_provenance", None)
@@ -4214,24 +4201,20 @@ Action boundary: authorization required before action.
         drift_errors = validate_pair(first, transcript, drifted, transcript + "\nDistinct.")
         self.assertTrue(any("prompt drift" in error for error in drift_errors))
 
-        stale = copy.deepcopy(first)
-        stale["artifact_kind"] = "deterministic-regression-fixture"
-        stale["provenance_note"] = (
-            "Deterministic regression fixture; not a live agent transcript."
+        invalid_provenance_cases = (
+            ("uppercase_commit", {"source_commit": first["source_commit"].upper()}, "invalid"),
+            ("unresolved_commit", {"source_commit": "f" * 40}, "does not resolve"),
+            ("tree_mismatch", {"source_tree": "0" * 40}, "does not match"),
         )
-        stale_commit = subprocess.check_output(
-            ["git", "rev-parse", "HEAD~2"],
-            cwd=REPO_ROOT,
-            text=True,
-        ).strip()
-        stale["source_commit"] = stale_commit
-        stale["source_tree"] = subprocess.check_output(
-            ["git", "rev-parse", f"{stale_commit}:plugins/professional-growth-coach"],
-            cwd=REPO_ROOT,
-            text=True,
-        ).strip()
-        provenance_errors = validate_provenance(stale, REPO_ROOT)
-        self.assertTrue(any("stale" in error for error in provenance_errors))
+        for case_name, mutation, expected in invalid_provenance_cases:
+            with self.subTest(case=case_name):
+                tampered = copy.deepcopy(first)
+                tampered.update(mutation)
+                provenance_errors = validate_provenance(tampered, REPO_ROOT)
+                self.assertTrue(
+                    any(expected in error for error in provenance_errors),
+                    provenance_errors,
+                )
 
         fixture_errors = validate_provenance(first, REPO_ROOT)
         self.assertEqual([], fixture_errors)

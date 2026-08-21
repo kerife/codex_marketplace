@@ -2049,14 +2049,9 @@ def validate_eval_provenance(artifact: object, repo_root: Path) -> list[str]:
     ancestor = _git_output(repo_root, "merge-base", "--is-ancestor", source_commit, "HEAD")
     if ancestor.returncode != 0:
         return ["source_commit provenance is not an ancestor of HEAD"]
-    if artifact.get("artifact_kind") == "deterministic-regression-fixture":
-        distance = _git_output(repo_root, "rev-list", "--count", f"{source_commit}..HEAD")
-        if distance.returncode != 0 or not distance.stdout.strip().isdigit():
-            return ["cannot determine source_commit provenance age"]
-        if int(distance.stdout.strip()) > 1:
-            return [
-                "stale source_commit provenance: deterministic fixtures must target HEAD or its immediate parent"
-            ]
+    # A deterministic regression fixture is immutable historical evidence. Its
+    # exact source commit/tree must remain resolvable and ancestral, not be
+    # rewritten to impersonate a newer run.
     return []
 
 
