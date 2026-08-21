@@ -1091,12 +1091,20 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 for (heading_id, card), priority in zip(cards, dossier["priorities"], strict=True):
                     rank = priority["rank"]
                     trace = re.search(
-                        rf'<section class="decision-trace" aria-labelledby="decision-trace-title-{rank}">(.*?</ol>.*?)</section>',
+                        rf'<section class="decision-trace" aria-labelledby="decision-trace-title-{rank}"[^>]*>(.*?</ol>.*?)</section>',
                         card,
                         re.DOTALL,
                     )
                     self.assertIsNotNone(trace)
                     trace_body = trace.group(1)
+                    self.assertIn(
+                        f'aria-describedby="decision-trace-boundary-{rank}"',
+                        trace.group(0),
+                    )
+                    self.assertIn(
+                        f'id="decision-trace-boundary-{rank}" class="decision-trace-boundary"',
+                        trace_body,
+                    )
                     self.assertEqual(
                         labels,
                         tuple(re.findall(r'<span class="decision-trace-step-label">([^<]+)</span>', trace_body)),
