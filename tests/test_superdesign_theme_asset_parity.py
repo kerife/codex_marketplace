@@ -133,8 +133,11 @@ class SuperdesignThemeAssetParityTests(unittest.TestCase):
         self.assertIn("executive-career-dossier-v2.css", pages)
         self.assertIn("career-market-learning-dossier-v1.schema.json", pages)
         self.assertIn("career-learning-decision-v1.schema.json", pages)
+        self.assertIn("career-market-learning-dossier-v2.schema.json", pages)
+        self.assertIn("career-learning-decision-v2.schema.json", pages)
         self.assertIn("render_executive_career_dossier_v2.py", routes)
         self.assertIn("DecisionTrace", routes)
+        self.assertIn("LearningSignalRoute", routes)
         self.assertIn("CoachPriorityCard and DecisionTrace", components)
         self.assertIn("MarketEvidence and LearningDecision", components)
         self.assertIn("## DecisionTrace", extractable)
@@ -155,6 +158,19 @@ class SuperdesignThemeAssetParityTests(unittest.TestCase):
             "card references the shared boundary with `aria-describedby`.",
             " ".join(text.split()),
         )
+
+    def test_design_system_documents_safe_semantic_v2_route_contract(self):
+        text = " ".join(DESIGN_SYSTEM.read_text(encoding="utf-8").split())
+        for contract in (
+            "validated public term label",
+            "localized support state",
+            "vacancy ordinals",
+            "recurrence",
+            "no internal IDs",
+            "mobile, print, dark, and forced-colors",
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, text)
 
 
 if __name__ == "__main__":

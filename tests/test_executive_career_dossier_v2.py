@@ -27,6 +27,11 @@ FIXTURE_ROOT = REPO_ROOT / "tests" / "evals" / "with-skill" / "fixtures" / "exec
 V2_FIXTURE_ROOT = FIXTURE_ROOT.with_name("executive-career-dossier-v2")
 RESEARCH_FIXTURE_ROOT = FIXTURE_ROOT.with_name("target-vacancy-research")
 MARKET_FIXTURE_ROOT = FIXTURE_ROOT.with_name("career-market-learning-dossier")
+MARKET_V2_FIXTURE_ROOT = FIXTURE_ROOT.with_name("career-market-learning-dossier-v2")
+LEARNING_V2_FIXTURE_ROOT = FIXTURE_ROOT.with_name("career-learning-decision-v2")
+PROVIDER_RESEARCH_FIXTURE_ROOT = FIXTURE_ROOT.with_name(
+    "career-learning-provider-research"
+)
 NO_MARKET_RENDER_SNAPSHOTS = {
     "scenario-a-es.json": (48801, "19d85f8a4061ca5eb44746801a2f0094a9109d9d5764e80d515d84bafdfd79d6"),
     "scenario-c-en.json": (46856, "7f4513fc555d60a6042981168437aea3b1dc470027fd700d1604588e291ece7c"),
@@ -376,6 +381,45 @@ def learning_case(
         rows = []
     bundle = build_learning_bundle(research, market, dossier, rows)
     return dossier, market, research, alignment, bundle
+
+
+def semantic_v2_case(
+    state: str = "complete",
+) -> tuple[
+    dict[str, object],
+    dict[str, object],
+    dict[str, object],
+    dict[str, object],
+    dict[str, object],
+]:
+    names = {
+        "complete": (
+            "scenario-a-es.json",
+            "complete-five-es.json",
+            "complete-es.json",
+            "complete-es.json",
+        ),
+        "limited": (
+            "scenario-c-market-en.json",
+            "limited-four-en.json",
+            "limited-en.json",
+            "limited-en.json",
+        ),
+        "unavailable": (
+            "scenario-a-es.json",
+            "unavailable-es.json",
+            "unavailable-es.json",
+            "unavailable-es.json",
+        ),
+    }
+    dossier_name, market_name, learning_name, provider_name = names[state]
+    return (
+        load_json_fixture(V2_FIXTURE_ROOT / dossier_name),
+        load_json_fixture(MARKET_V2_FIXTURE_ROOT / market_name),
+        load_json_fixture(RESEARCH_FIXTURE_ROOT / market_name),
+        load_json_fixture(LEARNING_V2_FIXTURE_ROOT / learning_name),
+        load_json_fixture(PROVIDER_RESEARCH_FIXTURE_ROOT / provider_name),
+    )
 
 
 def build_limited_market_case(
@@ -793,6 +837,285 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.renderer = load_renderer()
         cls.validator = load_validator()
+
+    def v1_render_sources(self) -> dict[str, object]:
+        dossier, market, research, alignment, learning = learning_case(
+            "complete-five-es.json", "scenario-a-es.json", count=5
+        )
+        return {
+            "dossier": dossier,
+            "market_dossier": market,
+            "market_research": research,
+            "market_alignment": alignment,
+            "learning_decision": learning,
+        }
+
+    def v2_render_sources(self, state: str = "complete") -> dict[str, object]:
+        dossier, market, research, learning, provider = semantic_v2_case(state)
+        return {
+            "dossier": dossier,
+            "market_dossier": market,
+            "market_research": research,
+            "market_alignment": None,
+            "learning_decision": learning,
+            "provider_research": provider,
+        }
+
+    def test_renderer_accepts_only_coherent_market_learning_versions(self) -> None:
+        v1 = self.v1_render_sources()
+        v2 = self.v2_render_sources()
+        self.assertIn("market-context", self.renderer.render_dossier_html(**v1))
+        self.assertIn("learning-signal-route", self.renderer.render_dossier_html(**v2))
+
+        market_only_v2 = dict(v2, learning_decision=None, provider_research=None)
+        market_only = self.renderer.render_dossier_html(**market_only_v2)
+        self.assertIn("market-context", market_only)
+        self.assertNotIn("learning-signal-route", market_only)
+
+        pairs = (
+            ("v1 without learning", dict(v1, learning_decision=None), True),
+            ("v1 with v1 learning", v1, True),
+            (
+                "v1 with v2 learning",
+                dict(
+                    v1,
+                    learning_decision=v2["learning_decision"],
+                    provider_research=v2["provider_research"],
+                ),
+                False,
+            ),
+            ("v2 without learning", market_only_v2, True),
+            (
+                "v2 with v1 learning",
+                dict(
+                    v2,
+                    learning_decision=v1["learning_decision"],
+                    provider_research=None,
+                ),
+                False,
+            ),
+            ("v2 with v2 learning", v2, True),
+        )
+        for label, arguments, accepted in pairs:
+            with self.subTest(pair=label):
+                if accepted:
+                    self.assertIn(
+                        "market-context", self.renderer.render_dossier_html(**arguments)
+                    )
+                else:
+                    with self.assertRaisesRegex(
+                        ValueError, "market and learning versions are incompatible"
+                    ):
+                        self.renderer.render_dossier_html(**arguments)
+
+    def test_learning_v2_route_omits_internal_and_source_values(self) -> None:
+        sources = self.v2_render_sources()
+        html_output = self.renderer.render_dossier_html(**sources)
+        forbidden = (
+            "C-002",
+            "E-004",
+            "V-003-R-01",
+            "V-003",
+            "LP-001",
+            "snap-",
+            "https://",
+            "Synthetic test requirement",
+            "candidate_reported_match",
+            "research_first",
+            "candidate_owned",
+        )
+        for value in forbidden:
+            with self.subTest(forbidden=value):
+                self.assertNotIn(value, html_output)
+        self.assertIn("Terraform", html_output)
+        self.assertIn("1/5", html_output)
+        self.assertIn("V3", html_output)
+
+    def test_learning_v2_routes_are_localized_resolved_and_complete(self) -> None:
+        support_labels = {
+            "es": {
+                "verified_match": "Evidencia directa",
+                "candidate_reported_match": "Reportado por cliente",
+            },
+            "en": {
+                "verified_match": "Direct evidence",
+                "candidate_reported_match": "Candidate reported",
+            },
+        }
+        for state in ("complete", "limited"):
+            with self.subTest(state=state):
+                sources = self.v2_render_sources(state)
+                learning = sources["learning_decision"]
+                assert isinstance(learning, dict)
+                decisions = learning["decisions"]
+                assert isinstance(decisions, list)
+                rendered = self.renderer.render_dossier_html(**sources)
+                self.assertEqual(
+                    len(decisions),
+                    rendered.count('class="learning-signal-route"'),
+                )
+                expected_rows = sum(len(row["signal_routes"]) for row in decisions)
+                self.assertEqual(
+                    expected_rows,
+                    rendered.count('class="learning-signal-route-row"'),
+                )
+                locale = str(learning["locale"])
+                for decision in decisions:
+                    for route in decision["signal_routes"]:
+                        self.assertIn(html.escape(route["term_label"]), rendered)
+                        self.assertIn(route["recurrence"], rendered)
+                        for ordinal in route["vacancy_ordinals"]:
+                            self.assertIn(ordinal, rendered)
+                        self.assertIn(
+                            support_labels[locale][route["support_state"]], rendered
+                        )
+                        self.assertNotIn(route["support_state"], rendered)
+                    self.assertIn(
+                        html.escape(decision["decision_basis"], quote=True), rendered
+                    )
+                    self.assertNotIn(decision["decision"], rendered)
+                audit = DossierDOMAudit()
+                audit.feed(rendered)
+                self.assertEqual(len(audit.ids), len(set(audit.ids)))
+                self.assertEqual(set(), set(audit.references) - set(audit.ids))
+
+    def test_v2_omitted_groups_unavailable_and_legacy_states_fail_closed(self) -> None:
+        v1 = self.v1_render_sources()
+        v2 = self.v2_render_sources()
+        omissions = (
+            ("v1 alignment", dict(v1, market_alignment=None)),
+            ("v2 research", dict(v2, market_research=None)),
+            ("v2 provider", dict(v2, provider_research=None)),
+            (
+                "provider without learning",
+                dict(v2, learning_decision=None),
+            ),
+            ("v2 with alignment", dict(v2, market_alignment=v1["market_alignment"])),
+            ("v1 with provider", dict(v1, provider_research=v2["provider_research"])),
+        )
+        for label, arguments in omissions:
+            with self.subTest(group=label):
+                with self.assertRaises(ValueError):
+                    self.renderer.render_dossier_html(**arguments)
+
+        malformed_version = copy.deepcopy(v2)
+        malformed_version["market_dossier"]["schema_version"] = [
+            "career-market-learning-dossier-v2"
+        ]
+        with self.assertRaises(self.renderer.DossierValidationError):
+            self.renderer.render_dossier_html(**malformed_version)
+
+        unavailable = self.renderer.render_dossier_html(
+            **self.v2_render_sources("unavailable")
+        )
+        self.assertIn("market-context", unavailable)
+        self.assertNotIn("learning-signal-route", unavailable)
+        legacy = self.renderer.render_dossier_html(v2["dossier"])
+        self.assertNotIn("learning-signal-route", legacy)
+
+        for name, (expected_size, expected_digest) in NO_MARKET_RENDER_SNAPSHOTS.items():
+            with self.subTest(snapshot=name):
+                rendered = self.renderer.render_dossier_html(
+                    load_json_fixture(V2_FIXTURE_ROOT / name)
+                )
+                self.assertEqual(expected_size, len(rendered.encode("utf-8")))
+                self.assertEqual(
+                    expected_digest,
+                    hashlib.sha256(rendered.encode("utf-8")).hexdigest(),
+                )
+
+    def test_v2_private_source_mutations_fail_before_render_without_echo(self) -> None:
+        sentinels = (
+            ("private name", "Private Candidate Name"),
+            ("contact", "private.person@example.test"),
+            ("local path", "/Users/private-person/source.json"),
+            ("url", "https://example.test/private-source"),
+            ("snapshot", "snap-private-sha256-" + "a" * 64),
+            ("internal id", "E-999"),
+            ("control", "private\u202esource"),
+            ("source prose", "Arbitrary private source prose sentinel."),
+        )
+        for index, (label, sentinel) in enumerate(sentinels):
+            with self.subTest(mutation=label):
+                sources = copy.deepcopy(self.v2_render_sources())
+                if index == 0:
+                    sources["dossier"]["claims"][0]["paraphrase"] = sentinel
+                elif index == 1:
+                    sources["market_research"]["vacancies"][0]["title"] = sentinel
+                elif index == 2:
+                    sources["provider_research"]["options"][0]["unknowns"] = sentinel
+                elif index == 3:
+                    sources["provider_research"]["options"][0]["url"] = sentinel
+                elif index == 4:
+                    sources["market_dossier"]["source_alignment_snapshot"] = sentinel
+                elif index == 5:
+                    sources["learning_decision"]["decisions"][0]["claim_ids"] = [sentinel]
+                elif index == 6:
+                    sources["provider_research"]["options"][0]["source_title"] = sentinel
+                else:
+                    sources["market_research"]["vacancies"][0]["requirements"][0][
+                        "source_paraphrase"
+                    ] = sentinel
+                with self.assertRaises(ValueError) as raised:
+                    self.renderer.render_dossier_html(**sources)
+                self.assertNotIn(sentinel, str(raised.exception))
+                errors = getattr(raised.exception, "errors", ())
+                self.assertNotIn(sentinel, "\n".join(errors))
+
+    def test_v2_private_source_mutations_leave_no_writer_or_cli_output(self) -> None:
+        sources = copy.deepcopy(self.v2_render_sources())
+        sentinel = "private.person@example.test"
+        sources["provider_research"]["options"][0]["unknowns"] = sentinel
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths: dict[str, Path] = {}
+            for name, value in sources.items():
+                if value is None:
+                    continue
+                path = root / f"{name}.json"
+                path.write_text(json.dumps(value), encoding="utf-8")
+                paths[name] = path
+            writer_output = root / "writer.html"
+            with self.assertRaises(ValueError) as raised:
+                self.renderer.write_dossier_html(
+                    paths["dossier"],
+                    writer_output,
+                    market_dossier_path=paths["market_dossier"],
+                    market_research_path=paths["market_research"],
+                    learning_decision_path=paths["learning_decision"],
+                    provider_research_path=paths["provider_research"],
+                )
+            self.assertNotIn(sentinel, str(raised.exception))
+            self.assertFalse(writer_output.exists())
+
+            cli_output = root / "cli.html"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(RENDERER_PATH),
+                    str(paths["dossier"]),
+                    "--market-dossier",
+                    str(paths["market_dossier"]),
+                    "--market-research",
+                    str(paths["market_research"]),
+                    "--learning-decision",
+                    str(paths["learning_decision"]),
+                    "--provider-research",
+                    str(paths["provider_research"]),
+                    "--output",
+                    str(cli_output),
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=20,
+            )
+            self.assertEqual(2, result.returncode)
+            self.assertNotIn(sentinel, result.stderr)
+            self.assertNotIn("Traceback", result.stderr)
+            self.assertFalse(cli_output.exists())
 
     def test_localized_ledger_has_one_named_region_and_exact_semantic_rows(self) -> None:
         expected_labels = {

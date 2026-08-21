@@ -13,11 +13,20 @@
   - optionally composes validated market evidence and learning decisions from
     `career-market-learning-dossier-v1.schema.json` and
     `career-learning-decision-v1.schema.json`
+  - alternatively composes the strict source-recomputed generation from
+    `career-market-learning-dossier-v2.schema.json` and
+    `career-learning-decision-v2.schema.json`; alignment is recomputed and
+    provider research is accepted only with learning v2
 
 The market and learning bundles are offline inputs to this dossier route, not
 separate web pages. Their build/validation scripts are
 `build_career_market_learning_dossier.py`, `validate_career_market_learning_dossier.py`,
-`build_career_learning_decision.py`, and `validate_career_learning_decision.py`.
+`build_career_learning_decision.py`, and `validate_career_learning_decision.py`
+for version 1, plus `build_career_market_learning_dossier_v2.py`,
+`validate_career_market_learning_dossier_v2.py`,
+`build_career_learning_decision_v2.py`,
+`validate_career_learning_decision_v2.py`, and
+`validate_career_learning_provider_research.py` for version 2.
 
 ## Recruiter reply triage
 

@@ -32,14 +32,17 @@ are the source of truth. `.superdesign/init/layouts.md` and
 `.superdesign/init/theme.md` mirror those files byte-for-byte where marked;
 parity tests must fail if either artifact drifts.
 
-The composed market region is source-aware and all-or-none: its derived market
-dossier, normalized research, and identity-free alignment must validate
-together before any market UI renders. Legacy dossier renders with no optional
-market inputs keep the existing generic placeholder. A validated unavailable
-bundle instead shows its bounded limitation and one localized safe next step,
-without exposing snapshots, URLs, referrers, internal vacancy/employer/evidence/
-requirement IDs, raw requirement paraphrases, or inferred eligibility; it makes
-no external action.
+The composed market region is source-aware, generation-strict, and all-or-none.
+Version 1 requires its derived market dossier, normalized research, and supplied
+identity-free alignment; optional learning must also be version 1. Version 2
+requires its market dossier and normalized research, recomputes alignment, and
+accepts independently validated provider research only with a version 2 learning
+decision. Mixed, crossed, and incomplete groups fail before any market UI
+renders. Legacy dossier renders with no optional market inputs keep the existing
+generic placeholder. A validated unavailable bundle instead shows its bounded
+limitation and one localized safe next step, without exposing snapshots, URLs,
+referrers, internal vacancy/employer/evidence/requirement IDs, raw requirement
+paraphrases, or inferred eligibility; it makes no external action.
 
 Complete and limited market summaries expose one localized, validated research
 date before the learning boundary so the client can judge evidence freshness;
@@ -59,6 +62,16 @@ The learning decision boundary appears before the cards, and every learning
 card references the shared boundary with `aria-describedby`. The localized,
 visible boundary remains printable and does not predict an interview, offer,
 salary, or return on investment.
+
+LearningSignalRoute is a compact group inside each validated version 2 learning
+card. It renders one row per source signal with only the validated public term
+label, localized support state, public vacancy ordinals, and exact recurrence;
+the card adds the source-recomputed decision basis and localized decision label.
+It exposes no internal IDs, snapshots, URLs, source prose, or raw enums. Group
+and row labels resolve through unique ARIA references, while the inherited card
+and proof styles preserve the same mobile, print, dark, and forced-colors
+contracts. Version 1 cards, unavailable market evidence, and legacy no-market
+output keep their prior behavior.
 
 Vacancy alignment uses one native `progress` per vacancy, labelled by the
 vacancy heading, its visible `N de 100` / `N out of 100` score, evidence

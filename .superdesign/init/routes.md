@@ -14,7 +14,13 @@ There is no web router. The plugin exposes deterministic CLI entry points that w
 All routes are local-file artifacts. The privacy contract forbids external fetches and preserves no-action/manual-handoff boundaries.
 
 The v2 route accepts optional, prevalidated offline market and learning bundles;
-they are inputs to the dossier artifact rather than additional routes. The
-market-only Decide ahora / Decide now and proof-to-cost learning cards are
-omitted when market evidence is unavailable. DecisionTrace is a rendered
-coach-priority subcomponent, not a persisted route or standalone artifact.
+they are inputs to the dossier artifact rather than additional routes. Version 1
+composition requires its alignment input. Version 2 composition recomputes
+alignment, accepts market-only input without provider research, and requires
+independently validated provider research when learning v2 is present. Versions
+cannot be mixed. The market-only Decide ahora / Decide now and proof-to-cost
+learning cards are omitted when market evidence is unavailable. DecisionTrace
+is a rendered coach-priority subcomponent, not a persisted route or standalone
+artifact. LearningSignalRoute is the compact, ARIA-labelled per-decision group
+that projects public term labels, localized support, vacancy ordinals,
+recurrence, deterministic basis, and localized decision without source values.

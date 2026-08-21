@@ -26,6 +26,17 @@ By default, a normal local LinkedIn dossier also performs a read-only bounded se
 
 The private dossier shows reproducible evidence alignment and `k/N` recurrence over the actual included sample. This does not change the LinkedIn profile score, predict hiring fit, or authorize applying, messaging, connecting, following, publishing, enrolling, or purchasing. Course and certification recommendations remain unevaluated until the separate learning step.
 
+The HTML renderer accepts exactly one coherent composition generation. Market
+v1 keeps its required supplied alignment and may add learning v1. Market v2
+recomputes alignment from the validated vacancy research and executive dossier;
+it can render without learning or provider research, while learning v2 requires
+its independently validated provider-research source. Mixed versions, crossed
+sources, and incomplete groups fail before HTML is assembled or written. A
+learning v2 card projects one compact row per validated signal using only the
+public term label, localized support, public vacancy ordinals, recurrence,
+source-recomputed basis, and localized decision. It does not render source
+links, snapshots, source prose, raw enums, or internal provenance identifiers.
+
 ### Installed test scope
 
 An extracted marketplace cache contains the package-local validators, renderers,

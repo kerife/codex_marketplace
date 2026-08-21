@@ -1165,6 +1165,70 @@ class RepositoryPrivacyTests(unittest.TestCase):
                 text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
                 self.assertEqual({}, scanner.scan_text(relative_path, text))
 
+    def test_semantic_v2_renderer_projects_no_internal_or_source_provenance(self) -> None:
+        runtime = load_market_runtime()
+        renderer = runtime["render_executive_career_dossier_v2"]
+        fixture_root = REPO_ROOT / "tests/evals/with-skill/fixtures"
+        dossier = json.loads(
+            (fixture_root / "executive-career-dossier-v2/scenario-a-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        research = json.loads(
+            (fixture_root / "target-vacancy-research/complete-five-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        market = json.loads(
+            (
+                fixture_root
+                / "career-market-learning-dossier-v2/complete-five-es.json"
+            ).read_text(encoding="utf-8")
+        )
+        learning = json.loads(
+            (fixture_root / "career-learning-decision-v2/complete-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        provider = json.loads(
+            (
+                fixture_root
+                / "career-learning-provider-research/complete-es.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        rendered = renderer.render_dossier_html(
+            dossier,
+            market,
+            market_research=research,
+            learning_decision=learning,
+            provider_research=provider,
+        )
+
+        forbidden = {
+            market["source_research_snapshot"],
+            market["source_executive_dossier_snapshot"],
+            market["source_alignment_snapshot"],
+            learning["source_market_snapshot"],
+            learning["source_provider_research_snapshot"],
+            research["employers"][0]["official_source_url"],
+            research["vacancies"][0]["source_url"],
+            research["vacancies"][0]["requirements"][0]["source_paraphrase"],
+            provider["options"][0]["url"],
+            provider["options"][0]["source_title"],
+            provider["options"][0]["unknowns"],
+            learning["decisions"][0]["claim_ids"][0],
+            learning["decisions"][0]["source_evidence_ids"][0],
+            learning["decisions"][0]["requirement_ids"][0],
+            learning["decisions"][0]["vacancy_ids"][0],
+        }
+        for value in forbidden:
+            with self.subTest(forbidden=value):
+                self.assertNotIn(value, rendered)
+        self.assertIn("Terraform", rendered)
+        self.assertIn("1/5", rendered)
+        self.assertIn("V3", rendered)
+
     def test_market_v2_golden_policy_does_not_hide_private_injections(self) -> None:
         scanner = load_scanner()
         mutations = (

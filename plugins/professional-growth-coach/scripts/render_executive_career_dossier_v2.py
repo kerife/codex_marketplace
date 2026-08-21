@@ -42,6 +42,15 @@ def _sibling_with_local_imports(name: str) -> Any:
 VALIDATOR = _sibling("validate_executive_career_dossier_v2.py")
 MARKET_VALIDATOR = _sibling_with_local_imports("validate_career_market_learning_dossier.py")
 LEARNING_VALIDATOR = _sibling_with_local_imports("validate_career_learning_decision.py")
+MARKET_V2_VALIDATOR = _sibling_with_local_imports(
+    "validate_career_market_learning_dossier_v2.py"
+)
+LEARNING_V2_VALIDATOR = _sibling_with_local_imports(
+    "validate_career_learning_decision_v2.py"
+)
+PROVIDER_VALIDATOR = _sibling_with_local_imports(
+    "validate_career_learning_provider_research.py"
+)
 RESEARCH_VALIDATOR = _sibling("validate_target_vacancy_research.py")
 COMPAT = _sibling("executive_career_dossier_v2_compat.py")
 BASE = _sibling("render_executive_career_dossier.py")
@@ -58,6 +67,10 @@ RenderReceipt = BASE.RenderReceipt
 
 class MarketInputLoadError(ValueError):
     """A bounded market composition input could not be loaded."""
+
+
+class MarketCompositionVersionError(ValueError):
+    """Market and learning roots do not form one supported generation."""
 
 
 SECTION_LABELS = {
@@ -214,6 +227,11 @@ COPY = {
         "learning_risk": "Riesgo de sobreinvertir",
         "learning_decision": "Decisión del coach",
         "learning_gate": "Siguiente revisión",
+        "learning_route": "Ruta de evidencia por señal",
+        "learning_route_support": "Soporte",
+        "learning_route_vacancies": "Vacantes",
+        "learning_route_recurrence": "Recurrencia",
+        "learning_decision_number": "Decisión de aprendizaje {rank}",
         "learning_boundary": "Esto es una hipótesis acotada de aprendizaje; no predice entrevista, oferta, salario ni retorno de inversión.",
         "learning_option_types": {"course": "Curso", "certification": "Certificación", "portfolio_project": "Proyecto de portafolio", "lab": "Laboratorio", "role_search": "Búsqueda de rol", "no_learning_yet": "Todavía no estudiar"},
         "learning_decisions": {"do_now": "Hazlo ahora", "defer": "Déjalo en pausa", "omit": "Omítelo por ahora", "research_first": "Investiga antes"},
@@ -273,10 +291,26 @@ COPY = {
         "learning_risk": "Overinvestment risk",
         "learning_decision": "Coach decision",
         "learning_gate": "Next review",
+        "learning_route": "Per-signal evidence route",
+        "learning_route_support": "Support",
+        "learning_route_vacancies": "Vacancies",
+        "learning_route_recurrence": "Recurrence",
+        "learning_decision_number": "Learning decision {rank}",
         "learning_boundary": "This is a bounded learning hypothesis; it predicts neither an interview, offer, salary, nor return on investment.",
         "learning_option_types": {"course": "Course", "certification": "Certification", "portfolio_project": "Portfolio project", "lab": "Lab", "role_search": "Role search", "no_learning_yet": "No learning yet"},
         "learning_decisions": {"do_now": "Do now", "defer": "Defer", "omit": "Omit for now", "research_first": "Research first"},
         "learning_gap_types": {"knowledge": "Knowledge", "proof": "Proof", "experience": "Experience", "terminology": "Terminology", "low_return": "Low return"},
+    },
+}
+
+SUPPORT_STATE_LABELS = {
+    "es": {
+        "verified_match": "Evidencia directa",
+        "candidate_reported_match": "Reportado por cliente",
+    },
+    "en": {
+        "verified_match": "Direct evidence",
+        "candidate_reported_match": "Candidate reported",
     },
 }
 
@@ -535,19 +569,129 @@ def _plain(value: object) -> object:
     return value
 
 
+def _market_learning_generation(
+    market: Mapping[str, object], learning: Mapping[str, object] | None
+) -> str:
+    try:
+        market_version = market.get("schema_version")
+        learning_version = learning.get("schema_version") if learning is not None else None
+    except (AttributeError, RecursionError, TypeError, ValueError):
+        raise MarketCompositionVersionError(
+            "market and learning versions are incompatible"
+        ) from None
+    allowed = {
+        ("career-market-learning-dossier-v1", None): "v1",
+        (
+            "career-market-learning-dossier-v1",
+            "career-learning-decision-v1",
+        ): "v1",
+        ("career-market-learning-dossier-v2", None): "v2",
+        (
+            "career-market-learning-dossier-v2",
+            "career-learning-decision-v2",
+        ): "v2",
+    }
+    try:
+        generation = allowed.get((market_version, learning_version))
+    except TypeError:
+        generation = None
+    if generation is None:
+        raise MarketCompositionVersionError(
+            "market and learning versions are incompatible"
+        )
+    return generation
+
+
+def _composition_generation(
+    market_dossier: Mapping[str, object] | None,
+    market_research: Mapping[str, object] | None,
+    market_alignment: Mapping[str, object] | None,
+    learning_decision: Mapping[str, object] | None,
+    provider_research: Mapping[str, object] | None,
+) -> str | None:
+    if market_dossier is None:
+        if any(
+            value is not None
+            for value in (
+                market_research,
+                market_alignment,
+                learning_decision,
+                provider_research,
+            )
+        ):
+            raise DossierValidationError(
+                ["market composition inputs must be supplied together"]
+            )
+        return None
+    if market_research is None:
+        raise DossierValidationError(
+            ["market composition inputs must be supplied together"]
+        )
+    if not isinstance(market_dossier, Mapping):
+        raise DossierValidationError(
+            ["market composition inputs have malformed structure"]
+        )
+    if learning_decision is not None and not isinstance(
+        learning_decision, Mapping
+    ):
+        raise DossierValidationError(["learning decision must be an object"])
+    try:
+        market_version = market_dossier.get("schema_version")
+        learning_version = (
+            learning_decision.get("schema_version")
+            if learning_decision is not None
+            else None
+        )
+    except (AttributeError, RecursionError, TypeError, ValueError):
+        raise DossierValidationError(
+            ["market composition inputs have malformed structure"]
+        ) from None
+    if not isinstance(market_version, str) or market_version not in {
+        "career-market-learning-dossier-v1",
+        "career-market-learning-dossier-v2",
+    }:
+        raise DossierValidationError(
+            ["market composition inputs have malformed structure"]
+        )
+    if learning_version is not None and (
+        not isinstance(learning_version, str)
+        or learning_version
+        not in {
+            "career-learning-decision-v1",
+            "career-learning-decision-v2",
+        }
+    ):
+        raise DossierValidationError(["learning decision is unavailable"])
+    generation = _market_learning_generation(market_dossier, learning_decision)
+    if generation == "v1":
+        if market_alignment is None:
+            raise DossierValidationError(
+                ["v1 market composition requires alignment"]
+            )
+        if provider_research is not None:
+            raise DossierValidationError(
+                ["v1 market composition excludes provider research"]
+            )
+    else:
+        if market_alignment is not None:
+            raise DossierValidationError(
+                ["v2 market composition recomputes alignment"]
+            )
+        if (learning_decision is None) != (provider_research is None):
+            raise DossierValidationError(
+                ["v2 learning and provider research must be supplied together"]
+            )
+    return generation
+
+
 def _validated_market_group(
     dossier: Mapping[str, object],
     market_dossier: Mapping[str, object] | None,
     market_research: Mapping[str, object] | None,
     market_alignment: Mapping[str, object] | None,
+    generation: str | None,
 ) -> Mapping[str, object] | None:
-    supplied = tuple(
-        value is not None
-        for value in (market_dossier, market_research, market_alignment)
-    )
-    if any(supplied) and not all(supplied):
-        raise DossierValidationError(["market composition inputs must be supplied together"])
-    if not any(supplied):
+    if generation is None:
         return None
     try:
         market_copy, research_copy, alignment_copy = copy.deepcopy(
@@ -555,9 +699,14 @@ def _validated_market_group(
         )
     except (RecursionError, TypeError, ValueError) as error:
         raise DossierValidationError(["market composition inputs have malformed structure"]) from error
-    errors = MARKET_VALIDATOR.validate_market_dossier(
-        market_copy, research_copy, _plain(dossier), alignment_copy
-    )
+    if generation == "v1":
+        errors = MARKET_VALIDATOR.validate_market_dossier(
+            market_copy, research_copy, _plain(dossier), alignment_copy
+        )
+    else:
+        errors = MARKET_V2_VALIDATOR.validate_market_dossier_v2(
+            market_copy, research_copy, _plain(dossier)
+        )
     if errors:
         raise DossierValidationError(errors)
     frozen_market = BASE._freeze(market_copy)
@@ -571,6 +720,8 @@ def _validated_learning_group(
     market_dossier: Mapping[str, object] | None,
     market_research: Mapping[str, object] | None,
     learning_decision: Mapping[str, object] | None,
+    provider_research: Mapping[str, object] | None,
+    generation: str | None,
 ) -> Mapping[str, object] | None:
     """Return only a source-bound evaluated bundle and reject malformed supplied input."""
     if learning_decision is None:
@@ -581,21 +732,43 @@ def _validated_learning_group(
         raise DossierValidationError(["learning decision requires the validated market composition group"])
     try:
         candidate = copy.deepcopy(learning_decision)
-        errors = LEARNING_VALIDATOR.validate_learning_bundle(
-            candidate,
-            _plain(market_dossier),
-            _plain(dossier),
-            _plain(market_research),
-        )
+        if generation == "v1":
+            errors = LEARNING_VALIDATOR.validate_learning_bundle(
+                candidate,
+                _plain(market_dossier),
+                _plain(dossier),
+                _plain(market_research),
+            )
+        else:
+            provider_copy = copy.deepcopy(provider_research)
+            provider_errors = PROVIDER_VALIDATOR.validate_provider_research(
+                provider_copy
+            )
+            if provider_errors:
+                raise DossierValidationError(["provider research is invalid"])
+            errors = LEARNING_V2_VALIDATOR.validate_learning_bundle_v2(
+                candidate,
+                _plain(market_research),
+                _plain(market_dossier),
+                _plain(dossier),
+                provider_copy,
+            )
         if errors:
             raise DossierValidationError(errors)
         if not isinstance(candidate, Mapping):
             raise DossierValidationError(["learning decision must be an object"])
-        if candidate.get("state") != "evaluated":
+        accepted_states = (
+            {"evaluated"} if generation == "v1" else {"complete", "limited"}
+        )
+        if candidate.get("state") not in accepted_states:
             return None
         decisions = candidate.get("decisions")
         vacancies = _plain(market_dossier).get("vacancies")
-        if not isinstance(decisions, list) or not 3 <= len(decisions) <= 5:
+        minimum_decisions = 3 if generation == "v1" else 1
+        if (
+            not isinstance(decisions, list)
+            or not minimum_decisions <= len(decisions) <= 5
+        ):
             return None
         if not isinstance(vacancies, list) or not vacancies:
             return None
@@ -622,7 +795,7 @@ def _learning_signal_labels(
     return ", ".join(signals) if signals else COPY[locale]["learning_evidence"]
 
 
-def _render_learning_decision(
+def _render_learning_decision_v1(
     market_dossier: Mapping[str, object],
     learning_decision: Mapping[str, object] | None,
     locale: str,
@@ -676,6 +849,91 @@ def _render_learning_decision(
       <p id="learning-decision-boundary" class="learning-decision-boundary">{labels['learning_boundary']}</p>
       <div class="dossier-grid learning-decision-grid">{"".join(cards)}</div>
     </section>'''
+
+
+def _learning_signal_route_view(
+    row: Mapping[str, object], locale: str
+) -> list[dict[str, str]]:
+    views: list[dict[str, str]] = []
+    for route in BASE._rows(row["signal_routes"]):
+        support_state = str(route["support_state"])
+        views.append(
+            {
+                "label": html.escape(str(route["term_label"]), quote=True),
+                "support": SUPPORT_STATE_LABELS[locale][support_state],
+                "vacancies": html.escape(
+                    ", ".join(str(value) for value in route["vacancy_ordinals"]),
+                    quote=True,
+                ),
+                "recurrence": html.escape(str(route["recurrence"]), quote=True),
+            }
+        )
+    return views
+
+
+def _render_learning_decision_v2(
+    market_dossier: Mapping[str, object],
+    learning_decision: Mapping[str, object],
+    locale: str,
+) -> str:
+    labels = COPY[locale]
+    decisions = BASE._rows(learning_decision["decisions"])
+    vacancies = BASE._rows(market_dossier.get("vacancies"))
+    cards: list[str] = []
+    for row in decisions:
+        rank = int(row["decision_rank"])
+        heading_id = f"learning-decision-card-title-{rank}"
+        route_title_id = f"learning-signal-route-title-{rank}"
+        route_rows: list[str] = []
+        for route_index, route in enumerate(
+            _learning_signal_route_view(row, locale), start=1
+        ):
+            label_id = f"learning-signal-route-label-{rank}-{route_index}"
+            route_rows.append(
+                f'''<div class="learning-signal-route-row" role="group" aria-labelledby="{label_id}">
+              <strong id="{label_id}">{route['label']}</strong>
+              <p><span class="label">{labels['learning_route_support']}</span>{route['support']}</p>
+              <p><span class="label">{labels['learning_route_vacancies']}</span>{route['vacancies']}</p>
+              <p><span class="label">{labels['learning_route_recurrence']}</span>{route['recurrence']}</p>
+            </div>'''
+            )
+        decision_label = labels["learning_decisions"][str(row["decision"])]
+        decision_basis = html.escape(str(row["decision_basis"]), quote=True)
+        cards.append(
+            f'''<article class="card span-4 learning-decision-card" aria-labelledby="{heading_id}" aria-describedby="learning-decision-boundary">
+          <div class="learning-decision-header"><span class="learning-decision-rank" aria-hidden="true">{rank}</span><h3 id="{heading_id}">{labels['learning_decision_number'].format(rank=rank)}</h3></div>
+          <div class="learning-decision-proof">
+            <div class="learning-signal-route" role="group" aria-labelledby="{route_title_id}">
+              <h4 id="{route_title_id}">{labels['learning_route']}</h4>
+              {''.join(route_rows)}
+            </div>
+          </div>
+          <p><span class="label">{labels['learning_basis']}</span>{decision_basis}</p>
+          <p><span class="label">{labels['learning_decision']}</span>{decision_label}</p>
+        </article>'''
+        )
+    sample_count = len(vacancies)
+    return f'''<section class="section-block learning-decision" aria-labelledby="learning-decision-title">
+      <h2 id="learning-decision-title">{labels['learning_title']}</h2>
+      <p class="learning-decision-intro">{labels['learning_intro']}</p>
+      <p class="learning-decision-sample"><strong>{labels['learning_sample']}:</strong> N={sample_count}</p>
+      <p id="learning-decision-boundary" class="learning-decision-boundary">{labels['learning_boundary']}</p>
+      <div class="dossier-grid learning-decision-grid">{''.join(cards)}</div>
+    </section>'''
+
+
+def _render_learning_decision(
+    market_dossier: Mapping[str, object],
+    learning_decision: Mapping[str, object] | None,
+    locale: str,
+) -> str:
+    if learning_decision is None:
+        return ""
+    if learning_decision.get("schema_version") == "career-learning-decision-v2":
+        return _render_learning_decision_v2(
+            market_dossier, learning_decision, locale
+        )
+    return _render_learning_decision_v1(market_dossier, learning_decision, locale)
 
 
 def _matrix_state(state: str, locale: str) -> str:
@@ -1155,8 +1413,14 @@ def _render_main(
     locale: str,
     market_dossier: Mapping[str, object] | None,
     learning_decision: Mapping[str, object] | None = None,
+    generation: str | None = None,
 ) -> str:
-    projected = COMPAT.project_v2_to_v1(BASE._mapping(_plain(dossier)))
+    public_dossier = _plain(dossier)
+    if not isinstance(public_dossier, dict):
+        raise DossierValidationError(["dossier projection is unavailable"])
+    if generation == "v2":
+        public_dossier["methodology_source_categories"] = []
+    projected = COMPAT.project_v2_to_v1(BASE._mapping(public_dossier))
     opening = BASE._render_verdict(projected, locale) + BASE._render_recruiter_scan(projected, locale)
     bridge_holds = BASE._render_holds(projected, locale) + BASE._render_screen_bridge(projected, locale)
     decide_now = _render_decide_now(dossier, locale, market_dossier, learning_decision) if market_dossier is not None else ""
@@ -1210,13 +1474,26 @@ def render_dossier_html(
     market_research: Mapping[str, object] | None = None,
     market_alignment: Mapping[str, object] | None = None,
     learning_decision: Mapping[str, object] | None = None,
+    provider_research: Mapping[str, object] | None = None,
 ) -> str:
     frozen = _validate_and_freeze(dossier)
+    generation = _composition_generation(
+        market_dossier,
+        market_research,
+        market_alignment,
+        learning_decision,
+        provider_research,
+    )
     frozen_market = _validated_market_group(
-        frozen, market_dossier, market_research, market_alignment
+        frozen, market_dossier, market_research, market_alignment, generation
     )
     frozen_learning = _validated_learning_group(
-        frozen, frozen_market, market_research, learning_decision
+        frozen,
+        frozen_market,
+        market_research,
+        learning_decision,
+        provider_research,
+        generation,
     )
     locale = str(frozen["locale"])
     template = BASE.ASSET_LOADER.read_private_asset(ASSET_ROOT.parent, TEMPLATE_PATH)
@@ -1235,7 +1512,9 @@ def render_dossier_html(
         "{{TITLE}}": BASE.COPY[locale]["title"],
         "{{INLINE_CSS}}": base_css + extension_css + market_css,
         "{{HEADER}}": BASE._render_header(locale),
-        "{{MAIN}}": _render_main(frozen, locale, frozen_market, frozen_learning),
+        "{{MAIN}}": _render_main(
+            frozen, locale, frozen_market, frozen_learning, generation
+        ),
         "{{INLINE_SCRIPT}}": BASE.INLINE_SCRIPT,
     }
     return BASE.STATIC_TEMPLATE_TOKEN.sub(lambda match: substitutions[match.group(0)], template)
@@ -1249,28 +1528,38 @@ def write_dossier_html(
     market_research_path: Path | None = None,
     market_alignment_path: Path | None = None,
     learning_decision_path: Path | None = None,
+    provider_research_path: Path | None = None,
     force: bool = False,
 ) -> RenderReceipt:
     dossier = VALIDATOR.load_dossier(Path(dossier_path))
     errors = VALIDATOR.validate_dossier(dossier)
     if errors:
         raise DossierValidationError(errors)
-    market_paths = (market_dossier_path, market_research_path, market_alignment_path)
-    if any(path is not None for path in market_paths) and not all(
-        path is not None for path in market_paths
+    required_market_paths = (market_dossier_path, market_research_path)
+    optional_source_paths = (
+        market_alignment_path,
+        learning_decision_path,
+        provider_research_path,
+    )
+    if any(path is not None for path in required_market_paths) and not all(
+        path is not None for path in required_market_paths
+    ):
+        raise DossierValidationError(["market composition inputs must be supplied together"])
+    if not any(path is not None for path in required_market_paths) and any(
+        path is not None for path in optional_source_paths
     ):
         raise DossierValidationError(["market composition inputs must be supplied together"])
     market_dossier = None
     market_research = None
     market_alignment = None
     learning_decision = None
-    if learning_decision_path is not None and not all(path is not None for path in market_paths):
-        raise DossierValidationError(["learning decision requires the validated market composition group"])
-    if all(path is not None for path in market_paths):
+    provider_research = None
+    if all(path is not None for path in required_market_paths):
         try:
             market_dossier = VALIDATOR.load_dossier(Path(market_dossier_path))
             market_research = RESEARCH_VALIDATOR.load_research(Path(market_research_path))
-            market_alignment = VALIDATOR.load_dossier(Path(market_alignment_path))
+            if market_alignment_path is not None:
+                market_alignment = VALIDATOR.load_dossier(Path(market_alignment_path))
         except (VALIDATOR.DossierLoadError, RESEARCH_VALIDATOR.ResearchLoadError) as error:
             raise MarketInputLoadError("cannot load market composition input") from error
         if learning_decision_path is not None:
@@ -1278,11 +1567,15 @@ def write_dossier_html(
                 learning_decision = LEARNING_VALIDATOR.load_learning_bundle(Path(learning_decision_path))
             except LEARNING_VALIDATOR.LearningBundleLoadError as error:
                 raise MarketInputLoadError("cannot load learning decision input") from error
-            learning_errors = LEARNING_VALIDATOR.validate_learning_bundle(
-                learning_decision, market_dossier, dossier, market_research
-            )
-            if learning_errors:
-                raise DossierValidationError(learning_errors)
+        if provider_research_path is not None:
+            try:
+                provider_research = PROVIDER_VALIDATOR.load_provider_research(
+                    Path(provider_research_path)
+                )
+            except PROVIDER_VALIDATOR.ProviderResearchLoadError as error:
+                raise MarketInputLoadError(
+                    "cannot load provider research input"
+                ) from error
     try:
         expanded_output = Path(output_path).expanduser()
     except RuntimeError as error:
@@ -1294,6 +1587,7 @@ def write_dossier_html(
         market_research=market_research,
         market_alignment=market_alignment,
         learning_decision=learning_decision,
+        provider_research=provider_research,
     )
     summary = build_chat_summary(dossier)
     BASE._atomic_private_write(output, rendered.encode("utf-8"), force=force)
@@ -1308,6 +1602,7 @@ def _cli(argv: list[str] | None = None) -> int:
     parser.add_argument("--market-research", type=Path)
     parser.add_argument("--market-alignment", type=Path)
     parser.add_argument("--learning-decision", type=Path)
+    parser.add_argument("--provider-research", type=Path)
     parser.add_argument("--force", action="store_true")
     arguments = parser.parse_args(argv)
     try:
@@ -1318,12 +1613,18 @@ def _cli(argv: list[str] | None = None) -> int:
             market_research_path=arguments.market_research,
             market_alignment_path=arguments.market_alignment,
             learning_decision_path=arguments.learning_decision,
+            provider_research_path=arguments.provider_research,
             force=arguments.force,
         )
     except OSError:
         print("cannot write dossier artifact", file=sys.stderr)
         return 3
-    except (VALIDATOR.DossierLoadError, MarketInputLoadError, DossierValidationError) as error:
+    except (
+        VALIDATOR.DossierLoadError,
+        MarketInputLoadError,
+        MarketCompositionVersionError,
+        DossierValidationError,
+    ) as error:
         if isinstance(error, DossierValidationError):
             print("\n".join(error.errors), file=sys.stderr)
         else:
