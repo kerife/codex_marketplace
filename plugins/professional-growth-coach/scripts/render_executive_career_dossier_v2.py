@@ -159,6 +159,19 @@ AUTHORIZATION_QUESTIONS = {
 
 COPY = {
     "es": {
+        "decide_title": "Decide ahora",
+        "decide_priorities": "Tres prioridades",
+        "decide_coverage": "Cobertura visible",
+        "decide_authorization": "Siguiente autorización",
+        "decide_market": "Estado del mercado",
+        "decide_reviewed": "Revisadas",
+        "decide_provided": "Proporcionadas",
+        "decide_unavailable": "No disponibles",
+        "decide_sample": "Muestra validada",
+        "decide_recurrence": "Señales recurrentes",
+        "decide_no_market": "No hay puntuación ni recurrencia sin vacantes verificadas.",
+        "decide_no_pending": "No hay una autorización pendiente en esta sesión.",
+        "decide_navigation": "Navegación del resumen",
         "coverage_title": "Cobertura de secciones",
         "availability": "Disponibilidad", "reason": "Motivo", "request": "Decisión de inspección",
         "priorities": "Prioridades de coaching", "target": "Sección objetivo",
@@ -181,6 +194,19 @@ COPY = {
         "gap_route": "Ruta para cerrar brechas", "gap_steps": ("Confirmar la brecha contra evidencia validada.", "Reunir una prueba práctica y acotada.", "Documentar el alcance sin inferir resultados.", "Revalidar si la nueva evidencia cambia la matriz."),
     },
     "en": {
+        "decide_title": "Decide now",
+        "decide_priorities": "Three priorities",
+        "decide_coverage": "Visible coverage",
+        "decide_authorization": "Next authorization",
+        "decide_market": "Market state",
+        "decide_reviewed": "Reviewed",
+        "decide_provided": "Provided",
+        "decide_unavailable": "Unavailable",
+        "decide_sample": "Validated sample",
+        "decide_recurrence": "Recurring signals",
+        "decide_no_market": "No score or recurrence without verified vacancies.",
+        "decide_no_pending": "There is no pending authorization in this session.",
+        "decide_navigation": "Summary navigation",
         "coverage_title": "Section coverage", "availability": "Availability", "reason": "Reason",
         "request": "Inspection decision", "priorities": "Coaching priorities",
         "target": "Target section", "observation": "Observation", "why": "Why it matters",
@@ -297,6 +323,99 @@ def _render_section_coverage(dossier: Mapping[str, object], locale: str) -> str:
     return f'''<section class="section-block section-coverage-ledger" aria-labelledby="section-coverage-ledger-title">
       <h2 id="section-coverage-ledger-title">{labels['coverage_title']}</h2>
       <ol class="section-coverage-list">{''.join(rows)}</ol>
+    </section>'''
+
+
+def _render_decide_now(
+    dossier: Mapping[str, object], locale: str, market_dossier: Mapping[str, object]
+) -> str:
+    labels = COPY[locale]
+    coverage_rows = BASE._rows(dossier["section_coverage"])
+    reviewed = sum(
+        1 for row in coverage_rows if row.get("availability") in {"inspected_present", "inspected_absent"}
+    )
+    provided = sum(1 for row in coverage_rows if row.get("availability") == "candidate_supplied")
+    unavailable = sum(1 for row in coverage_rows if row.get("availability") == "unavailable")
+    priorities = BASE._rows(dossier["priorities"])
+    priority_ids = [f"coach-priority-title-{priority['rank']}" for priority in priorities]
+    market_title_id = "market-context-title"
+    described_by = "decide-now-summary"
+    pending = VALIDATOR.select_pending_inspection_section(BASE._mapping(_plain(dossier)))
+    pending_index = next(
+        (
+            index
+            for index, row in enumerate(coverage_rows, start=1)
+            if row.get("section") == pending
+        ),
+        None,
+    )
+    priority_items = "".join(
+        f'<li><a href="#{priority_ids[index]}"><span class="decide-now-rank">{priority["rank"]}</span> '
+        f'{html.escape(str(priority["title"]), quote=True)} '
+        f'<span class="decide-now-target">({SECTION_LABELS[locale][str(priority["target_section"])]})</span></a></li>'
+        for index, priority in enumerate(priorities)
+    )
+    authorization = (
+        AUTHORIZATION_QUESTIONS[locale][pending]
+        if pending is not None
+        else labels["decide_no_pending"]
+    )
+    market_state = str(market_dossier["state"])
+    vacancies = BASE._rows(market_dossier.get("vacancies"))
+    sample_count = len(vacancies)
+    if market_state == "market_evidence_unavailable" or sample_count == 0:
+        market_content = (
+            f'<p id="decide-now-market-summary"><strong>{labels["decide_sample"]}:</strong> N=0</p>'
+            f'<p>{labels["decide_no_market"]}</p>'
+        )
+    else:
+        fractions = "".join(
+            f'<li><span class="decide-now-signal">{_signal_label(row["signal"])}</span> '
+            f'<span class="decide-now-fraction">{html.escape(str(row["display_fraction"]), quote=True)}</span></li>'
+            for row in BASE._rows(market_dossier.get("recurrence_rows"))
+        )
+        market_content = (
+            f'<p id="decide-now-market-summary"><strong>{labels["decide_sample"]}:</strong> '
+            f'N={sample_count}</p>'
+            f'<h4>{labels["decide_recurrence"]}</h4>'
+            f'<ul class="decide-now-recurrence">{fractions}</ul>'
+        )
+    navigation_items = "".join(
+        f'<li><a href="#{priority_ids[index]}">{html.escape(str(priority["title"]), quote=True)}</a></li>'
+        for index, priority in enumerate(priorities)
+    )
+    if pending_index is not None:
+        navigation_items += (
+            f'<li><a href="#section-coverage-title-{pending_index}">'
+            f'{SECTION_LABELS[locale][str(pending)]}</a></li>'
+        )
+    navigation_items += f'<li><a href="#{market_title_id}">{labels["decide_market"]}</a></li>'
+    return f'''<section class="section-block decide-now" aria-labelledby="decide-now-title" aria-describedby="{described_by}">
+      <h2 id="decide-now-title">{labels['decide_title']}</h2>
+      <p id="decide-now-summary" class="decide-now-summary">{labels['decide_priorities']} · {labels['decide_coverage']} · {labels['decide_market']}</p>
+      <nav class="decide-now-navigation" aria-label="{labels['decide_navigation']}"><ul>{navigation_items}</ul></nav>
+      <div class="dossier-grid decide-now-grid">
+        <article class="card span-4 decide-now-card" aria-labelledby="decide-now-priorities-title">
+          <h3 id="decide-now-priorities-title">{labels['decide_priorities']}</h3>
+          <ol class="decide-now-list">{priority_items}</ol>
+        </article>
+        <article class="card span-4 decide-now-card" aria-labelledby="decide-now-coverage-title">
+          <h3 id="decide-now-coverage-title">{labels['decide_coverage']}</h3>
+          <dl class="decide-now-facts">
+            <dt>{labels['decide_reviewed']}</dt><dd>{reviewed}</dd>
+            <dt>{labels['decide_provided']}</dt><dd>{provided}</dd>
+            <dt>{labels['decide_unavailable']}</dt><dd>{unavailable}</dd>
+          </dl>
+        </article>
+        <article class="card span-4 decide-now-card decide-now-authorization" aria-labelledby="decide-now-authorization-title">
+          <h3 id="decide-now-authorization-title">{labels['decide_authorization']}</h3>
+          <p>{html.escape(authorization, quote=True)}</p>
+        </article>
+        <article class="card span-12 decide-now-card decide-now-market" aria-labelledby="decide-now-market-title">
+          <h3 id="decide-now-market-title">{labels['decide_market']}</h3>
+          {market_content}
+        </article>
+      </div>
     </section>'''
 
 
@@ -502,9 +621,10 @@ def _render_main(
     projected = COMPAT.project_v2_to_v1(BASE._mapping(_plain(dossier)))
     opening = BASE._render_verdict(projected, locale) + BASE._render_recruiter_scan(projected, locale)
     bridge_holds = BASE._render_holds(projected, locale) + BASE._render_screen_bridge(projected, locale)
+    decide_now = _render_decide_now(dossier, locale, market_dossier) if market_dossier is not None else ""
     return f'''<main id="main-content" class="shell" tabindex="-1">
       <div class="dossier-grid">{opening}</div>
-      {_render_section_coverage(dossier, locale)}
+      {decide_now}{_render_section_coverage(dossier, locale)}
       {_render_coach_priorities(dossier, locale)}
       <div class="dossier-grid section-block">{BASE._render_analytics(projected, locale)}</div>
       {BASE._render_dimensions(projected, locale)}

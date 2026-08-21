@@ -22,6 +22,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = REPO_ROOT / "plugins" / "professional-growth-coach" / "scripts"
 VALIDATOR_PATH = SCRIPTS / "validate_executive_career_dossier_v2.py"
 RENDERER_PATH = SCRIPTS / "render_executive_career_dossier_v2.py"
+V1_RENDERER_PATH = SCRIPTS / "render_executive_career_dossier.py"
 FIXTURE_ROOT = REPO_ROOT / "tests" / "evals" / "with-skill" / "fixtures" / "executive-career-dossier"
 V2_FIXTURE_ROOT = FIXTURE_ROOT.with_name("executive-career-dossier-v2")
 RESEARCH_FIXTURE_ROOT = FIXTURE_ROOT.with_name("target-vacancy-research")
@@ -262,9 +263,33 @@ def load_renderer() -> object:
     return renderer
 
 
+def load_v1_renderer() -> object:
+    specification = importlib.util.spec_from_file_location(
+        "render_executive_career_dossier_decide_now_v1", V1_RENDERER_PATH
+    )
+    assert specification is not None and specification.loader is not None
+    renderer = importlib.util.module_from_spec(specification)
+    sys.modules[specification.name] = renderer
+    specification.loader.exec_module(renderer)
+    return renderer
+
+
 def visible_text(rendered: str) -> str:
     without_code = re.sub(r"(?is)<(?:style|script)\b.*?</(?:style|script)>", " ", rendered)
     return " ".join(html.unescape(re.sub(r"(?s)<[^>]+>", " ", without_code)).split())
+
+
+def decide_now_region(rendered: str) -> tuple[set[str], str, str]:
+    match = re.search(
+        r'<section(?=[^>]*class="[^"]*\bdecide-now\b[^"]*")'
+        r'(?=[^>]*aria-labelledby="decide-now-title")'
+        r'(?=[^>]*aria-describedby="([^"]+)")[^>]*>(.*?)</section>',
+        rendered,
+        re.DOTALL,
+    )
+    if match is None:
+        raise AssertionError("Decide now section is missing")
+    return set(re.findall(r'<a href="#([^"]+)">', match.group(2))), match.group(1), match.group(2)
 
 
 class DossierDOMAudit(HTMLParser):
@@ -984,6 +1009,122 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         for value in forbidden_values:
             with self.subTest(forbidden=value):
                 self.assertNotIn(value, rendered)
+
+    def test_decide_now_precedes_coverage_and_uses_semantic_references_without_actions_or_echo(self) -> None:
+        dossier, market, research, alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        rendered = self.renderer.render_dossier_html(
+            dossier,
+            market,
+            market_research=research,
+            market_alignment=alignment,
+        )
+
+        references, described_by, region = decide_now_region(rendered)
+        self.assertLess(
+            rendered.index('class="section-block decide-now"'),
+            rendered.index('class="section-block section-coverage-ledger"'),
+        )
+        pending = self.validator.select_pending_inspection_section(dossier)
+        pending_index = next(
+            index for index, row in enumerate(dossier["section_coverage"], start=1)
+            if row["section"] == pending
+        )
+        self.assertEqual(
+            {
+                "coach-priority-title-1",
+                "coach-priority-title-2",
+                "coach-priority-title-3",
+                f"section-coverage-title-{pending_index}",
+                "market-context-title",
+            },
+            references,
+        )
+        self.assertEqual("decide-now-summary", described_by)
+        self.assertNotRegex(region, r"<(?:button|input|select|textarea|form)\b")
+        self.assertNotRegex(region, r'<a href="https?://')
+        for forbidden in (
+            market["source_research_snapshot"],
+            market["source_executive_dossier_snapshot"],
+            *(
+                value
+                for vacancy in research["vacancies"]
+                for value in (vacancy["vacancy_id"], vacancy["employer_id"], vacancy["source_url"])
+            ),
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, region)
+
+        v1_rendered = load_v1_renderer().render_dossier_html(
+            load_v1_fixture("scenario-a-es.json")
+        )
+        self.assertNotIn('class="section-block decide-now"', v1_rendered)
+
+    def test_decide_now_uses_zero_market_without_score_recurrence_or_gap_route(self) -> None:
+        dossier, market, research, alignment = market_case(
+            "unavailable-es.json", "scenario-a-es.json"
+        )
+        rendered = self.renderer.render_dossier_html(
+            dossier,
+            market,
+            market_research=research,
+            market_alignment=alignment,
+        )
+
+        references, _described_by, region = decide_now_region(rendered)
+        self.assertIn("market-context-title", references)
+        self.assertNotIn("vacancy-alignment", region)
+        self.assertNotIn("recurrence-row", region)
+        self.assertNotIn("gap-closure-route", region)
+        self.assertNotIn("<progress", region)
+        self.assertNotRegex(visible_text(region), r"\b\d+(?:\.\d+)?%\b|\b\d+/0\b")
+
+    def test_decide_now_uses_actual_one_to_five_denominators_and_one_pending_authorization(self) -> None:
+        for count in range(1, 6):
+            with self.subTest(count=count):
+                if count == 5:
+                    dossier, market, research, alignment = market_case(
+                        "complete-five-es.json", "scenario-a-es.json"
+                    )
+                    authorization = "¿Autorizas inspeccionar"
+                else:
+                    dossier, market, research, alignment = build_limited_market_case(count)
+                    authorization = "Do you authorize read-only inspection"
+                rendered = self.renderer.render_dossier_html(
+                    dossier,
+                    market,
+                    market_research=research,
+                    market_alignment=alignment,
+                )
+
+                _references, _described_by, region = decide_now_region(rendered)
+                text = visible_text(region)
+                self.assertEqual(1, text.count(authorization))
+                self.assertEqual(
+                    [row["display_fraction"] for row in market["recurrence_rows"]],
+                    re.findall(r"\b\d+/\d+\b", text),
+                )
+                self.assertTrue(
+                    all(f"/{count}" in fraction for fraction in re.findall(r"\b\d+/\d+\b", text))
+                )
+
+    def test_decide_now_styles_cover_responsive_print_and_forced_colors_without_fixed_tracks(self) -> None:
+        css = (REPO_ROOT / "plugins" / "professional-growth-coach" / "assets" / "career-market-learning-dossier-v1.css").read_text(encoding="utf-8")
+        for contract in (
+            ".decide-now-card",
+            "@media (max-width: 640px)",
+            "@media print",
+            "@media (forced-colors: active)",
+            "@media (prefers-reduced-motion: reduce)",
+            "background: Canvas",
+            "color: CanvasText",
+            "background: Highlight",
+            "color: HighlightText",
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, css)
+        self.assertNotIn("min-width: 7rem", css)
 
     def test_limited_market_composition_uses_dynamic_n_without_padding(self) -> None:
         for count in (1, 2, 3, 4):
