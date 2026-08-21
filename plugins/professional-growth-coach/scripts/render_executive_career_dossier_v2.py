@@ -314,6 +314,16 @@ TRACE_INSPECTION_LABELS = {
     },
 }
 
+TRACE_INSPECTION_LINK_LABELS = {
+    "es": "Ver la tarjeta Decide ahora",
+    "en": "View the Decide now card",
+}
+
+TRACE_BOUNDARY = {
+    "es": "No se ejecuta ninguna acción externa; cualquier acción posterior requiere autorización separada.",
+    "en": "No external action is executed; any later action requires separate authorization.",
+}
+
 TRACE_RAW_REFERENCE_RE = re.compile(r"\b(?:E-\d{3}|CAP-\d{3})\b")
 TRACE_MARKET_STATES = frozenset({"complete", "limited_market_evidence", "market_evidence_unavailable"})
 
@@ -754,7 +764,72 @@ def _render_decide_now(
     </section>'''
 
 
-def _render_coach_priorities(dossier: Mapping[str, object], locale: str) -> str:
+def _render_decision_trace(
+    priority: Mapping[str, object],
+    dossier: Mapping[str, object],
+    market_dossier: Mapping[str, object],
+    locale: str,
+    fields: str,
+    template_heading_id: str,
+    template_boundary_id: str,
+) -> str:
+    trace = _derive_decision_trace(priority, dossier, market_dossier, locale)
+    rank = str(priority["rank"])
+    steps = trace["steps"]
+    evidence_views = trace["evidence_views"]
+    evidence_items = "".join(
+        f'<li id="decision-trace-evidence-{rank}-{ordinal}" class="decision-trace-evidence-item">'
+        f'<span class="decision-trace-evidence-state">{html.escape(str(view["state_label"]), quote=True)}</span> '
+        f'<span class="decision-trace-evidence-paraphrase">{html.escape(str(view["paraphrase"]), quote=True)}</span></li>'
+        for ordinal, view in enumerate(evidence_views, start=1)
+    )
+    if not evidence_items:
+        evidence_items = (
+            f'<li id="decision-trace-evidence-{rank}-1" class="decision-trace-evidence-item">'
+            f'{TRACE_INSPECTION_LABELS[locale]["unavailable"]}</li>'
+        )
+    inspection = trace["inspection_state"]
+    authorization_link = ""
+    if trace.get("authorization_anchor"):
+        authorization_link = (
+            f'<a href="#{html.escape(str(trace["authorization_anchor"]), quote=True)}">'
+            f'{TRACE_INSPECTION_LINK_LABELS[locale]}</a>'
+        )
+    return f'''<section class="decision-trace" aria-labelledby="decision-trace-title-{rank}">
+            <h4 id="decision-trace-title-{rank}" class="decision-trace-title">{html.escape(str(priority['title']), quote=True)}</h4>
+            <ol class="decision-trace-steps">
+              <li id="decision-trace-priority-{rank}" class="decision-trace-step">
+                <span class="decision-trace-step-label">{html.escape(str(steps[0]['label']), quote=True)}</span>
+                <p><span class="label">{COPY[locale]['target']}</span>{html.escape(str(trace['target_section_label']), quote=True)}</p>
+                <p><span class="label">{html.escape(TEMPLATE_FIELD_LABELS[locale]['target_role'], quote=True)}</span>{html.escape(str(trace['target_section_label']), quote=True)}</p>
+              </li>
+              <li id="decision-trace-evidence-step-{rank}" class="decision-trace-step">
+                <span class="decision-trace-step-label">{html.escape(str(steps[1]['label']), quote=True)}</span>
+                <ul class="decision-trace-evidence-list">{evidence_items}</ul>
+              </li>
+              <li id="decision-trace-template-{rank}" class="decision-trace-step">
+                <span class="decision-trace-step-label">{html.escape(str(steps[2]['label']), quote=True)}</span>
+                <section class="coach-template" aria-labelledby="{template_heading_id}" aria-describedby="{template_boundary_id}">
+                  <h5 id="{template_heading_id}">{COPY[locale]['template']}: {TEMPLATE_LABELS[locale][str(priority['client_template']['template_id'])]}</h5>
+                  <ul class="coach-template-list">{fields}</ul>
+                  <p id="{template_boundary_id}" class="coach-template-boundary">{COPY[locale]['template_boundary']}</p>
+                </section>
+              </li>
+              <li id="decision-trace-inspection-{rank}" class="decision-trace-step">
+                <span class="decision-trace-step-label">{html.escape(str(steps[3]['label']), quote=True)}</span>
+                <p><span class="label">{html.escape(str(inspection['target_label']), quote=True)}</span>{html.escape(str(inspection['label']), quote=True)}</p>
+                {authorization_link}
+              </li>
+            </ol>
+            <p class="decision-trace-boundary">{TRACE_BOUNDARY[locale]}</p>
+          </section>'''
+
+
+def _render_coach_priorities(
+    dossier: Mapping[str, object],
+    locale: str,
+    market_dossier: Mapping[str, object] | None = None,
+) -> str:
     labels = COPY[locale]
     cards: list[str] = []
     for priority in BASE._rows(dossier["priorities"]):
@@ -768,7 +843,8 @@ def _render_coach_priorities(dossier: Mapping[str, object], locale: str) -> str:
             f'<span class="coach-template-blank" role="img" aria-label="{labels["template_blank"]}"></span></li>'
             for key in template["field_keys"]
         )
-        cards.append(f'''<article class="card span-4 coach-priority-card" aria-labelledby="{heading_id}">
+        if market_dossier is None:
+            cards.append(f'''<article class="card span-4 coach-priority-card" aria-labelledby="{heading_id}">
           <div class="priority-header"><h3 id="{heading_id}">{html.escape(str(priority['title']), quote=True)}</h3><span class="priority-rank">{rank}</span></div>
           <p><span class="label">{labels['target']}</span>{SECTION_LABELS[locale][str(priority['target_section'])]}</p>
           <p class="coach-observation"><span class="label">{labels['observation']}</span>{html.escape(str(priority['coach_observation']), quote=True)}</p>
@@ -779,6 +855,24 @@ def _render_coach_priorities(dossier: Mapping[str, object], locale: str) -> str:
             <ul class="coach-template-list">{fields}</ul>
             <p id="{template_boundary_id}" class="coach-template-boundary">{labels['template_boundary']}</p>
           </section>
+        </article>''')
+            continue
+        trace_markup = _render_decision_trace(
+            priority,
+            dossier,
+            market_dossier,
+            locale,
+            fields,
+            template_heading_id,
+            template_boundary_id,
+        )
+        cards.append(f'''<article class="card span-4 coach-priority-card" aria-labelledby="{heading_id}">
+          <div class="priority-header"><h3 id="{heading_id}">{html.escape(str(priority['title']), quote=True)}</h3><span class="priority-rank">{rank}</span></div>
+          <p><span class="label">{labels['target']}</span>{SECTION_LABELS[locale][str(priority['target_section'])]}</p>
+          <p class="coach-observation"><span class="label">{labels['observation']}</span>{html.escape(str(priority['coach_observation']), quote=True)}</p>
+          <p><span class="label">{labels['why']}</span>{html.escape(str(priority['why_it_matters']), quote=True)}</p>
+          <p class="coach-prompt"><span class="label">{labels['prompt']}</span>{html.escape(str(priority['coach_prompt']), quote=True)}</p>
+          {trace_markup}
         </article>''')
     return f'''<section class="section-block coach-priorities" aria-labelledby="coach-priorities-title">
       <h2 id="coach-priorities-title">{labels['priorities']}</h2>
@@ -970,7 +1064,7 @@ def _render_main(
     return f'''<main id="main-content" class="shell" tabindex="-1">
       <div class="dossier-grid">{opening}</div>
       {decide_now}{_render_section_coverage(dossier, locale)}
-      {_render_coach_priorities(dossier, locale)}
+      {_render_coach_priorities(dossier, locale, market_dossier)}
       <div class="dossier-grid section-block">{BASE._render_analytics(projected, locale)}</div>
       {BASE._render_dimensions(projected, locale)}
       {BASE._render_visual_review(projected, locale)}

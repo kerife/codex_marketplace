@@ -279,6 +279,75 @@
   font-size: .875rem;
 }
 
+.decision-trace {
+  min-width: 0;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--forest-soft);
+  border-left: 4px solid var(--coral);
+  background: var(--paper);
+  overflow-wrap: anywhere;
+}
+.decision-trace-title { margin: 0 0 .75rem; }
+.decision-trace-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .75rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+.decision-trace-step { min-width: 0; padding-left: .25rem; }
+.decision-trace-step-label {
+  display: block;
+  color: var(--forest);
+  font-size: .8125rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.decision-trace-step p { margin: .55rem 0 0; }
+.decision-trace-evidence-list,
+.decision-trace-evidence-list li { min-width: 0; }
+.decision-trace-evidence-list { margin: .55rem 0 0; padding-left: 1.1rem; }
+.decision-trace-evidence-list li + li { margin-top: .5rem; }
+.decision-trace-evidence-state { color: var(--forest); font-weight: 700; }
+.decision-trace-evidence-paraphrase { display: block; }
+.decision-trace .coach-template { margin-top: .55rem; padding: .75rem; background: var(--surface); }
+.decision-trace .coach-template h5 { margin: 0; font-size: 1rem; }
+.decision-trace .coach-template-list { margin-top: .55rem; }
+.decision-trace-boundary { margin: 1rem 0 0; color: var(--muted); font-size: .875rem; }
+
+@media screen and (prefers-color-scheme: dark) {
+  .decision-trace { border-color: var(--forest); background: var(--surface); color: var(--ink); }
+  .decision-trace .coach-template { background: var(--paper); }
+  .decision-trace-step-label,
+  .decision-trace-evidence-state { color: var(--forest); }
+}
+
+@media (max-width: 640px) {
+  .decision-trace-steps { grid-template-columns: minmax(0, 1fr); }
+  .decision-trace { padding: .85rem; }
+}
+
+@media print {
+  .decision-trace,
+  .decision-trace-step,
+  .decision-trace .coach-template { break-inside: avoid; page-break-inside: avoid; }
+}
+
+@media (forced-colors: active) {
+  .decision-trace,
+  .decision-trace .coach-template { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .decision-trace { border-left-color: Highlight; }
+  .decision-trace-step-label,
+  .decision-trace-evidence-state { color: CanvasText; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .decision-trace,
+  .decision-trace * { animation: none !important; transition: none !important; transform: none !important; }
+}
+
 @media screen and (prefers-color-scheme: dark) {
   .learning-decision-card { border-color: var(--forest); background: var(--surface); color: var(--ink); }
   .learning-decision-rank { background: var(--coral); color: var(--paper); }

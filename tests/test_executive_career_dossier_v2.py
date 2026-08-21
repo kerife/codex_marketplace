@@ -1013,6 +1013,73 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         self.assertEqual(expected_size, len(rendered.encode("utf-8")))
         self.assertEqual(expected_digest, hashlib.sha256(rendered.encode("utf-8")).hexdigest())
 
+    def test_decision_trace_markup_and_accessibility(self) -> None:
+        css = (REPO_ROOT / "plugins" / "professional-growth-coach" / "assets" / "career-market-learning-dossier-v1.css").read_text(encoding="utf-8")
+        for contract in (
+            ".decision-trace",
+            "grid-template-columns: minmax(0, 1fr)",
+            "@media (max-width: 640px)",
+            "@media print",
+            "break-inside: avoid",
+            "@media screen and (prefers-color-scheme: dark)",
+            "@media (forced-colors: active)",
+            "@media (prefers-reduced-motion: reduce)",
+            "background: Canvas",
+            "color: CanvasText",
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, css)
+
+        for locale in ("es", "en"):
+            with self.subTest(locale=locale):
+                if locale == "es":
+                    dossier, market, research, alignment = market_case(
+                        "complete-five-es.json", "scenario-a-es.json"
+                    )
+                    labels = ("Prioridad", "Evidencia disponible", "Plantilla privada", "Permiso de lectura")
+                    pending_question = "¿Autorizas inspeccionar"
+                else:
+                    dossier, market, research, alignment = build_limited_market_case(4)
+                    labels = ("Priority", "Available evidence", "Private template", "Read-only permission")
+                    pending_question = "Do you authorize read-only inspection"
+                rendered = self.renderer.render_dossier_html(
+                    dossier, market, market_research=research, market_alignment=alignment,
+                )
+                cards = re.findall(
+                    r'<article class="card span-4 coach-priority-card" aria-labelledby="([^\"]+)">(.*?)</article>',
+                    rendered,
+                    re.DOTALL,
+                )
+                self.assertEqual(3, len(cards))
+                for (heading_id, card), priority in zip(cards, dossier["priorities"], strict=True):
+                    rank = priority["rank"]
+                    trace = re.search(
+                        rf'<section class="decision-trace" aria-labelledby="decision-trace-title-{rank}">(.*?</ol>.*?)</section>',
+                        card,
+                        re.DOTALL,
+                    )
+                    self.assertIsNotNone(trace)
+                    trace_body = trace.group(1)
+                    self.assertEqual(
+                        labels,
+                        tuple(re.findall(r'<span class="decision-trace-step-label">([^<]+)</span>', trace_body)),
+                    )
+                    self.assertIn(f'id="decision-trace-title-{rank}"', trace_body)
+                    self.assertIn(f'id="decision-trace-priority-{rank}"', trace_body)
+                    self.assertIn(f'id="decision-trace-evidence-{rank}-1"', trace_body)
+                    self.assertIn(f'id="decision-trace-template-{rank}"', trace_body)
+                    self.assertIn(f'id="decision-trace-inspection-{rank}"', trace_body)
+                    self.assertIn("Rol objetivo" if locale == "es" else "Target role", trace_body)
+                    self.assertNotRegex(trace_body, r"<(?:form|button|input|select|textarea)\b")
+                    hrefs = re.findall(r'<a\s+[^>]*href="([^"]+)"', trace_body)
+                    self.assertTrue(all(href == "#decide-now-authorization-title" for href in hrefs))
+                audit = DossierDOMAudit()
+                audit.feed(rendered)
+                self.assertEqual(len(audit.ids), len(set(audit.ids)))
+                self.assertEqual(set(), set(audit.references) - set(audit.ids))
+                self.assertEqual(3, rendered.count('class="decision-trace"'))
+                self.assertEqual(1, visible_text(rendered).count(pending_question))
+
     def test_coach_templates_expose_localized_private_blank_and_boundary(self) -> None:
         for locale, expected in (
             ("es", ("No incluyas texto sin procesar del perfil, datos de contacto ni valores privados.", "Espacio en blanco para completar en privado")),
