@@ -1850,6 +1850,40 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 self.assertNotRegex(panel.group(0), r"<a href=\"https?://")
                 self.assertNotRegex(panel.group(0), r"<(?:button|input|select|textarea|form)\b")
 
+    def test_learning_proof_to_cost_groups_are_named_and_aria_referenced(self) -> None:
+        for locale, research_name, dossier_name in (
+            ("es", "complete-five-es.json", "scenario-a-es.json"),
+            ("en", "limited-four-en.json", "scenario-c-en.json"),
+        ):
+            with self.subTest(locale=locale):
+                case = learning_case(
+                    research_name,
+                    dossier_name,
+                    count=5 if locale == "es" else 3,
+                    decision_count=3,
+                )
+                rendered = self.renderer.render_dossier_html(
+                    case[0],
+                    case[1],
+                    market_research=case[2],
+                    market_alignment=case[3],
+                    learning_decision=case[4],
+                )
+                expected = "Prueba y costo" if locale == "es" else "Proof and cost"
+                groups = re.findall(
+                    r'<div class="learning-decision-proof" aria-labelledby="([^"]+)">(.*?)</div>',
+                    rendered,
+                    re.DOTALL,
+                )
+                self.assertEqual(3, len(groups))
+                self.assertEqual(3, len({group_id for group_id, _body in groups}))
+                for rank, (group_id, body) in enumerate(groups, start=1):
+                    self.assertEqual(f"learning-decision-proof-title-{rank}", group_id)
+                    self.assertIn(
+                        f'<h4 id="learning-decision-proof-title-{rank}">{expected}</h4>',
+                        body,
+                    )
+
     def test_learning_card_proof_to_cost_fields_remain_absent_without_provider_source(self) -> None:
         case = learning_case(
             "complete-five-es.json", "scenario-a-es.json", count=5, decision_count=3

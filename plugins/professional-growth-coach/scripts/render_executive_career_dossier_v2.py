@@ -204,7 +204,7 @@ COPY = {
         "learning_option": "Opción",
         "learning_owner": "Proveedor o dueño",
         "learning_evidence": "Señal recurrente",
-        "learning_basis": "Base de la decisión",
+        "learning_proof_title": "Prueba y costo", "learning_basis": "Base de la decisión",
         "learning_cost_time": "Costo y tiempo",
         "learning_signal_boundary": "Señal esperada",
         "learning_source": "Fuente oficial",
@@ -261,7 +261,7 @@ COPY = {
         "learning_option": "Option",
         "learning_owner": "Provider or owner",
         "learning_evidence": "Recurring signal",
-        "learning_basis": "Decision basis",
+        "learning_proof_title": "Proof and cost", "learning_basis": "Decision basis",
         "learning_cost_time": "Cost and time",
         "learning_signal_boundary": "Expected signal",
         "learning_source": "Official source",
@@ -651,7 +651,8 @@ def _render_learning_decision(
           <p><span class="label">{labels['learning_option']}</span>{html.escape(option_type, quote=True)}</p>
           <p><span class="label">{labels['learning_owner']}</span>{html.escape(str(row['provider_or_owner']), quote=True)}</p>
           <p><span class="label">{labels['learning_evidence']}</span>{html.escape(_learning_signal_labels(market_dossier, row.get('source_gap_ids'), locale), quote=True)}</p>
-          <div class="learning-decision-proof">
+          <div class="learning-decision-proof" aria-labelledby="learning-decision-proof-title-{rank}">
+            <h4 id="learning-decision-proof-title-{rank}">{labels['learning_proof_title']}</h4>
             <p><span class="label">{labels['learning_basis']}</span>{html.escape(str(row['decision_basis']), quote=True)}</p>
             <p><span class="label">{labels['learning_cost_time']}</span>{html.escape(str(row['cost_time_band']), quote=True)}</p>
             <p><span class="label">{labels['learning_signal_boundary']}</span>{html.escape(str(row['expected_signal_boundary']), quote=True)}</p>
