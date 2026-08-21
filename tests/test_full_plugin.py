@@ -349,6 +349,7 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "schemas/career-learning-decision-v1.schema.json",
                 "scripts/validate_target_vacancy_research.py",
                 "scripts/build_career_market_learning_dossier.py",
+                "scripts/build_career_learning_decision.py",
                 "scripts/validate_career_market_learning_dossier.py",
                 "scripts/validate_career_learning_decision.py",
                 "assets/career-market-learning-dossier-v1.css",

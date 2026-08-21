@@ -210,6 +210,7 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/career-learning-decision-v1.schema.json",
     "scripts/validate_target_vacancy_research.py",
     "scripts/build_career_market_learning_dossier.py",
+    "scripts/build_career_learning_decision.py",
     "scripts/validate_career_market_learning_dossier.py",
     "scripts/validate_career_learning_decision.py",
     "assets/career-market-learning-dossier-v1.css",
@@ -728,6 +729,7 @@ def _load_market_package_modules(plugin_root: Path) -> dict[str, object]:
         for name in (
             "validate_target_vacancy_research",
             "build_career_market_learning_dossier",
+            "build_career_learning_decision",
             "validate_career_market_learning_dossier",
             "validate_career_learning_decision",
             "render_executive_career_dossier_v2",
@@ -845,6 +847,10 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             "build_market_dossier",
             "snapshot_for_dossier",
         ),
+        "build_career_learning_decision": (
+            "build_learning_bundle",
+            "snapshot_for_learning_bundle",
+        ),
         "validate_career_market_learning_dossier": ("validate_market_dossier",),
         "validate_career_learning_decision": (
             "validate_learning_bundle",
@@ -865,6 +871,8 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         return sorted(set(errors))
     research_validator = modules["validate_target_vacancy_research"]
     builder = modules["build_career_market_learning_dossier"]
+    learning_builder = modules["build_career_learning_decision"]
+    learning_validator = modules["validate_career_learning_decision"]
     market_validator = modules["validate_career_market_learning_dossier"]
     renderer = modules["render_executive_career_dossier_v2"]
 
@@ -891,6 +899,15 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
                 research, dossier, research_validator, builder
             )
             built_market = builder.build_market_dossier(research, dossier, alignment)
+            if market_name == "unavailable-es.json":
+                built_learning = learning_builder.build_learning_bundle(
+                    research, expected_market, dossier, []
+                )
+                learning_errors = learning_validator.validate_learning_bundle(
+                    built_learning, expected_market, dossier, research
+                )
+                if learning_errors:
+                    errors.append(f"{market_name}: unavailable learning fixture rejected")
             research_validation_errors = research_validator.validate_research(research)
             validation_errors = market_validator.validate_market_dossier(
                 expected_market, research, dossier, alignment

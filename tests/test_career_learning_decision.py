@@ -21,6 +21,10 @@ sys.path.insert(0, str(SCRIPTS))
 sys.path.insert(0, str(ROOT / "plugins" / "professional-growth-coach" / "tests"))
 
 from dossier_snapshot import snapshot_for_dossier  # noqa: E402
+from build_career_learning_decision import (  # noqa: E402
+    build_learning_bundle,
+    snapshot_for_learning_bundle,
+)
 from validate_private_schema_conformance import (  # noqa: E402
     validate_schema_instance,
 )
@@ -289,6 +293,52 @@ class CareerLearningDecisionContractTests(unittest.TestCase):
         mutations.append(bad_domain)
         for value in mutations:
             self.assertTrue(self.validator.validate_learning_bundle(value, self.market, self.dossier, self.research))
+
+    def test_builder_binds_snapshots_orders_rows_and_preserves_provider_unknowns(self) -> None:
+        decisions = _bundle(count=5)["decisions"]
+        before = copy.deepcopy(decisions)
+        result = build_learning_bundle(self.research, self.market, self.dossier, list(reversed(decisions)))
+        self.assertEqual(before, decisions)
+        self.assertEqual("career-learning-decision-v1", result["schema_version"])
+        self.assertEqual("evaluated", result["state"])
+        self.assertEqual([1, 2, 3, 4, 5], [row["decision_rank"] for row in result["decisions"]])
+        self.assertEqual("unknown: official page does not establish Mexico eligibility", result["decisions"][1]["provider_source"]["geography"])
+        self.assertEqual([], self.validator.validate_learning_bundle(result, self.market, self.dossier, self.research))
+        self.assertEqual(snapshot_for_learning_bundle(result), snapshot_for_learning_bundle(copy.deepcopy(result)))
+
+    def test_builder_returns_bounded_unavailable_result_for_zero_market(self) -> None:
+        research = _load_json(RESEARCH_ROOT / "unavailable-es.json")
+        market = _load_json(MARKET_ROOT / "unavailable-es.json")
+        result = build_learning_bundle(research, market, self.dossier, [])
+        self.assertEqual(("unavailable", []), (result["state"], result["decisions"]))
+        self.assertEqual([], self.validator.validate_learning_bundle(result, market, self.dossier, research))
+
+    def test_builder_rejects_invalid_row_counts_and_missing_project_or_certificate_alternative(self) -> None:
+        decisions = _bundle(count=5)["decisions"]
+        for value in (decisions[:2], decisions + [_decision(6, "lab", "Too many")]):
+            with self.subTest(count=len(value)):
+                with self.assertRaisesRegex(ValueError, "learning"):
+                    build_learning_bundle(self.research, self.market, self.dossier, value)
+        no_certificate = copy.deepcopy(decisions)
+        no_certificate[1]["option_type"] = "lab"
+        no_certificate[1]["provider_source"] = None
+        no_certificate[2]["option_type"] = "lab"
+        no_certificate[2]["provider_source"] = None
+        with self.assertRaisesRegex(ValueError, "learning"):
+            build_learning_bundle(self.research, self.market, self.dossier, no_certificate)
+
+    def test_builder_rejects_unbound_recurrence_gap_and_malformed_or_cyclic_inputs(self) -> None:
+        decisions = _bundle(count=3)["decisions"]
+        unbound = copy.deepcopy(decisions)
+        unbound[0]["source_gap_ids"] = ["E-999"]
+        with self.assertRaisesRegex(ValueError, "learning"):
+            build_learning_bundle(self.research, self.market, self.dossier, unbound)
+        cyclic = copy.deepcopy(decisions)
+        cyclic.append(cyclic)
+        with self.assertRaisesRegex(ValueError, "learning"):
+            build_learning_bundle(self.research, self.market, self.dossier, cyclic)
+        with self.assertRaisesRegex(ValueError, "learning"):
+            build_learning_bundle(self.research, self.market, self.dossier, None)
 
     def test_market_v1_placeholder_remains_not_evaluated_and_empty(self) -> None:
         self.assertEqual("not_evaluated", self.market["learning_state"])
