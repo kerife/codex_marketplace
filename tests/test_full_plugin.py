@@ -112,7 +112,177 @@ def parse_frontmatter(text: str) -> dict[str, str]:
     return metadata
 
 
+def release_file_inventory(root: Path) -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            path.relative_to(root).as_posix()
+            for path in root.rglob("*")
+            if path.is_file()
+        )
+    )
+
+
+def release_bytecode_inventory(root: Path) -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            path.relative_to(root).as_posix()
+            for path in root.rglob("*")
+            if path.is_file() and path.suffix.lower() in {".pyc", ".pyo"}
+        )
+    )
+
+
+def release_content_inventory(root: Path) -> tuple[tuple[str, str], ...]:
+    entries: list[tuple[str, str]] = []
+    for relative in release_file_inventory(root):
+        try:
+            digest = hashlib.sha256((root / relative).read_bytes()).hexdigest()
+        except OSError:
+            raise AssertionError("release attestation contains unreadable artifact") from None
+        entries.append((relative, digest))
+    return tuple(entries)
+
+
+def build_release_attestation(source_root: Path, cache_root: Path) -> dict[str, object]:
+    if not source_root.is_dir() or not cache_root.is_dir():
+        raise AssertionError("release attestation requires existing roots")
+    source_files = release_file_inventory(source_root)
+    cache_files = release_file_inventory(cache_root)
+    if not source_files or not cache_files:
+        raise AssertionError("release attestation requires existing roots")
+    source_content = release_content_inventory(source_root)
+    cache_content = release_content_inventory(cache_root)
+    source_bytecode = release_bytecode_inventory(source_root)
+    cache_bytecode = release_bytecode_inventory(cache_root)
+    if source_bytecode or cache_bytecode:
+        raise AssertionError("release attestation requires zero bytecode")
+    if source_files != cache_files or source_content != cache_content:
+        raise AssertionError("release attestation requires content parity")
+    return {
+        "source_file_count": len(source_files),
+        "installed_file_count": len(cache_files),
+        "source_bytecode_count": len(source_bytecode),
+        "installed_bytecode_count": len(cache_bytecode),
+        "source_cache_equivalent": True,
+    }
+
+
 class FullPluginIntegrationTests(unittest.TestCase):
+    def test_release_attestation_rejects_missing_or_empty_roots(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            empty_source = root / "empty-source"
+            empty_cache = root / "empty-cache"
+            empty_source.mkdir()
+            empty_cache.mkdir()
+            for source, cache in (
+                (root / "missing-source", root / "missing-cache"),
+                (empty_source, empty_cache),
+            ):
+                with self.subTest(source=source.name, cache=cache.name):
+                    with self.assertRaisesRegex(
+                        AssertionError, "release attestation requires existing roots"
+                    ):
+                        build_release_attestation(source, cache)
+
+    def test_release_attestation_rejects_same_names_with_different_bytes(self) -> None:
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source" / "professional-growth-coach"
+            shutil.copytree(
+                PLUGIN_ROOT,
+                source,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+            cache = root / "cache" / "professional-growth-coach"
+            shutil.copytree(source, cache)
+            target = cache / "README.md"
+            target.write_bytes(target.read_bytes() + b"\nsynthetic content mutation\n")
+
+            with self.assertRaisesRegex(AssertionError, "content parity"):
+                build_release_attestation(source, cache)
+
+    def test_installed_cache_inventory_redacts_alternate_paths_and_unreadable_files(self) -> None:
+        checker = load_static_checker()
+        with TemporaryDirectory() as temporary_directory:
+            cache = Path(temporary_directory) / "professional-growth-coach"
+            cache.mkdir()
+            marker = "/private/tmp/synthetic-user/job_search_coach/scripts/app.py"
+            (cache / "provenance.bin").write_bytes(
+                f"co_filename={marker}".encode("utf-8")
+            )
+            errors = checker.validate_installed_cache_inventory(cache)
+            self.assertTrue(errors)
+            self.assertTrue(all(marker not in error for error in errors))
+            self.assertTrue(
+                any(
+                    error.endswith(
+                        "provenance.bin: installed cache contains personal metadata"
+                    )
+                    for error in errors
+                )
+            )
+            source_errors = checker.validate_release_inventory(cache)
+            self.assertTrue(source_errors)
+            self.assertTrue(all(marker not in error for error in source_errors))
+            self.assertTrue(
+                any(
+                    error.endswith("provenance.bin: release inventory contains personal metadata")
+                    for error in source_errors
+                )
+            )
+
+            unreadable = cache / "unreadable.bin"
+            unreadable.write_bytes(b"synthetic")
+            with patch.object(Path, "read_bytes", side_effect=PermissionError("synthetic")):
+                unreadable_errors = checker.validate_installed_cache_inventory(cache)
+            self.assertIn("installed cache contains unreadable artifact", unreadable_errors)
+
+    def test_release_inventory_and_attestation_reject_bytecode_and_metadata(self) -> None:
+        checker = load_static_checker()
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source" / "professional-growth-coach"
+            shutil.copytree(
+                PLUGIN_ROOT,
+                source,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+            cache = root / "cache" / "professional-growth-coach"
+            shutil.copytree(source, cache)
+
+            attestation = build_release_attestation(source, cache)
+            self.assertEqual(0, attestation["source_bytecode_count"])
+            self.assertEqual(0, attestation["installed_bytecode_count"])
+            self.assertEqual(attestation["source_file_count"], attestation["installed_file_count"])
+            self.assertTrue(attestation["source_cache_equivalent"])
+            self.assertEqual([], checker.validate_release_inventory(source))
+            self.assertEqual([], checker.validate_installed_cache_inventory(cache))
+
+            source_bytecode = source / "scripts" / "__pycache__" / "sentinel.pyc"
+            cache_bytecode = cache / "scripts" / "__pycache__" / "sentinel.pyc"
+            source_bytecode.parent.mkdir()
+            cache_bytecode.parent.mkdir()
+            source_bytecode.write_bytes(b"synthetic bytecode")
+            cache_bytecode.write_bytes(b"synthetic bytecode")
+
+            self.assertEqual(release_file_inventory(source), release_file_inventory(cache))
+            self.assertEqual(1, len(release_bytecode_inventory(source)))
+            with self.assertRaisesRegex(AssertionError, "zero bytecode"):
+                build_release_attestation(source, cache)
+            self.assertTrue(checker.validate_release_inventory(source))
+            self.assertTrue(checker.validate_installed_cache_inventory(cache))
+
+            (cache / "attested.bin").write_bytes(
+                b"co_filename=/Users/synthetic-user/projects/job_search_coach/scripts/app.py"
+            )
+            self.assertTrue(
+                any(
+                    error.endswith("attested.bin: installed cache contains personal metadata")
+                    for error in checker.validate_installed_cache_inventory(cache)
+                )
+            )
+
     def test_linkedin_semantic_validators_and_tests_have_no_closed_vocabulary_shortcuts(self) -> None:
         checker = load_static_checker()
         validator_names = (

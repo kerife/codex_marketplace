@@ -82,6 +82,59 @@ def load_static_checker():
 
 
 class JobSearchCoachPluginStructureTests(unittest.TestCase):
+    def test_release_inventory_rejects_bytecode_artifacts(self) -> None:
+        checker = load_static_checker()
+        self.assertTrue(
+            hasattr(checker, "validate_release_inventory"),
+            "static checker must expose release inventory validation",
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            plugin = Path(temporary_directory) / "professional-growth-coach"
+            shutil.copytree(
+                PLUGIN_ROOT,
+                plugin,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+            bytecode_directory = plugin / "scripts" / "__pycache__"
+            bytecode_directory.mkdir()
+            (bytecode_directory / "sentinel.pyc").write_bytes(b"synthetic bytecode")
+            errors = checker.validate_release_inventory(plugin)
+
+        self.assertIn(
+            "scripts/__pycache__: release inventory forbids bytecode",
+            errors,
+        )
+        self.assertIn(
+            "scripts/__pycache__/sentinel.pyc: release inventory forbids bytecode",
+            errors,
+        )
+
+    def test_installed_cache_inventory_rejects_bytecode_and_personal_metadata(self) -> None:
+        checker = load_static_checker()
+        self.assertTrue(
+            hasattr(checker, "validate_installed_cache_inventory"),
+            "static checker must expose installed cache inventory validation",
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            cache = Path(temporary_directory) / "professional-growth-coach"
+            cache.mkdir()
+            (cache / "renamed.bin").write_bytes(
+                b"co_filename=/Users/synthetic-user/projects/job_search_coach/scripts/app.py"
+            )
+            bytecode_directory = cache / "scripts" / "__pycache__"
+            bytecode_directory.mkdir(parents=True)
+            (bytecode_directory / "sentinel.pyc").write_bytes(b"synthetic bytecode")
+            errors = checker.validate_installed_cache_inventory(cache)
+
+        self.assertIn(
+            "scripts/__pycache__: installed cache forbids bytecode",
+            errors,
+        )
+        self.assertIn(
+            "renamed.bin: installed cache contains personal metadata",
+            errors,
+        )
+
     def render_pressure_fixture_with_receipt(
         self, root: Path, fixture_path: Path = DOSSIER_FIXTURE_PATH
     ) -> tuple[Path, dict[str, object]]:
