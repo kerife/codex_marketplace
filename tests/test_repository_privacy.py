@@ -46,6 +46,16 @@ DOSSIER_V2_FIXTURE_PATHS = (
     Path("tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-a-es.json"),
     Path("tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-c-en.json"),
 )
+MARKET_DOSSIER_V2_FIXTURE_PATHS = (
+    Path(
+        "tests/evals/with-skill/fixtures/"
+        "career-market-learning-dossier-v2/complete-five-es.json"
+    ),
+    Path(
+        "tests/evals/with-skill/fixtures/"
+        "career-market-learning-dossier-v2/limited-four-en.json"
+    ),
+)
 RECRUITER_PRACTICE_FIXTURE_PATH = (
     REPO_ROOT
     / "tests"
@@ -1144,6 +1154,91 @@ class RepositoryPrivacyTests(unittest.TestCase):
             market_path.relative_to(REPO_ROOT), json.dumps(market)
         )
         self.assertTrue(market_violations)
+
+    def test_exact_synthetic_market_v2_goldens_pass_repository_privacy_scan(
+        self,
+    ) -> None:
+        scanner = load_scanner()
+
+        for relative_path in MARKET_DOSSIER_V2_FIXTURE_PATHS:
+            with self.subTest(path=str(relative_path)):
+                text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertEqual({}, scanner.scan_text(relative_path, text))
+
+    def test_market_v2_golden_policy_does_not_hide_private_injections(self) -> None:
+        scanner = load_scanner()
+        mutations = (
+            ("name", "candidate_name", "Private Person", "NAME_FIELD"),
+            (
+                "contact",
+                "contact_email",
+                "private.person@example.com",
+                "EMAIL_ADDRESS",
+            ),
+            (
+                "path",
+                "evidence_path",
+                "/Users/private-person/evidence.json",
+                "LOCAL_USER_PATH",
+            ),
+        )
+
+        for relative_path in MARKET_DOSSIER_V2_FIXTURE_PATHS:
+            payload = json.loads(
+                (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+            )
+            for label, field, value, rule_id in mutations:
+                with self.subTest(path=str(relative_path), injection=label):
+                    mutated = copy.deepcopy(payload)
+                    mutated[field] = value
+                    violations = scanner.scan_text(
+                        relative_path,
+                        json.dumps(mutated, ensure_ascii=False),
+                    )
+                    self.assertGreater(violations[rule_id], 0)
+
+    def test_market_v2_golden_policy_requires_exact_path_contract_and_provenance(
+        self,
+    ) -> None:
+        scanner = load_scanner()
+        relative_path = MARKET_DOSSIER_V2_FIXTURE_PATHS[0]
+        payload = json.loads((REPO_ROOT / relative_path).read_text(encoding="utf-8"))
+        near_misses = (
+            (
+                "unregistered path",
+                Path("tests/evals/with-skill/fixtures/market-v2-copy.json"),
+                payload,
+            ),
+            (
+                "schema",
+                relative_path,
+                {**payload, "schema_version": "career-market-learning-dossier-v1"},
+            ),
+            (
+                "privacy boundary",
+                relative_path,
+                {**payload, "privacy_boundary": "identity_free_evidence_references_only"},
+            ),
+            (
+                "source provenance",
+                relative_path,
+                {
+                    **payload,
+                    "source_research_snapshot": "snap-market-sha256-" + "0" * 64,
+                },
+            ),
+        )
+
+        for label, path, value in near_misses:
+            with self.subTest(condition=label):
+                violations = scanner.scan_text(
+                    path,
+                    json.dumps(value, ensure_ascii=False),
+                )
+                self.assertGreater(
+                    violations["SINGLING_OUT_STRUCTURED_COMBINATION"],
+                    0,
+                )
 
     def test_candidate_identity_in_allowed_market_fields_is_scanned_and_cannot_compose(self) -> None:
         scanner = load_scanner()

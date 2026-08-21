@@ -112,9 +112,29 @@ DOSSIER_V2_VALIDATOR_PATH = (
 )
 TARGET_RESEARCH_SCHEMA_VERSION = "target-vacancy-research-v1"
 MARKET_DOSSIER_SCHEMA_VERSION = "career-market-learning-dossier-v1"
+MARKET_DOSSIER_V2_SCHEMA_VERSION = "career-market-learning-dossier-v2"
+MARKET_DOSSIER_V2_PRIVACY_BOUNDARY = (
+    "public_vacancy_metadata_and_identity_free_evidence_references_only"
+)
 MARKET_SCRIPTS_ROOT = (
     Path(__file__).resolve().parents[1] / "plugins/professional-growth-coach/scripts"
 )
+MARKET_DOSSIER_V2_SYNTHETIC_SOURCES = {
+    Path(
+        "tests/evals/with-skill/fixtures/"
+        "career-market-learning-dossier-v2/complete-five-es.json"
+    ): (
+        Path("target-vacancy-research/complete-five-es.json"),
+        Path("executive-career-dossier-v2/scenario-a-es.json"),
+    ),
+    Path(
+        "tests/evals/with-skill/fixtures/"
+        "career-market-learning-dossier-v2/limited-four-en.json"
+    ): (
+        Path("target-vacancy-research/limited-four-en.json"),
+        Path("executive-career-dossier-v2/scenario-c-market-en.json"),
+    ),
+}
 CANDIDATE_IDENTITY_POLICY_PATH = MARKET_SCRIPTS_ROOT / "private_prose_safety.py"
 RECRUITER_PRACTICE_SCHEMA_VERSION = "recruiter-practice-session-v1"
 RECRUITER_PRACTICE_VALIDATOR_PATH = (
@@ -405,6 +425,8 @@ def _load_market_privacy_contract() -> dict[str, object] | None:
             "validate_target_vacancy_research",
             "build_career_market_learning_dossier",
             "validate_career_market_learning_dossier",
+            "build_career_market_learning_dossier_v2",
+            "validate_career_market_learning_dossier_v2",
         ):
             path = MARKET_SCRIPTS_ROOT / f"{name}.py"
             specification = importlib.util.spec_from_file_location(
@@ -549,6 +571,98 @@ def _safe_market_dossier_scan_value(
         "privacy_boundary": value["privacy_boundary"],
         "no_external_action": value["no_external_action"],
     }
+
+
+def _has_known_synthetic_market_provenance(value: object) -> bool:
+    if not isinstance(value, dict):
+        return False
+    employers = value.get("employers")
+    vacancies = value.get("vacancies")
+    if (
+        not isinstance(employers, list)
+        or not employers
+        or not isinstance(vacancies, list)
+        or not vacancies
+    ):
+        return False
+    if any(
+        not isinstance(employer, dict)
+        or not isinstance(employer.get("display_name"), str)
+        or not employer["display_name"].startswith("Fixture Employer ")
+        or employer.get("qualification_observation") != "Synthetic test qualification."
+        or employer.get("official_source_title") != "Synthetic careers index"
+        or not isinstance(employer.get("official_source_url"), str)
+        or not employer["official_source_url"].startswith(
+            "https://www.rfc-editor.org/rfc/rfc"
+        )
+        for employer in employers
+    ):
+        return False
+    for vacancy in vacancies:
+        if (
+            not isinstance(vacancy, dict)
+            or not isinstance(vacancy.get("title"), str)
+            or not vacancy["title"].startswith("Fixture ")
+            or not isinstance(vacancy.get("source_url"), str)
+            or not vacancy["source_url"].startswith(
+                "https://www.rfc-editor.org/rfc/rfc"
+            )
+            or not isinstance(vacancy.get("requirements"), list)
+            or not vacancy["requirements"]
+        ):
+            return False
+        if any(
+            not isinstance(requirement, dict)
+            or requirement.get("source_paraphrase") != "Synthetic test requirement."
+            for requirement in vacancy["requirements"]
+        ):
+            return False
+    return True
+
+
+def _is_exact_synthetic_market_v2_fixture(
+    path: Path, text: str, value: object
+) -> bool:
+    source_paths = MARKET_DOSSIER_V2_SYNTHETIC_SOURCES.get(path)
+    if (
+        source_paths is None
+        or not isinstance(value, dict)
+        or value.get("schema_version") != MARKET_DOSSIER_V2_SCHEMA_VERSION
+        or value.get("privacy_boundary") != MARKET_DOSSIER_V2_PRIVACY_BOUNDARY
+        or len(text.encode("utf-8")) > 256 * 1024
+        or not _json_depth_is_bounded(value, 12)
+    ):
+        return False
+    contract = _load_market_privacy_contract()
+    if contract is None:
+        return False
+    fixture_root = Path(__file__).resolve().parents[1] / "tests/evals/with-skill/fixtures"
+    before = copy.deepcopy(value)
+    try:
+        research = json.loads(
+            (fixture_root / source_paths[0]).read_text(encoding="utf-8"),
+            object_pairs_hook=_unique_json_object,
+        )
+        dossier = json.loads(
+            (fixture_root / source_paths[1]).read_text(encoding="utf-8"),
+            object_pairs_hook=_unique_json_object,
+        )
+        if not _has_known_synthetic_market_provenance(research):
+            return False
+        builder = contract["build_career_market_learning_dossier_v2"]
+        validator = contract["validate_career_market_learning_dossier_v2"]
+        expected = builder.build_market_dossier_v2(research, dossier)
+        errors = validator.validate_market_dossier_v2(value, research, dossier)
+    except Exception:
+        return False
+    return (
+        value == before
+        and value == expected
+        and type(errors) is list
+        and not errors
+    )
+
+
 @lru_cache(maxsize=1)
 def _load_recruiter_practice_validator() -> Callable[[object], list[str]] | None:
     specification = importlib.util.spec_from_file_location(
@@ -935,7 +1049,9 @@ def scan_text(path: Path, text: str) -> Counter[str]:
             for mapping in _walk_mappings(structured_scan_value)
         )
         structured_count += json_structured_count
-    if structured_count:
+    if structured_count and not _is_exact_synthetic_market_v2_fixture(
+        path, text, dossier_candidate
+    ):
         violations["SINGLING_OUT_STRUCTURED_COMBINATION"] = structured_count
     return violations
 
