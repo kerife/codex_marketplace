@@ -1806,6 +1806,53 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     rendered.index('class="gap-closure-route"'),
                 )
 
+    def test_learning_cards_reference_shared_boundary_before_options_in_es_and_en(self) -> None:
+        for locale, research_name, dossier_name in (
+            ("es", "complete-five-es.json", "scenario-a-es.json"),
+            ("en", "limited-four-en.json", "scenario-c-en.json"),
+        ):
+            with self.subTest(locale=locale):
+                case = learning_case(
+                    research_name,
+                    dossier_name,
+                    count=5 if locale == "es" else 3,
+                    decision_count=3,
+                )
+                rendered = self.renderer.render_dossier_html(
+                    case[0],
+                    case[1],
+                    market_research=case[2],
+                    market_alignment=case[3],
+                    learning_decision=case[4],
+                )
+                panel = re.search(
+                    r'<section class="section-block learning-decision".*?</section>',
+                    rendered,
+                    re.DOTALL,
+                )
+                self.assertIsNotNone(panel)
+                boundary = '<p id="learning-decision-boundary" class="learning-decision-boundary">'
+                self.assertEqual(1, panel.group(0).count(boundary))
+                self.assertEqual(1, rendered.count('id="learning-decision-boundary"'))
+                self.assertLess(
+                    panel.group(0).index(boundary),
+                    panel.group(0).index('class="dossier-grid learning-decision-grid"'),
+                )
+                cards = re.findall(
+                    r'<article class="card span-4 learning-decision-card" '
+                    r'aria-labelledby="[^"]+" aria-describedby="([^"]+)">',
+                    panel.group(0),
+                )
+                self.assertEqual(
+                    ["learning-decision-boundary"] * 3,
+                    cards,
+                )
+                audit = DossierDOMAudit()
+                audit.feed(rendered)
+                self.assertEqual(set(), set(audit.references) - set(audit.ids))
+                self.assertNotRegex(panel.group(0), r'<(?:button|input|select|textarea|form)\b')
+                self.assertNotRegex(panel.group(0), r'<a href="https?://')
+
     def test_learning_panel_has_one_decide_now_internal_anchor_and_rejects_invalid_bundle_before_output(self) -> None:
         case = learning_case("complete-five-es.json", "scenario-a-es.json", count=3)
         rendered = self.renderer.render_dossier_html(

@@ -644,7 +644,7 @@ def _render_learning_decision(
                 f'{html.escape(str(provider_source.get("unknowns", "")), quote=True)}</p>'
             )
         cards.append(
-            f'''<article class="card span-4 learning-decision-card" aria-labelledby="{heading_id}">
+            f'''<article class="card span-4 learning-decision-card" aria-labelledby="{heading_id}" aria-describedby="learning-decision-boundary">
           <div class="learning-decision-header"><span class="learning-decision-rank" aria-hidden="true">{rank}</span><h3 id="{heading_id}">{html.escape(str(row['option_name']), quote=True)}</h3></div>
           <p class="learning-decision-role"><span class="label">{labels['learning_target_role']}</span>{html.escape(str(row['target_role']), quote=True)}</p>
           <p><span class="label">{labels['learning_gap']}</span>{html.escape(gap_label, quote=True)}</p>
@@ -669,8 +669,8 @@ def _render_learning_decision(
       <h2 id="learning-decision-title">{labels['learning_title']}</h2>
       <p class="learning-decision-intro">{labels['learning_intro']}</p>
       <p class="learning-decision-sample"><strong>{labels['learning_sample']}:</strong> N={sample_count}</p>
+      <p id="learning-decision-boundary" class="learning-decision-boundary">{labels['learning_boundary']}</p>
       <div class="dossier-grid learning-decision-grid">{"".join(cards)}</div>
-      <p class="learning-decision-boundary">{labels['learning_boundary']}</p>
     </section>'''
 
 

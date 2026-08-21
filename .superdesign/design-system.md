@@ -41,6 +41,11 @@ without exposing snapshots, URLs, referrers, internal vacancy/employer/evidence/
 requirement IDs, raw requirement paraphrases, or inferred eligibility; it makes
 no external action.
 
+The learning decision boundary appears before the cards, and every learning
+card references the shared boundary with `aria-describedby`. The localized,
+visible boundary remains printable and does not predict an interview, offer,
+salary, or return on investment.
+
 Vacancy alignment uses one native `progress` per vacancy, labelled by the
 vacancy heading, its visible `N de 100` / `N out of 100` score, evidence
 coverage percentage, and localized qualitative band. Coverage and band are

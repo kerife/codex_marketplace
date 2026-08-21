@@ -148,6 +148,14 @@ class SuperdesignThemeAssetParityTests(unittest.TestCase):
         self.assertRegex(paragraph, r"(?i)locali[sz]ed")
         self.assertRegex(paragraph, r"(?i)no external action")
 
+    def test_design_system_documents_learning_boundary_before_cards_and_aria(self):
+        text = DESIGN_SYSTEM.read_text(encoding="utf-8")
+        self.assertIn(
+            "The learning decision boundary appears before the cards, and every learning "
+            "card references the shared boundary with `aria-describedby`.",
+            " ".join(text.split()),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
