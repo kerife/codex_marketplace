@@ -72,7 +72,7 @@ installed_target_research_identity_smokes: `12/12; common_and_non_allowlisted_ob
 
 installed_current_cycle_obfuscated_smokes: `45/45; five_surname_families_across_strict_fields; compact_role_tail_and_hostname_forms_fail_closed; technical_and_organization_controls_pass; diagnostics_no_echo`
 
-installed_current_cycle_organization_allowlist_smokes: `21/21; Grant_Thornton_Brown_University_Miller_Lite_safe_fields_only; location_and_fingerprint_fail_closed; diagnostics_no_echo`
+installed_current_cycle_organization_allowlist_smokes: `18/18; Grant_Thornton_Brown_University_Miller_Lite_safe_fields_only; location_and_fingerprint_fail_closed; diagnostics_no_echo`
 
 installed_current_cycle_contrast_smokes: `3/3; muted_text_contrast; light_line_token; forced_colors_text_override`
 
