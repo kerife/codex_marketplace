@@ -184,7 +184,7 @@ COPY = {
         "market_available_body": "Hay evidencia de mercado fechada disponible para una revisión privada junto con la evidencia del perfil.",
         "template_boundary": "No incluyas texto sin procesar del perfil, datos de contacto ni valores privados.",
         "template_blank": "Espacio en blanco para completar en privado",
-        "market_context": "Evidencia de mercado", "market_complete": "Cinco vacantes activas verificadas",
+        "market_context": "Evidencia de mercado", "market_complete": "Cinco vacantes activas verificadas", "market_as_of": "Corte de evidencia",
         "market_limited": "Muestra limitada de {count} vacantes activas verificadas",
         "market_limited_reason": "La búsqueda acotada terminó antes de reunir cinco vacantes.",
         "market_unavailable_reason": "La búsqueda acotada no produjo vacantes verificables para esta muestra.",
@@ -241,7 +241,7 @@ COPY = {
         "market_available_body": "Dated market evidence is available for private review alongside the profile evidence.",
         "template_boundary": "Do not include raw profile text, contact data, or private values.",
         "template_blank": "Blank for private completion",
-        "market_context": "Market evidence", "market_complete": "Five verified active vacancies",
+        "market_context": "Market evidence", "market_complete": "Five verified active vacancies", "market_as_of": "Evidence as of",
         "market_limited": "Limited sample of {count} verified active vacancies",
         "market_limited_reason": "The bounded search ended before five vacancies were gathered.",
         "market_unavailable_reason": "The bounded search produced no verifiable vacancies for this sample.",
@@ -965,6 +965,7 @@ def _render_market_context(
       </div>
     </section>'''
 
+    as_of_date = html.escape(str(summary["as_of_date"]), quote=True)
     vacancies = BASE._rows(market_dossier["vacancies"])
     count = len(vacancies)
     summary_heading = (
@@ -1059,6 +1060,7 @@ def _render_market_context(
           <h2 id="market-context-title">{labels['market_context']}</h2>
           <p class="market-summary-heading">{summary_heading}</p>
           <p>{labels['market_boundary']}</p>
+          <p id="market-evidence-as-of" class="market-summary-as-of"><span class="label">{labels['market_as_of']}</span><time datetime="{as_of_date}">{as_of_date}</time></p>
           <p class="market-learning-state">{labels['market_learning_state']}</p>
           {limitation_markup}
         </div>

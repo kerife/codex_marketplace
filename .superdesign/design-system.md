@@ -41,6 +41,10 @@ without exposing snapshots, URLs, referrers, internal vacancy/employer/evidence/
 requirement IDs, raw requirement paraphrases, or inferred eligibility; it makes
 no external action.
 
+Complete and limited market summaries expose one localized, validated research
+date before the learning boundary so the client can judge evidence freshness;
+unavailable and legacy no-market states expose no date marker.
+
 The learning decision boundary appears before the cards, and every learning
 card references the shared boundary with `aria-describedby`. The localized,
 visible boundary remains printable and does not predict an interview, offer,

@@ -2204,6 +2204,63 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         legacy = self.renderer.render_dossier_html(dossier)
         self.assertNotIn("market-learning-state", legacy)
 
+    def test_market_summary_exposes_localized_research_as_of_date(self) -> None:
+        cases = (
+            (
+                "es",
+                market_case("complete-five-es.json", "scenario-a-es.json"),
+                "Corte de evidencia",
+            ),
+            (
+                "en",
+                build_limited_market_case(3),
+                "Evidence as of",
+            ),
+        )
+        for locale, case, label in cases:
+            with self.subTest(locale=locale):
+                dossier, market, research, alignment = case
+                rendered = self.renderer.render_dossier_html(
+                    dossier,
+                    market,
+                    market_research=research,
+                    market_alignment=alignment,
+                )
+                panel = re.search(
+                    r'<section class="section-block market-summary".*?</section>',
+                    rendered,
+                    re.DOTALL,
+                )
+                self.assertIsNotNone(panel)
+                marker = (
+                    '<p id="market-evidence-as-of" class="market-summary-as-of">'
+                    f'<span class="label">{label}</span>'
+                    '<time datetime="2026-08-13">2026-08-13</time></p>'
+                )
+                self.assertEqual(1, rendered.count('id="market-evidence-as-of"'))
+                self.assertIn(marker, panel.group(0))
+                self.assertLess(
+                    panel.group(0).index(marker),
+                    panel.group(0).index('class="market-learning-state"'),
+                )
+                audit = DossierDOMAudit()
+                audit.feed(rendered)
+                self.assertEqual(set(), set(audit.references) - set(audit.ids))
+                self.assertNotRegex(panel.group(0), r'<(?:button|input|select|textarea|form)\b')
+                self.assertNotRegex(panel.group(0), r'<a href="https?://')
+
+        dossier, market, research, alignment = market_case(
+            "unavailable-es.json", "scenario-a-es.json"
+        )
+        unavailable = self.renderer.render_dossier_html(
+            dossier,
+            market,
+            market_research=research,
+            market_alignment=alignment,
+        )
+        self.assertNotIn("market-evidence-as-of", unavailable)
+        self.assertNotIn("market-evidence-as-of", self.renderer.render_dossier_html(dossier))
+
     def test_market_inputs_are_all_or_none_and_trusted_composition_rejects_source_mutation(self) -> None:
         dossier, market, research, alignment = market_case(
             "complete-five-es.json", "scenario-a-es.json"
