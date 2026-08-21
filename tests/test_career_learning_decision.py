@@ -233,6 +233,63 @@ class CareerLearningDecisionContractTests(unittest.TestCase):
         self.assertTrue(errors)
         self.assertNotIn(private, "\n".join(errors))
 
+    def test_validator_is_total_for_unhashable_json_shaped_values(self) -> None:
+        valid = _bundle(count=3)
+        mutations = []
+        bad = copy.deepcopy(valid); bad["decisions"][0]["source_gap_ids"] = [{}]; mutations.append(bad)
+        bad = copy.deepcopy(valid); bad["decisions"][0]["vacancy_ids"] = [{}]; mutations.append(bad)
+        bad = copy.deepcopy(valid); bad["decisions"][0]["option_type"] = {}; mutations.append(bad)
+        bad = copy.deepcopy(valid); bad["decisions"][0]["gap_type"] = []; mutations.append(bad)
+        bad = copy.deepcopy(valid); bad["decisions"][0]["decision"] = {}; mutations.append(bad)
+        bad = copy.deepcopy(valid); bad["decisions"][0]["decision_rank"] = {}; mutations.append(bad)
+        for value in mutations:
+            with self.subTest(value=value["decisions"][0]):
+                try:
+                    errors = self.validator.validate_learning_bundle(value, self.market, self.dossier, self.research)
+                except Exception as error:  # pragma: no cover - regression guard
+                    self.fail(f"validator raised on malformed JSON-shaped value: {type(error).__name__}")
+                self.assertTrue(errors)
+
+    def test_schema_and_validator_enforce_state_specific_decision_counts(self) -> None:
+        evaluated_empty = _bundle(count=3)
+        evaluated_empty["decisions"] = []
+        unavailable_nonempty = _bundle(state="unavailable")
+        unavailable_nonempty["decisions"] = [_decision(1, "lab", "A bounded lab")]
+        for value in (evaluated_empty, unavailable_nonempty):
+            with self.subTest(state=value["state"]):
+                self.assertTrue(validate_schema_instance(value, self.schema))
+                self.assertTrue(self.validator.validate_learning_bundle(value, self.market, self.dossier, self.research))
+
+    def test_validator_rejects_local_paths_and_profile_urls_in_text(self) -> None:
+        valid = _bundle(count=3)
+        for field, value in (
+            ("option_name", "file:///Users/private/profile.json"),
+            ("decision_basis", "https://www.linkedin.com/in/example-profile"),
+            ("provider_or_owner", "/private/tmp/candidate-notes"),
+        ):
+            with self.subTest(field=field):
+                bad = copy.deepcopy(valid)
+                bad["decisions"][0][field] = value
+                errors = self.validator.validate_learning_bundle(bad, self.market, self.dossier, self.research)
+                self.assertTrue(errors)
+                self.assertNotIn(value, "\n".join(errors))
+
+    def test_validator_requires_active_official_provider_source(self) -> None:
+        valid = _bundle(count=3)
+        mutations = []
+        bad_url = copy.deepcopy(valid)
+        bad_url["decisions"][1]["provider_source"]["url"] = "https://example.invalid/not-official"
+        mutations.append(bad_url)
+        bad_state = copy.deepcopy(valid)
+        bad_state["decisions"][1]["provider_source"]["source_state"] = "unknown"
+        mutations.append(bad_state)
+        bad_domain = copy.deepcopy(valid)
+        bad_domain["decisions"][1]["provider_source"]["provider"] = "HashiCorp"
+        bad_domain["decisions"][1]["provider_source"]["url"] = "https://example.com/course"
+        mutations.append(bad_domain)
+        for value in mutations:
+            self.assertTrue(self.validator.validate_learning_bundle(value, self.market, self.dossier, self.research))
+
     def test_market_v1_placeholder_remains_not_evaluated_and_empty(self) -> None:
         self.assertEqual("not_evaluated", self.market["learning_state"])
         self.assertEqual([], self.market["learning_decisions"])

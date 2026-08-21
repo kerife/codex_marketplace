@@ -119,6 +119,9 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         missing_provider_field = copy.deepcopy(evaluated)
         del missing_provider_field["decisions"][1]["provider_source"]["source_title"]
         self.assertTrue(validate_schema_instance(missing_provider_field, schema))
+        inactive_provider = copy.deepcopy(evaluated)
+        inactive_provider["decisions"][1]["provider_source"]["source_state"] = "unknown"
+        self.assertTrue(validate_schema_instance(inactive_provider, schema))
 
     def test_target_vacancy_research_schema_accepts_closed_synthetic_states(self):
         schema = self._schema("target-vacancy-research-v1.schema.json")

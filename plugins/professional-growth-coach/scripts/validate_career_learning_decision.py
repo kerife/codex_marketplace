@@ -11,6 +11,7 @@ import sys
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 
 def _sibling(name: str) -> Any:
@@ -36,7 +37,8 @@ SCHEMA = json.loads(
     )
 )
 
-LearningBundleLoadError = type("LearningBundleLoadError", (ValueError,), {})
+class LearningBundleLoadError(ValueError):
+    """A bounded learning bundle load failed without exposing input details."""
 
 DECISION_FIELDS = frozenset(
     {
@@ -100,11 +102,11 @@ TOP_FIELDS = frozenset(
 _DATE_RE = re.compile(r"\A[0-9]{4}-[0-9]{2}-[0-9]{2}\Z")
 _EVIDENCE_RE = re.compile(r"\AE-[0-9]{3}\Z")
 _VACANCY_RE = re.compile(r"\AV-[0-9]{3}\Z")
-_MARKET_SNAPSHOT_RE = re.compile(r"\Asnap-market-sha256-[0-9a-f]{64}\Z")
-_DOSSIER_SNAPSHOT_RE = re.compile(r"\Asnap-dossier-sha256-[0-9a-f]{64}\Z")
 _EMAIL_RE = re.compile(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}")
 _PHONE_RE = re.compile(r"(?:^|\s)\+?\d[\d .()_-]{6,}\d(?:$|\s)")
 _HTML_RE = re.compile(r"<\s*/?\s*(?:script|style|html|body|div|span|iframe)\b", re.I)
+_LOCAL_PATH_RE = re.compile(r"(?:file://|(?:^|\s)(?:/Users/|/private/|/tmp/|~/|[A-Za-z]:[\\/]))", re.I)
+_PROFILE_URL_RE = re.compile(r"https?://(?:www\.)?linkedin\.com/(?:in|pub|profile|company)/", re.I)
 _UNSAFE_ACTION_RE = re.compile(
     r"\b(?:enroll\s+now|purchase\s+now|schedule\s+(?:an?\s+)?exam|will\s+get|guarantee[sd]?|"
     r"interview\s+probability|offer\s+probability|salary\s+increase|time[- ]to[- ]hire|return\s+on\s+investment)\b",
@@ -112,6 +114,24 @@ _UNSAFE_ACTION_RE = re.compile(
 )
 _MAX_NODES = 4096
 _MAX_DEPTH = 64
+_OFFICIAL_PROVIDER_DOMAINS = {
+    "amazon": ("amazon.com", "aws.amazon.com"),
+    "aws": ("amazon.com", "aws.amazon.com"),
+    "cncf": ("cncf.io",),
+    "coursera": ("coursera.org",),
+    "datadog": ("datadoghq.com",),
+    "edx": ("edx.org",),
+    "google": ("google.com", "cloud.google.com"),
+    "harvard": ("harvard.edu",),
+    "hashicorp": ("hashicorp.com",),
+    "kubernetes": ("kubernetes.io",),
+    "linux foundation": ("linuxfoundation.org",),
+    "linuxfoundation": ("linuxfoundation.org",),
+    "microsoft": ("microsoft.com",),
+    "red hat": ("redhat.com",),
+    "redhat": ("redhat.com",),
+    "terraform": ("hashicorp.com",),
+}
 
 
 def _bounded(errors: list[str]) -> list[str]:
@@ -133,16 +153,51 @@ def _closed(value: object, fields: frozenset[str], message: str, errors: list[st
 
 
 def _text(value: object, maximum: int = 1000) -> bool:
-    return isinstance(value, str) and 0 < len(value) <= maximum and not _EMAIL_RE.search(value) and not _HTML_RE.search(value)
+    return (
+        isinstance(value, str)
+        and 0 < len(value) <= maximum
+        and not _EMAIL_RE.search(value)
+        and not _HTML_RE.search(value)
+        and not _LOCAL_PATH_RE.search(value)
+        and not _PROFILE_URL_RE.search(value)
+    )
 
 
 def _ids(value: object, pattern: re.Pattern[str], *, minimum: int = 1, maximum: int = 20) -> bool:
-    return (
-        isinstance(value, list)
-        and minimum <= len(value) <= maximum
-        and len(value) == len(set(value))
-        and all(isinstance(item, str) and pattern.fullmatch(item) for item in value)
-    )
+    if not isinstance(value, list) or not minimum <= len(value) <= maximum:
+        return False
+    seen: list[str] = []
+    for item in value:
+        if not isinstance(item, str) or pattern.fullmatch(item) is None or item in seen:
+            return False
+        seen.append(item)
+    return True
+
+
+def _unique(values: list[object]) -> bool:
+    """Return whether values are unique without hashing malformed JSON values."""
+    for index, value in enumerate(values):
+        if any(value == prior for prior in values[:index]):
+            return False
+    return True
+
+
+def _official_provider_url(provider: object, url: object) -> bool:
+    if not isinstance(provider, str) or not isinstance(url, str):
+        return False
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").casefold().rstrip(".")
+    try:
+        port = parsed.port
+    except ValueError:
+        return False
+    if parsed.scheme != "https" or not host or parsed.username or parsed.password or port:
+        return False
+    normalized_provider = re.sub(r"[^a-z0-9]+", " ", provider.casefold()).strip()
+    domains = _OFFICIAL_PROVIDER_DOMAINS.get(normalized_provider)
+    if domains is None:
+        return False
+    return any(host == domain or host.endswith("." + domain) for domain in domains)
 
 
 def _date(value: object) -> bool:
@@ -245,10 +300,12 @@ def _source_metadata(
             errors.append("provider source has invalid metadata")
     if not _date(source.get("source_date")) or source.get("source_date") > as_of_date:
         errors.append("provider source date is invalid")
-    if source.get("source_state") not in {"active", "unknown", "unavailable"}:
+    if not isinstance(source.get("source_state"), str) or source.get("source_state") not in {"active", "unknown", "unavailable"}:
         errors.append("provider source state is invalid")
-    if not isinstance(source.get("url"), str) or not source["url"].startswith("https://") or len(source["url"]) > 500:
+    if not isinstance(source.get("url"), str) or not _official_provider_url(source.get("provider"), source.get("url")) or len(source["url"]) > 500:
         errors.append("provider source URL is invalid")
+    if source.get("source_state") != "active":
+        errors.append("course or certification requires an active official provider source")
     if source.get("source_state") == "unavailable":
         for field in ("source_title", "current_cost", "currency", "duration", "prerequisite", "renewal", "maintenance"):
             if not isinstance(source.get(field), str) or not source[field].startswith("unknown:"):
@@ -271,31 +328,32 @@ def _validate_decisions(
         return
     vacancy_rows = research.get("vacancies") if isinstance(research, Mapping) else None
     evidence_rows = dossier.get("evidence") if isinstance(dossier, Mapping) else None
-    vacancy_ids = {row.get("vacancy_id") for row in vacancy_rows or [] if isinstance(row, Mapping)}
-    evidence_ids = {row.get("id") for row in evidence_rows or [] if isinstance(row, Mapping)}
+    vacancy_ids = [row.get("vacancy_id") for row in vacancy_rows or [] if isinstance(row, Mapping)]
+    evidence_ids = [row.get("id") for row in evidence_rows or [] if isinstance(row, Mapping)]
     if not isinstance(vacancy_rows, list) or not vacancy_rows:
         errors.append("evaluated learning requires a non-empty market sample")
     if not 3 <= len(decisions) <= 5:
         errors.append("evaluated learning requires three to five decisions")
     ranks: list[object] = []
-    option_types: set[object] = set()
+    option_types: list[str] = []
     for item in decisions:
         row = _closed(item, DECISION_FIELDS, "learning decision has invalid closed structure", errors)
         if row is None:
             continue
         ranks.append(row.get("decision_rank"))
-        option_types.add(row.get("option_type"))
+        if isinstance(row.get("option_type"), str) and row["option_type"] not in option_types:
+            option_types.append(row["option_type"])
         if type(row.get("decision_rank")) is not int or not 1 <= row["decision_rank"] <= 5:
             errors.append("learning decision rank is invalid")
         for field in ("target_role", "option_name", "provider_or_owner", "market_evidence_state", "cost_time_band", "expected_signal_boundary", "portfolio_or_no_learning_alternative", "overbuying_risk", "decision_basis", "next_action_gate"):
             if not _text(row.get(field)):
                 errors.append("learning decision text is invalid")
-        if row.get("gap_type") not in {"knowledge", "proof", "experience", "terminology", "low_return"}:
+        if not isinstance(row.get("gap_type"), str) or row["gap_type"] not in {"knowledge", "proof", "experience", "terminology", "low_return"}:
             errors.append("learning decision gap type is invalid")
         option_type = row.get("option_type")
-        if option_type not in {"course", "certification", "portfolio_project", "lab", "role_search", "no_learning_yet"}:
+        if not isinstance(option_type, str) or option_type not in {"course", "certification", "portfolio_project", "lab", "role_search", "no_learning_yet"}:
             errors.append("learning decision option type is invalid")
-        if row.get("decision") not in {"do_now", "defer", "omit", "research_first"}:
+        if not isinstance(row.get("decision"), str) or row["decision"] not in {"do_now", "defer", "omit", "research_first"}:
             errors.append("learning decision outcome is invalid")
         if not _ids(row.get("source_gap_ids"), _EVIDENCE_RE, maximum=20) or any(item not in evidence_ids for item in row.get("source_gap_ids", [])):
             errors.append("learning decision evidence references are unbound")
@@ -310,18 +368,18 @@ def _validate_decisions(
         if _UNSAFE_ACTION_RE.search(" ".join(str(row.get(field, "")) for field in ("decision_basis", "next_action_gate", "expected_signal_boundary"))):
             errors.append("learning decision contains unsafe action or outcome language")
         provider_source = row.get("provider_source")
-        if option_type in {"course", "certification"}:
+        if isinstance(option_type, str) and option_type in {"course", "certification"}:
             if not isinstance(provider_source, Mapping):
                 errors.append("course or certification requires official provider source")
             else:
                 _source_metadata(provider_source, as_of_date=str(root.get("as_of_date", "")), errors=errors)
         elif provider_source is not None:
             errors.append("non-provider learning option must not include provider source")
-    if len(ranks) != len(set(ranks)) or ranks != list(range(1, len(decisions) + 1)):
+    if not _unique(ranks) or ranks != list(range(1, len(decisions) + 1)):
         errors.append("learning decision ranks must be unique and ordered")
-    if not option_types & {"course", "certification"}:
+    if not any(option_type in {"course", "certification"} for option_type in option_types):
         errors.append("learning decisions require a course or certification option")
-    if not option_types & {"portfolio_project", "lab", "role_search", "no_learning_yet"}:
+    if not any(option_type in {"portfolio_project", "lab", "role_search", "no_learning_yet"} for option_type in option_types):
         errors.append("learning decisions require a proof or no-learning alternative")
 
 

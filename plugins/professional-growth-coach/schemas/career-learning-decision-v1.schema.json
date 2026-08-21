@@ -30,6 +30,20 @@
     "no_external_action": {"const": true},
     "outcome_boundary": {"const": "not_an_interview_offer_salary_or_roi_prediction"}
   },
+  "oneOf": [
+    {
+      "properties": {
+        "state": {"const": "evaluated"},
+        "decisions": {"minItems": 3, "maxItems": 5}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "unavailable"},
+        "decisions": {"maxItems": 0}
+      }
+    }
+  ],
   "$defs": {
     "id_evidence": {"type": "string", "pattern": "^E-[0-9]{3}$"},
     "id_vacancy": {"type": "string", "pattern": "^V-[0-9]{3}$"},
@@ -47,7 +61,7 @@
         "option": {"$ref": "#/$defs/text"},
         "source_title": {"$ref": "#/$defs/text"},
         "source_date": {"type": "string", "format": "date"},
-        "source_state": {"enum": ["active", "unknown", "unavailable"]},
+        "source_state": {"const": "active"},
         "url": {"type": "string", "pattern": "^https://", "maxLength": 500},
         "geography": {"$ref": "#/$defs/text"},
         "availability": {"$ref": "#/$defs/text"},
