@@ -39,10 +39,16 @@ _COMMON_GIVEN_NAMES = frozenset(
     {
         "alex", "alexander", "alicia", "amelia", "ana", "carlos", "david", "elodie", "emily", "franklin", "george", "jane", "jean",
         "john", "jordan", "juan", "jose", "joseph", "kevin", "luc", "luis",
-        "margaret", "maria", "marco", "mary", "michael", "mike", "miguel", "natalie", "nina", "rachel", "robert", "sarah", "sofia", "sophia", "tony", "zhang",
+        "margaret", "maria", "marco", "mary", "michael", "mike", "miguel", "natalie", "nina", "patrick", "rachel", "robert", "samuel", "samantha", "sarah", "sofia", "sophia", "thomas", "tony", "victoria", "zhang",
+        "benjamin", "elizabeth", "isabel",
     }
 )
-_COMMON_SURNAME_TOKENS = frozenset({"anderson", "brown", "grant", "miller"})
+_COMMON_SURNAME_TOKENS = frozenset(
+    {
+        "allende", "anderson", "brown", "franklin", "grant", "jackson",
+        "jefferson", "miller", "warren",
+    }
+)
 _SAFE_PUBLIC_RESEARCH_PHRASES = frozenset(
     {
         "jane street",
@@ -208,7 +214,9 @@ def contains_obfuscated_candidate_identity(value: object) -> bool:
             if prefix in stopwords or prefix in _SAFE_COMPACT_ROLE_TERMS:
                 continue
             if any(
-                len(part) > len(surname) + 2 and part.endswith(surname)
+                len(part) > len(surname) + 2
+                and part.endswith(surname)
+                and any(part.startswith(given) for given in _COMMON_GIVEN_NAMES)
                 for part in parts
                 for surname in _COMMON_SURNAME_TOKENS
             ):
@@ -269,11 +277,6 @@ def contains_obfuscated_candidate_identity(value: object) -> bool:
             if token.startswith(given_name) and len(token) > len(given_name) + 2:
                 remainder = token[len(given_name):]
                 if remainder not in stopwords:
-                    return True
-        for surname in _COMMON_SURNAME_TOKENS:
-            if token.endswith(surname) and len(token) > len(surname) + 2:
-                prefix = token[: -len(surname)]
-                if prefix not in stopwords:
                     return True
     return False
 
