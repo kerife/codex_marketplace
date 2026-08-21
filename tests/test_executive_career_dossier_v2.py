@@ -1268,10 +1268,21 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 f'{vacancy["alignment_percent"]} de 100</p>',
                 card,
             )
+            self.assertIn(
+                f'<p id="vacancy-alignment-coverage-{index}" class="vacancy-evidence-coverage">'
+                f'Cobertura de evidencia: '
+                f'{vacancy["evidence_coverage_percent"]}%</p>',
+                card,
+            )
+            self.assertRegex(
+                card,
+                rf'<p id="vacancy-alignment-band-{index}" class="vacancy-qualitative-band">[^<]+</p>',
+            )
             self.assertRegex(
                 card,
                 rf'<progress class="vacancy-alignment-progress" value="{vacancy["alignment_percent"]}" '
-                rf'max="100" aria-labelledby="{employer_id} {heading_id} {score_id}">',
+                rf'max="100" aria-labelledby="{employer_id} {heading_id} {score_id} '
+                rf'vacancy-alignment-coverage-{index} vacancy-alignment-band-{index}">',
             )
 
         audit = DossierDOMAudit()
@@ -1283,6 +1294,8 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         self.assertIn('<caption>Matriz de evidencia de la muestra</caption>', rendered)
         self.assertIn('<th id="market-matrix-col-signal" scope="col">Señal</th>', rendered)
         self.assertIn('<th id="market-matrix-col-profile" scope="col">Evidencia del perfil</th>', rendered)
+        self.assertNotIn("insufficient_evidence", rendered)
+        self.assertNotIn("higher_documented_alignment", rendered)
         vacancy_headers = re.findall(
             r'<th id="market-matrix-col-v([1-5])" scope="col"><span aria-hidden="true">V\1</span>'
             r'<span class="visually-hidden">([^<]+)</span></th>',
@@ -1359,8 +1372,14 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             rendered.index('<section class="section-block" aria-labelledby="copy-title">')
         ]
         market_text = visible_text(market_region)
+        learning_disclosure = (
+            "Evaluación de aprendizaje: no evaluada en este incremento de mercado; "
+            "no se recomienda curso ni certificación."
+        )
+        self.assertEqual(1, market_text.count(learning_disclosure))
+        market_text_without_learning_disclosure = market_text.replace(learning_disclosure, "")
         for forbidden in ("curso", "course", "certificación", "certification"):
-            self.assertNotIn(forbidden, market_text.casefold())
+            self.assertNotIn(forbidden, market_text_without_learning_disclosure.casefold())
 
         self.assertNotIn("aria-live", market_region)
         forbidden_values = {

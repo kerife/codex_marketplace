@@ -190,7 +190,7 @@ COPY = {
         "market_unavailable_reason": "La búsqueda acotada no produjo vacantes verificables para esta muestra.",
         "market_limitation": "Limitación de la muestra", "market_boundary": "La alineación es direccional y se basa sólo en evidencia documentada; no predice ajuste ni contratación.",
         "market_learning_state": "Evaluación de aprendizaje: no evaluada en este incremento de mercado; no se recomienda curso ni certificación.",
-        "vacancy_alignment": "Alineación de evidencia por vacante", "score_boundary": "Puntuación direccional de evidencia documentada",
+        "vacancy_alignment": "Alineación de evidencia por vacante", "score_boundary": "Puntuación direccional de evidencia documentada", "evidence_coverage": "Cobertura de evidencia",
         "matrix_title": "Qué pide cada vacante y qué evidencia existe", "matrix_caption": "Matriz de evidencia de la muestra",
         "matrix_signal": "Señal", "matrix_profile": "Evidencia del perfil", "vacancy_key": "Clave de vacantes",
         "recurrence_title": "Señales recurrentes en la muestra", "recurrence_boundary": "La recurrencia describe sólo esta muestra validada; no representa demanda del mercado.",
@@ -246,7 +246,7 @@ COPY = {
         "market_unavailable_reason": "The bounded search produced no verifiable vacancies for this sample.",
         "market_limitation": "Sample limitation", "market_boundary": "Alignment is directional and based only on documented evidence; it predicts neither fit nor hiring.",
         "market_learning_state": "Learning evaluation: not evaluated in this market increment; no course or certification recommendation is made.",
-        "vacancy_alignment": "Evidence alignment by vacancy", "score_boundary": "Directional documented-evidence score",
+        "vacancy_alignment": "Evidence alignment by vacancy", "score_boundary": "Directional documented-evidence score", "evidence_coverage": "Evidence coverage",
         "matrix_title": "What each vacancy requests and what evidence exists", "matrix_caption": "Sample evidence matrix",
         "matrix_signal": "Signal", "matrix_profile": "Profile evidence", "vacancy_key": "Vacancy key",
         "recurrence_title": "Recurring signals in the sample", "recurrence_boundary": "Recurrence describes only this validated sample; it does not represent market demand.",
@@ -271,6 +271,21 @@ COPY = {
         "learning_option_types": {"course": "Course", "certification": "Certification", "portfolio_project": "Portfolio project", "lab": "Lab", "role_search": "Role search", "no_learning_yet": "No learning yet"},
         "learning_decisions": {"do_now": "Do now", "defer": "Defer", "omit": "Omit for now", "research_first": "Research first"},
         "learning_gap_types": {"knowledge": "Knowledge", "proof": "Proof", "experience": "Experience", "terminology": "Terminology", "low_return": "Low return"},
+    },
+}
+
+MARKET_BAND_LABELS = {
+    "es": {
+        "insufficient_evidence": "Evidencia insuficiente",
+        "higher_documented_alignment": "Alineación documentada alta",
+        "moderate_documented_alignment": "Alineación documentada moderada",
+        "lower_documented_alignment": "Alineación documentada baja",
+    },
+    "en": {
+        "insufficient_evidence": "Insufficient evidence",
+        "higher_documented_alignment": "Higher documented alignment",
+        "moderate_documented_alignment": "Moderate documented alignment",
+        "lower_documented_alignment": "Lower documented alignment",
     },
 }
 
@@ -971,15 +986,21 @@ def _render_market_context(
         employer_id = f"vacancy-alignment-employer-{index}"
         heading_id = f"vacancy-alignment-title-{index}"
         score_id = f"vacancy-alignment-score-{index}"
+        coverage_id = f"vacancy-alignment-coverage-{index}"
+        band_id = f"vacancy-alignment-band-{index}"
         score = int(vacancy["alignment_percent"])
         score_text = f"{score} de 100" if locale == "es" else f"{score} out of 100"
+        coverage = int(vacancy["evidence_coverage_percent"])
+        band = MARKET_BAND_LABELS[locale][str(vacancy["qualitative_band"])]
         cards.append(f'''<article class="vacancy-alignment-card" aria-labelledby="{employer_id} {heading_id}">
           <p class="vacancy-key-label">{short}</p>
           <p id="{employer_id}" class="vacancy-employer">{employer}</p>
           <h3 id="{heading_id}">{title}</h3>
           <p id="{score_id}" class="vacancy-alignment-score">{score_text}</p>
-          <progress class="vacancy-alignment-progress" value="{score}" max="100" aria-labelledby="{employer_id} {heading_id} {score_id}"></progress>
+          <progress class="vacancy-alignment-progress" value="{score}" max="100" aria-labelledby="{employer_id} {heading_id} {score_id} {coverage_id} {band_id}"></progress>
           <p class="vacancy-score-boundary">{labels['score_boundary']}</p>
+          <p id="{coverage_id}" class="vacancy-evidence-coverage">{labels['evidence_coverage']}: {coverage}%</p>
+          <p id="{band_id}" class="vacancy-qualitative-band">{band}</p>
         </article>''')
 
     key_items = "".join(

@@ -41,7 +41,9 @@ referrers, internal vacancy/employer/evidence/requirement IDs, raw requirement
 paraphrases, or inferred eligibility.
 
 Vacancy alignment uses one native `progress` per vacancy, labelled by the
-vacancy heading and its visible `N de 100` / `N out of 100` score. Recurrence
+vacancy heading, its visible `N de 100` / `N out of 100` score, evidence
+coverage percentage, and localized qualitative band. Coverage and band are
+descriptive evidence metadata, never a hiring probability. Recurrence
 uses a second native progress family labelled by the visible signal and exact
 `k/N` fraction; this always describes the validated sample only. The semantic
 matrix keeps a caption, scoped row/column headers, stable header relationships,

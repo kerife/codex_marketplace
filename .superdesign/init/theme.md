@@ -1348,6 +1348,8 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 .vacancy-employer { font-size: .875rem; }
 .vacancy-alignment-score { margin: .8rem 0 0; color: var(--forest); font-family: var(--serif); font-size: 1.5rem; font-weight: 700; }
 .vacancy-score-boundary { margin: .65rem 0 0; font-size: .875rem; }
+.vacancy-evidence-coverage { margin: .75rem 0 0; font-size: .9rem; }
+.vacancy-qualitative-band { margin: .35rem 0 0; color: var(--forest); font-weight: 700; }
 
 .market-vacancy-key { margin: .5rem 0 1rem; padding-left: 1.5rem; }
 .market-vacancy-key-item + .market-vacancy-key-item { margin-top: .35rem; }
@@ -1498,6 +1500,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   .recurrence-progress::-webkit-progress-value,
   .vacancy-alignment-progress::-moz-progress-bar,
   .recurrence-progress::-moz-progress-bar { background: Highlight; }
+  .vacancy-qualitative-band { color: CanvasText; }
 }
 
 @media (prefers-contrast: more) {
