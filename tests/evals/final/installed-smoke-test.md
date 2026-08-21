@@ -20,9 +20,9 @@ release_timestamp: `2026-08-21T07:11:41Z`
 
 installed_access_timestamp: `2026-08-21T07:16:00Z`
 
-source_commit: `766ea05c1f8f830430cdcc9ff65892356a4cfdbd`
+source_commit: `10e4d7a1d23a9d73f5351f02bc4dbc4853761bb0`
 
-source_tree: `563d6b44a4ca91aa313cd0aeb86c8b649dd376ec`
+source_tree: `7c7792b6ca4bb2d6a0d29c407ed8070925a46294`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
