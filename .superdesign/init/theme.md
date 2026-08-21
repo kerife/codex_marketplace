@@ -1608,7 +1608,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 .decision-trace-title { margin: 0 0 .75rem; }
 .decision-trace-steps {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: .75rem;
   margin: 0;
   padding-left: 1.25rem;

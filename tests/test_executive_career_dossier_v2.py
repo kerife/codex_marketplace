@@ -1031,6 +1031,7 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         css = (REPO_ROOT / "plugins" / "professional-growth-coach" / "assets" / "career-market-learning-dossier-v1.css").read_text(encoding="utf-8")
         for contract in (
             ".decision-trace",
+            "grid-template-columns: repeat(2, minmax(0, 1fr))",
             "grid-template-columns: minmax(0, 1fr)",
             "@media (max-width: 640px)",
             "@media print",
@@ -1043,6 +1044,10 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         ):
             with self.subTest(contract=contract):
                 self.assertIn(contract, css)
+        trace_css = re.search(r"\.decision-trace-steps\s*\{(.*?)\}", css, re.DOTALL)
+        self.assertIsNotNone(trace_css)
+        self.assertIn("repeat(2, minmax(0, 1fr))", trace_css.group(1))
+        self.assertNotIn("repeat(4,", trace_css.group(1))
 
         for locale in ("es", "en"):
             with self.subTest(locale=locale):
