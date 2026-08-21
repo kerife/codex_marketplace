@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-14T16:16:22Z`
+release_timestamp: `2026-08-21T05:28:49Z`
 
-installed_access_timestamp: `2026-08-14T16:21:14Z`
+installed_access_timestamp: `2026-08-21T05:32:00Z`
 
-source_commit: `f266aae6ab48dd385b3f26bddb3a6d92c40a5e3f`
+source_commit: `961dc07b5d843a805f0abd1c2ace7b2405a604a7`
 
-source_tree: `3631a743c0e4d811c04af7f6454d56f2bb60917c`
+source_tree: `a54ab7076edbbfc9ceee522e0dc3ba62bb7aeb92`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260814161622`
+installed_cache_version: `0.2.0+codex.20260821052849`
 
 installed_enabled: `true`
 
@@ -34,17 +34,17 @@ source_file_count: `121`
 
 installed_file_count: `121`
 
-normalized_source_cache_sha256: `aa101b2ccc8cde60425ab8eadc5d9abdcd21fb9cf58051aab8fc9d94cdd5d28f`
+normalized_source_cache_sha256: `95aabe14ef1d00b1d3c42965f2e3a7228cd965135f49e71d67d808fac552c1ef`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
 source_cache_equivalence: `diff_qr_silent`
 
-installed_direct_smokes: `2/2`
+installed_direct_smokes: `3/3`
 
-installed_validator_smokes: `2/2`
+installed_validator_smokes: `3/3`
 
-installed_renderer_smokes: `2/2`
+installed_renderer_smokes: `3/3`
 
 installed_visible_privacy_smokes: `not_run_separately`
 
