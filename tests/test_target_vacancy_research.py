@@ -413,11 +413,72 @@ class TargetVacancyResearchTests(unittest.TestCase):
                 )
                 self.assertNotIn(marker, "\n".join(errors))
 
+    def test_unmarked_non_allowlisted_person_names_are_rejected_from_public_fields(self) -> None:
+        names = (
+            "Emily Stone",
+            "Jordan Lee",
+            "Kevin Rivers",
+            "Alicia Smith",
+            "Zhang Wei",
+            "Élodie Martin",
+        )
+        fields = (
+            ("employer display name", "employers", "display_name", lambda name: name),
+            ("employer qualification observation", "employers", "qualification_observation", lambda name: name),
+            ("vacancy title", "vacancies", "title", lambda name: name),
+            ("vacancy duplicate fingerprint", "vacancies", "duplicate_fingerprint", lambda name: name.casefold().replace(" ", "-")),
+        )
+        for name in names:
+            for label, collection, field, transform in fields:
+                with self.subTest(name=name, field=label):
+                    value = self.complete()
+                    marker = transform(name)
+                    value[collection][0][field] = marker
+                    errors = self.assert_invalid(
+                        value, "research contains forbidden private or raw content"
+                    )
+                    self.assertNotIn(marker, "\n".join(errors))
+
     def test_legitimate_company_and_role_strings_remain_valid(self) -> None:
+        for employer, title in (
+            ("Acme Corp", "Platform Engineering Manager"),
+            ("HashiCorp", "Google Cloud"),
+        ):
+            with self.subTest(employer=employer, title=title):
+                value = self.complete()
+                value["employers"][0]["display_name"] = employer
+                value["vacancies"][0]["title"] = title
+                self.assertEqual([], self.validator.validate_research(value))
+
+    def test_embedded_unmarked_person_names_are_rejected_without_blocking_safe_slugs(self) -> None:
+        embedded_titles = (
+            "Emily Stone Engineer",
+            "Senior Emily Stone",
+            "Emily Stone (SRE)",
+            "Emily Stone - SRE",
+            "Platform Emily Stone",
+        )
+        for title in embedded_titles:
+            with self.subTest(field="title", value=title):
+                value = self.complete()
+                value["vacancies"][0]["title"] = title
+                self.assert_invalid(value, "research contains forbidden private or raw content")
+        for field, marker in (
+            ("display_name", "Emily Stone Engineering"),
+            ("qualification_observation", "Emily Stone leads synthetic evidence"),
+        ):
+            with self.subTest(field=field):
+                value = self.complete()
+                value["employers"][0][field] = marker
+                self.assert_invalid(value, "research contains forbidden private or raw content")
         value = self.complete()
-        value["employers"][0]["display_name"] = "Acme Corp"
-        value["vacancies"][0]["title"] = "Platform Engineering Manager"
-        self.assertEqual([], self.validator.validate_research(value))
+        value["vacancies"][0]["duplicate_fingerprint"] = "emily-stone-engineer"
+        self.assert_invalid(value, "research contains forbidden private or raw content")
+        for marker in ("cloud-native", "terraform-module"):
+            with self.subTest(field="safe fingerprint", value=marker):
+                value = self.complete()
+                value["vacancies"][0]["duplicate_fingerprint"] = marker
+                self.assertEqual([], self.validator.validate_research(value))
 
     def test_example_fixture_urls_are_rejected_outside_the_synthetic_fixture_boundary(self) -> None:
         value = self.complete()

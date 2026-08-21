@@ -39,6 +39,26 @@ _COMMON_GIVEN_NAMES = frozenset(
         "michael", "miguel", "robert", "sofia", "sophia", "david", "luis",
     }
 )
+_ORGANIZATION_AND_LOCATION_TERMS = frozenset(
+    {
+        "aerospace", "angeles", "canada", "city", "cloud", "corp", "corporation",
+        "employer", "fixture", "francisco", "global", "group", "inc", "international", "ltd", "llc",
+        "los", "mexico", "module", "motors", "native", "new", "sachs", "solutions",
+        "states", "terraform", "united", "york",
+    }
+)
+_PERSON_NAME_STOPWORDS = (
+    _SAFE_STANDALONE_TERMS
+    | _CANDIDATE_SINGLE_NAME_EXCLUSIONS
+    | _CANDIDATE_MARKERS
+    | _ROLE_TITLE_TECHNICAL_MODIFIERS
+    | _ORGANIZATION_AND_LOCATION_TERMS
+)
+_PROPER_NAME_PAIR = re.compile(
+    r"^\s*([^\W\d_][^\W\d_.'’\-]{1,})\s+([^\W\d_][^\W\d_.'’\-]{1,})\s*$",
+    re.UNICODE,
+)
+_NAME_SLUG_SEQUENCE = re.compile(r"^\s*([^\W\d_]+(?:-[^\W\d_]+)+)\s*$", re.UNICODE)
 
 
 def contains_unmarked_candidate_identity(value: object) -> bool:
@@ -89,6 +109,27 @@ def contains_candidate_like_name(value: object) -> bool:
     for match in re.finditer(r"\b([a-z][a-záéíóúñ]{2,})-([a-záéíóúñ]{2,})\b", normalized.casefold()):
         if match.group(1) in _COMMON_GIVEN_NAMES:
             return True
+    pair = _PROPER_NAME_PAIR.fullmatch(normalized)
+    if pair:
+        tokens = {token.rstrip(".'’-").casefold() for token in pair.groups()}
+        if tokens.isdisjoint(_PERSON_NAME_STOPWORDS):
+            return True
+    words = re.findall(r"[^\W\d_]+", normalized)
+    for first, second in zip(words, words[1:]):
+        if (
+            first[0].isupper()
+            and second[0].isupper()
+            and first[1:].islower()
+            and second[1:].islower()
+            and {first.casefold(), second.casefold()}.isdisjoint(_PERSON_NAME_STOPWORDS)
+        ):
+            return True
+    slug = _NAME_SLUG_SEQUENCE.fullmatch(normalized.casefold())
+    if slug:
+        parts = slug.group(1).split("-")
+        for first, second in zip(parts, parts[1:]):
+            if {first, second}.isdisjoint(_PERSON_NAME_STOPWORDS):
+                return True
     return False
 
 
@@ -178,7 +219,6 @@ def target_research_contains_candidate_identity(value: object) -> bool:
         strict_scalars.extend(
             vacancy.get(field)
             for field in (
-                "title",
                 "location",
                 "duplicate_fingerprint",
                 "source_url",
