@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-21T06:38:46-06:00`
+release_timestamp: `2026-08-21T06:56:05-06:00`
 
-installed_access_timestamp: `2026-08-21T12:38:46Z`
+installed_access_timestamp: `2026-08-21T12:56:05Z`
 
-source_commit: `d4505089baaf565fb9f3702580bc659b8af80c48`
+source_commit: `27fabb0eb5838bd3f2a93d4fd5f8e0875c5218a6`
 
-source_tree: `3e5b51404b088bc3e3e57f5afb1110ce0b828403`
+source_tree: `f3ffd639e58f7efca3a55ece570477906431be89`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260821123756`
+installed_cache_version: `0.2.0+codex.20260821125341`
 
 installed_enabled: `true`
 
@@ -34,7 +34,7 @@ source_file_count: `124`
 
 installed_file_count: `124`
 
-normalized_source_cache_sha256: `ac332afbf454aa45f8095bbd6038f525f3891dc8687b211e8ba14c2c293a6561`
+normalized_source_cache_sha256: `b2bc465bd1d115995b12900c8a64a58f94199e586fd04e58195f1cae34eb75d6`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
@@ -55,6 +55,8 @@ installed_cache_artifact_hygiene: `full_inventory_sha256_equal; bytecode=0; pyca
 installed_package_static_scope: `package_static_checks=passed; repository_conformance=repository_only_not_bundled`
 
 installed_test_discovery_scope: `package_local_and_mixed_safe; repository_only_selectors_skipped_outside_source_checkout`
+
+installed_test_discovery: `172/172; errors=0; skips=31; repository_only_scope_explicit`
 
 installed_direct_smokes: `6/6`
 
