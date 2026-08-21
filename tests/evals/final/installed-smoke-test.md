@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-21T22:00:00Z`
+release_timestamp: `2026-08-21T23:00:00Z`
 
-installed_access_timestamp: `2026-08-21T22:00:00Z`
+installed_access_timestamp: `2026-08-21T23:00:00Z`
 
-source_commit: `cad2c3370a646d235472427b45c28b73f9099143`
+source_commit: `16bf3c64050454f67af31a277232431758dbe5b2`
 
-source_tree: `d9f7232bf2e6dfd76ba85d51d9354567a6b148ab`
+source_tree: `0bb455c641c39acd5381b42ca3f336f70bd7fda8`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260821220000`
+installed_cache_version: `0.2.0+codex.20260821230000`
 
 installed_enabled: `true`
 
@@ -34,7 +34,7 @@ source_file_count: `124`
 
 installed_file_count: `124`
 
-normalized_source_cache_sha256: `ba335a81c74300104b75ec2c8966444195104da2c7a787cb985e6a477f17423f`
+normalized_source_cache_sha256: `6d51158f4788280ad609c4b103c717f74f38562e7663ee78584bde3b16b13e54`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
@@ -86,6 +86,8 @@ installed_current_cycle_market_freshness_smokes: `12/12; ES_EN_localized_validat
 
 installed_current_cycle_limited_sample_aria_smokes: `4_states_ES_EN; limitation_id_unique; market_region_described; limitation_before_learning_and_vacancies; complete_unavailable_legacy_absent`
 
+installed_current_cycle_authorization_impact_smokes: `6/6; ES_EN_ranked_priority_impact; coverage_only_fallback; no_pending_absent; one_question; no_external_controls`
+
 installed_current_cycle_contrast_smokes: `3/3; muted_text_contrast; light_line_token; forced_colors_text_override`
 
 installed_market_learning_disclosure_smokes: `3/3; localized; raw_enum_not_visible`
@@ -114,7 +116,7 @@ fresh_agent_smoke: `not_run_in_current_process`
 
 fresh_agent_smoke_scope: `not_claimed_for_intermediate_task1_release`
 
-official_release_validator: `passed_source_and_installed_cache`
+official_release_validator: `passed_source_and_installed_cache_with_full_repository_gates`
 
 installed_learning_proof_to_cost_smoke: `valid_cards=3; proof_cost=1; source_date=1`
 
