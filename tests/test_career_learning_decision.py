@@ -240,6 +240,8 @@ class CareerLearningDecisionContractTests(unittest.TestCase):
     def test_validator_is_total_for_unhashable_json_shaped_values(self) -> None:
         valid = _bundle(count=3)
         mutations = []
+        bad = copy.deepcopy(valid); bad["state"] = {}; mutations.append(bad)
+        bad = copy.deepcopy(valid); bad["state"] = []; mutations.append(bad)
         bad = copy.deepcopy(valid); bad["decisions"][0]["source_gap_ids"] = [{}]; mutations.append(bad)
         bad = copy.deepcopy(valid); bad["decisions"][0]["vacancy_ids"] = [{}]; mutations.append(bad)
         bad = copy.deepcopy(valid); bad["decisions"][0]["option_type"] = {}; mutations.append(bad)
@@ -253,6 +255,40 @@ class CareerLearningDecisionContractTests(unittest.TestCase):
                 except Exception as error:  # pragma: no cover - regression guard
                     self.fail(f"validator raised on malformed JSON-shaped value: {type(error).__name__}")
                 self.assertTrue(errors)
+
+    def test_validator_rejects_identity_action_and_outcome_text_on_every_learning_decision_surface(self) -> None:
+        cases = (
+            ("option_name", "Enroll now: example course"),
+            ("target_role", "Purchase now: Senior SRE"),
+            ("provider_or_owner", "Schedule an exam now with Example Provider"),
+            ("decision_basis", "Guaranteed interview preparation"),
+            ("target_role", "candidate name Example Person Senior SRE"),
+            ("provider_or_owner", "candidato nombre Ejemplo Persona"),
+            ("option_name", "This credential will get an offer"),
+        )
+        for field, unsafe_text in cases:
+            with self.subTest(field=field, unsafe_text=unsafe_text):
+                invalid = _bundle(count=3)
+                invalid["decisions"][0][field] = unsafe_text
+                errors = self.validator.validate_learning_bundle(
+                    invalid, self.market, self.dossier, self.research
+                )
+                self.assertTrue(errors)
+                self.assertNotIn(unsafe_text, "\n".join(errors))
+
+    def test_validator_keeps_safe_technical_learning_text_valid(self) -> None:
+        valid = _bundle(count=3)
+        valid["decisions"][0].update({
+            "target_role": "Senior SRE / Platform Engineer",
+            "option_name": "Terraform and observability proof artifact",
+            "provider_or_owner": "candidate-owned proof project",
+            "decision_basis": "Repeated Terraform evidence supports a bounded proof artifact before a purchase.",
+        })
+        self.assertEqual(
+            [], self.validator.validate_learning_bundle(
+                valid, self.market, self.dossier, self.research
+            )
+        )
 
     def test_schema_and_validator_enforce_state_specific_decision_counts(self) -> None:
         evaluated_empty = _bundle(count=3)
@@ -339,6 +375,21 @@ class CareerLearningDecisionContractTests(unittest.TestCase):
             build_learning_bundle(self.research, self.market, self.dossier, cyclic)
         with self.assertRaisesRegex(ValueError, "learning"):
             build_learning_bundle(self.research, self.market, self.dossier, None)
+
+    def test_builder_rejects_identity_action_and_outcome_text_before_returning_a_bundle(self) -> None:
+        cases = (
+            ("option_name", "Enroll now: example course"),
+            ("target_role", "candidate name Example Person Senior SRE"),
+            ("decision_basis", "Guaranteed interview preparation"),
+        )
+        for field, unsafe_text in cases:
+            with self.subTest(field=field, unsafe_text=unsafe_text):
+                decisions = _bundle(count=3)["decisions"]
+                decisions[0][field] = unsafe_text
+                with self.assertRaisesRegex(ValueError, "learning"):
+                    build_learning_bundle(
+                        self.research, self.market, self.dossier, decisions
+                    )
 
     def test_market_v1_placeholder_remains_not_evaluated_and_empty(self) -> None:
         self.assertEqual("not_evaluated", self.market["learning_state"])

@@ -112,6 +112,9 @@ _UNSAFE_ACTION_RE = re.compile(
     r"interview\s+probability|offer\s+probability|salary\s+increase|time[- ]to[- ]hire|return\s+on\s+investment)\b",
     re.I,
 )
+_SAFE_CANDIDATE_CONTEXT_RE = re.compile(
+    r"\bcandidate(?:[- ]owned|[- ]safe| effort)\b", re.I
+)
 _MAX_NODES = 4096
 _MAX_DEPTH = 64
 _OFFICIAL_PROVIDER_DOMAINS = {
@@ -160,6 +163,17 @@ def _text(value: object, maximum: int = 1000) -> bool:
         and not _HTML_RE.search(value)
         and not _LOCAL_PATH_RE.search(value)
         and not _PROFILE_URL_RE.search(value)
+    )
+
+
+def _text_has_identity_action_or_outcome_risk(value: object) -> bool:
+    """Reject unsafe copy while retaining established candidate-owned technical phrasing."""
+    if not isinstance(value, str):
+        return True
+    identity_candidate = _SAFE_CANDIDATE_CONTEXT_RE.sub("safe technical context", value)
+    return bool(
+        _prose.contains_candidate_identity(identity_candidate)
+        or _UNSAFE_ACTION_RE.search(value)
     )
 
 
@@ -348,6 +362,8 @@ def _validate_decisions(
         for field in ("target_role", "option_name", "provider_or_owner", "market_evidence_state", "cost_time_band", "expected_signal_boundary", "portfolio_or_no_learning_alternative", "overbuying_risk", "decision_basis", "next_action_gate"):
             if not _text(row.get(field)):
                 errors.append("learning decision text is invalid")
+            elif _text_has_identity_action_or_outcome_risk(row[field]):
+                errors.append("learning decision contains forbidden identity, action, or outcome content")
         if not isinstance(row.get("gap_type"), str) or row["gap_type"] not in {"knowledge", "proof", "experience", "terminology", "low_return"}:
             errors.append("learning decision gap type is invalid")
         option_type = row.get("option_type")
@@ -365,8 +381,6 @@ def _validate_decisions(
             errors.append("learning decision signal must be bounded")
         if not isinstance(row.get("next_action_gate"), str) or "exact authorization" not in row["next_action_gate"]:
             errors.append("learning decision gate must require exact authorization")
-        if _UNSAFE_ACTION_RE.search(" ".join(str(row.get(field, "")) for field in ("decision_basis", "next_action_gate", "expected_signal_boundary"))):
-            errors.append("learning decision contains unsafe action or outcome language")
         provider_source = row.get("provider_source")
         if isinstance(option_type, str) and option_type in {"course", "certification"}:
             if not isinstance(provider_source, Mapping):
@@ -408,7 +422,7 @@ def validate_learning_bundle(
         errors.append("learning bundle schema validation failed")
     if root.get("schema_version") != "career-learning-decision-v1":
         errors.append("learning bundle has invalid schema version")
-    if root.get("state") not in {"evaluated", "unavailable"}:
+    if not isinstance(root.get("state"), str) or root.get("state") not in {"evaluated", "unavailable"}:
         errors.append("learning bundle state is invalid")
     if root.get("privacy_boundary") != "public_vacancy_metadata_and_identity_free_evidence_references_only" or root.get("no_external_action") is not True or root.get("outcome_boundary") != "not_an_interview_offer_salary_or_roi_prediction":
         errors.append("learning bundle privacy or action boundary is invalid")

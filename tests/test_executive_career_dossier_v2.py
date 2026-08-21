@@ -1353,17 +1353,24 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         references, _described_by, decide_region = decide_now_region(rendered)
         self.assertIn("learning-decision-title", references)
         self.assertEqual(1, decide_region.count('href="#learning-decision-title"'))
-        invalid = copy.deepcopy(case[4])
-        invalid["decisions"][0]["option_name"] = "file:///Users/private/profile.json"
-        rendered_invalid = self.renderer.render_dossier_html(
-            case[0],
-            case[1],
-            market_research=case[2],
-            market_alignment=case[3],
-            learning_decision=invalid,
-        )
-        self.assertNotIn('class="learning-decision"', rendered_invalid)
-        self.assertNotIn("file:///Users/private/profile.json", rendered_invalid)
+        for field, unsafe_text in (
+            ("option_name", "file:///Users/private/profile.json"),
+            ("option_name", "Enroll now: example course"),
+            ("target_role", "candidate name Example Person Senior SRE"),
+            ("decision_basis", "Guaranteed interview preparation"),
+        ):
+            with self.subTest(field=field, unsafe_text=unsafe_text):
+                invalid = copy.deepcopy(case[4])
+                invalid["decisions"][0][field] = unsafe_text
+                rendered_invalid = self.renderer.render_dossier_html(
+                    case[0],
+                    case[1],
+                    market_research=case[2],
+                    market_alignment=case[3],
+                    learning_decision=invalid,
+                )
+                self.assertNotIn('class="learning-decision"', rendered_invalid)
+                self.assertNotIn(unsafe_text, rendered_invalid)
 
     def test_learning_panel_uses_dynamic_one_to_five_sample_counts(self) -> None:
         for count in range(1, 6):
@@ -1757,6 +1764,49 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     market_dossier_path=MARKET_FIXTURE_ROOT / "complete-five-es.json",
                 )
             self.assertFalse(output.exists())
+
+    def test_writer_and_cli_reject_invalid_learning_before_creating_an_artifact(self) -> None:
+        dossier, market, research, alignment, bundle = learning_case(
+            "complete-five-es.json", "scenario-a-es.json", count=3
+        )
+        bundle["decisions"][0]["option_name"] = "Enroll now: example course"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = {}
+            for name, value in (
+                ("dossier", dossier),
+                ("market", market),
+                ("research", research),
+                ("alignment", alignment),
+                ("learning", bundle),
+            ):
+                path = root / f"{name}.json"
+                path.write_text(json.dumps(value), encoding="utf-8")
+                paths[name] = path
+            writer_output = root / "writer.html"
+            with self.assertRaises(self.renderer.DossierValidationError):
+                self.renderer.write_dossier_html(
+                    paths["dossier"], writer_output,
+                    market_dossier_path=paths["market"],
+                    market_research_path=paths["research"],
+                    market_alignment_path=paths["alignment"],
+                    learning_decision_path=paths["learning"],
+                )
+            self.assertFalse(writer_output.exists())
+            cli_output = root / "cli.html"
+            result = subprocess.run(
+                [
+                    sys.executable, "-B", str(RENDERER_PATH), str(paths["dossier"]),
+                    "--market-dossier", str(paths["market"]),
+                    "--market-research", str(paths["research"]),
+                    "--market-alignment", str(paths["alignment"]),
+                    "--learning-decision", str(paths["learning"]),
+                    "--output", str(cli_output),
+                ],
+                cwd=root, capture_output=True, text=True, check=False, timeout=20,
+            )
+            self.assertEqual(2, result.returncode)
+            self.assertFalse(cli_output.exists())
 
 class ExecutiveCareerDossierV2LoadAndCliTests(unittest.TestCase):
     @classmethod

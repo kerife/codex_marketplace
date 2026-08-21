@@ -875,6 +875,11 @@ def write_dossier_html(
                 learning_decision = LEARNING_VALIDATOR.load_learning_bundle(Path(learning_decision_path))
             except LEARNING_VALIDATOR.LearningBundleLoadError as error:
                 raise MarketInputLoadError("cannot load learning decision input") from error
+            learning_errors = LEARNING_VALIDATOR.validate_learning_bundle(
+                learning_decision, market_dossier, dossier, market_research
+            )
+            if learning_errors:
+                raise DossierValidationError(learning_errors)
     try:
         expanded_output = Path(output_path).expanduser()
     except RuntimeError as error:
