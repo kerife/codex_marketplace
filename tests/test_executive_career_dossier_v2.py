@@ -1317,7 +1317,7 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             self.assertIn((str(index), full_label), key_items)
             self.assertIn((str(index), full_label), vacancy_headers)
             self.assertIn(
-                f'data-label="V{index} · {full_label}"', rendered
+                f'data-label="V{index}"', rendered
             )
 
         rows = re.findall(
@@ -1411,6 +1411,34 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         for value in forbidden_values:
             with self.subTest(forbidden=value):
                 self.assertNotIn(value, rendered)
+
+    def test_mobile_matrix_cells_use_short_vacancy_keys_while_key_and_headers_keep_full_labels(self) -> None:
+        dossier, market, research, alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        rendered = self.renderer.render_dossier_html(
+            dossier,
+            market,
+            market_research=research,
+            market_alignment=alignment,
+        )
+
+        for index, vacancy in enumerate(market["vacancies"], start=1):
+            full_label = f'{vacancy["employer"]} · {vacancy["title"]}'
+            with self.subTest(index=index):
+                self.assertIn(
+                    f'<td class="market-matrix-state-cell" data-label="V{index}" ',
+                    rendered,
+                )
+                self.assertIn(
+                    f'<li class="market-vacancy-key-item"><strong>V{index}</strong> — {full_label}</li>',
+                    rendered,
+                )
+                self.assertIn(
+                    f'<th id="market-matrix-col-v{index}" scope="col"><span aria-hidden="true">V{index}</span>'
+                    f'<span class="visually-hidden">{full_label}</span></th>',
+                    rendered,
+                )
 
     def test_decide_now_precedes_coverage_and_uses_semantic_references_without_actions_or_echo(self) -> None:
         dossier, market, research, alignment = market_case(

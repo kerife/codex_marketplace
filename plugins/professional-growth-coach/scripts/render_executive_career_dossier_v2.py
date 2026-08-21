@@ -1024,8 +1024,8 @@ def _render_market_context(
         ]
         for vacancy_index, cell in enumerate(BASE._rows(row["cells"]), start=1):
             state_copy = support_state if cell["required"] else "not_required"
-            short, full = vacancy_labels[vacancy_index - 1]
-            data_label = html.escape(f"{short} · {html.unescape(full)}", quote=True)
+            short, _full = vacancy_labels[vacancy_index - 1]
+            data_label = html.escape(short, quote=True)
             cells.append(
                 f'<td class="market-matrix-state-cell" data-label="{data_label}" '
                 f'headers="market-matrix-col-v{vacancy_index} {row_header_id}">'

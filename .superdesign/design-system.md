@@ -49,9 +49,11 @@ uses a second native progress family labelled by the visible signal and exact
 matrix keeps a caption, scoped row/column headers, stable header relationships,
 short V1–VN headers with visually hidden full labels, and a complete adjacent
 key. Every state combines a visible symbol and text. At 680px and below, the
-table remains in the DOM while rows stack and each data cell exposes its full
-`data-label`; the header is visually clipped, never removed. Print restores the
-table/header-group display model and keeps the full vacancy key with the table.
+table remains in the DOM while rows stack; vacancy cells use short V1–VN
+`data-label` values while the adjacent key and semantic headers retain full
+employer/title labels, avoiding repeated long names in the mobile scan. The
+header is visually clipped, never removed. Print restores the table/header-group
+display model and keeps the full vacancy key with the table.
 Dark, grayscale, high-contrast, and forced-colors modes preserve the same text
 and symbols without color-only meaning. The four-stage gap route remains a
 non-interactive evidence workflow and recommends no course or certification
