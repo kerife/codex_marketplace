@@ -7,6 +7,7 @@ import importlib.util
 import json
 import sys
 import unittest
+from collections.abc import Mapping
 from pathlib import Path
 
 
@@ -50,16 +51,17 @@ class CandidateMarketAlignmentV2Tests(unittest.TestCase):
             load_json(DOSSIER_FIXTURES / "scenario-a-es.json"),
         )
 
-    def test_v2_normalization_is_exact_and_rejects_aliases(self):
+    def test_v2_normalization_is_exact_and_rejects_invalid_punctuation(self):
         accepted = {
             "Terraform": "terraform",
             "  Google Cloud  ": "google_cloud",
             "Site-Reliability": "site_reliability",
+            "terra": "terra",
         }
         for raw, expected in accepted.items():
             with self.subTest(raw=raw):
                 self.assertEqual(expected, ALIGNMENT_V2.normalize_signal_term(raw))
-        for raw in ("C++", "node.js", "site/reliability", "terra", "", None, 7):
+        for raw in ("C++", "node.js", "site/reliability", "", None, 7):
             with self.subTest(raw=raw):
                 with self.assertRaisesRegex(ValueError, "technology term is invalid"):
                     ALIGNMENT_V2.normalize_signal_term(raw)
@@ -71,6 +73,19 @@ class CandidateMarketAlignmentV2Tests(unittest.TestCase):
         self.assertEqual("unknown", row["support_state"])
         self.assertEqual([], row["claim_ids"])
         self.assertEqual([], row["evidence_ids"])
+
+    def test_normalized_terra_does_not_bind_the_distinct_terraform_signal(self):
+        research, dossier = self.complete_sources()
+        dossier["requested_technology_terms"][0]["term"] = "terra"
+
+        alignment = ALIGNMENT_V2.derive_candidate_market_alignment_v2(research, dossier)
+        row = next(item for item in alignment["signal_bindings"] if item["signal"] == "terraform")
+
+        self.assertEqual("unknown", row["support_state"])
+        self.assertEqual([], row["claim_ids"])
+        self.assertEqual([], row["evidence_ids"])
+        self.assertEqual(["V-003-R-01"], row["requirement_ids"])
+        self.assertEqual(["V-003"], row["vacancy_ids"])
 
     def test_complete_fixture_derives_only_terraform_support(self):
         research, dossier = self.complete_sources()
@@ -182,6 +197,24 @@ class CandidateMarketAlignmentV2Tests(unittest.TestCase):
                     )
                 self.assertNotIn(sentinel, str(raised.exception))
 
+    def test_wide_mapping_is_rejected_without_eager_scalar_enqueuing(self):
+        class WideMapping(Mapping[str, object]):
+            def __getitem__(self, key: str) -> object:
+                raise KeyError(key)
+
+            def __iter__(self):
+                return iter(())
+
+            def __len__(self) -> int:
+                return ALIGNMENT_V2._MAX_NODES + 1
+
+            def values(self):
+                for index in range(ALIGNMENT_V2._MAX_NODES):
+                    yield index
+                raise AssertionError("wide input was eagerly traversed")
+
+        self.assertFalse(ALIGNMENT_V2._safe_tree(WideMapping()))
+
     def test_inferred_evidence_remains_unknown_without_exposing_candidate_ids(self):
         research, dossier = self.complete_sources()
         dossier["evidence"][3]["state"] = "inferred"
@@ -247,6 +280,24 @@ class CandidateMarketAlignmentV2Tests(unittest.TestCase):
             with self.subTest(name=name):
                 with self.assertRaisesRegex(ValueError, r"^alignment is invalid$"):
                     ALIGNMENT_V2.snapshot_for_alignment_v2(malformed)
+
+    def test_alignment_snapshot_rejects_a_real_reordered_requirement_id_array(self):
+        research, dossier = self.complete_sources()
+        research["vacancies"][0]["requirements"][0]["signal"] = "terraform"
+        canonical = ALIGNMENT_V2.derive_candidate_market_alignment_v2(research, dossier)
+        terraform = next(
+            row for row in canonical["signal_bindings"] if row["signal"] == "terraform"
+        )
+        self.assertEqual(["V-001-R-01", "V-003-R-01"], terraform["requirement_ids"])
+
+        reordered = copy.deepcopy(canonical)
+        target = next(
+            row for row in reordered["signal_bindings"] if row["signal"] == "terraform"
+        )
+        target["requirement_ids"] = list(reversed(target["requirement_ids"]))
+
+        with self.assertRaisesRegex(ValueError, r"^alignment is invalid$"):
+            ALIGNMENT_V2.snapshot_for_alignment_v2(reordered)
 
 
 if __name__ == "__main__":
