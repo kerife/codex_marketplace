@@ -10,6 +10,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 THEME = ROOT / ".superdesign" / "init" / "theme.md"
 LAYOUTS = ROOT / ".superdesign" / "init" / "layouts.md"
+PAGES = ROOT / ".superdesign" / "init" / "pages.md"
+ROUTES = ROOT / ".superdesign" / "init" / "routes.md"
+COMPONENTS = ROOT / ".superdesign" / "init" / "components.md"
+EXTRACTABLE = ROOT / ".superdesign" / "init" / "extractable-components.md"
 ASSETS = ROOT / "plugins" / "professional-growth-coach" / "assets"
 ASSET_NAMES = (
     "career-market-learning-dossier-v1.css",
@@ -118,6 +122,22 @@ class SuperdesignThemeAssetParityTests(unittest.TestCase):
         ):
             with self.subTest(source=source):
                 self.assertIn(b"{{EMPLOYMENT_BOUNDARY}}", layout_sources[source])
+
+    def test_superdesign_maps_describe_current_v2_composition(self):
+        pages = PAGES.read_text(encoding="utf-8")
+        routes = ROUTES.read_text(encoding="utf-8")
+        components = COMPONENTS.read_text(encoding="utf-8")
+        extractable = EXTRACTABLE.read_text(encoding="utf-8")
+        self.assertIn("render_executive_career_dossier_v2.py", pages)
+        self.assertIn("executive-career-dossier-v2.css", pages)
+        self.assertIn("career-market-learning-dossier-v1.schema.json", pages)
+        self.assertIn("career-learning-decision-v1.schema.json", pages)
+        self.assertIn("render_executive_career_dossier_v2.py", routes)
+        self.assertIn("DecisionTrace", routes)
+        self.assertIn("CoachPriorityCard and DecisionTrace", components)
+        self.assertIn("MarketEvidence and LearningDecision", components)
+        self.assertIn("## DecisionTrace", extractable)
+        self.assertIn("## LearningDecision", extractable)
 
 
 if __name__ == "__main__":

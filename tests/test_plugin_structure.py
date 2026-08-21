@@ -1281,5 +1281,22 @@ raise SystemExit(64)
         self.assertNotIn(marker, diagnostic)
         self.assertNotIn("Traceback", diagnostic)
 
+    def test_static_checker_passes_for_an_extracted_plugin_without_repository_fixtures(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            extracted = Path(temporary_directory) / "professional-growth-coach"
+            shutil.copytree(
+                PLUGIN_ROOT,
+                extracted,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+            result = subprocess.run(
+                [sys.executable, "-B", str(extracted / "tests" / "run_static_checks.py")],
+                cwd=extracted.parent.parent,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(0, result.returncode, result.stderr)
+
 if __name__ == "__main__":
     unittest.main()

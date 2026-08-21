@@ -21,6 +21,17 @@ This repository is a Python-rendered, offline HTML/CSS plugin rather than a Java
 ## ExecutiveDossierShell
 
 - Source template: `plugins/professional-growth-coach/assets/executive-career-dossier-v1.html`
-- Description: long-form private career dossier shell rendered with scoped inline CSS and optional inline behavior.
+- Description: long-form private career dossier shell rendered with scoped inline CSS and optional inline behavior. The v2 renderer composes this same shell with the v2 CSS extension and validated market/learning sections.
+
+## CoachPriorityCard and DecisionTrace
+
+- Source: `plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py` and `plugins/professional-growth-coach/assets/executive-career-dossier-v2.css`
+- Description: three market-aware coaching priority cards. Each DecisionTrace presents priority, localized evidence state/paraphrase, a private blank template, and read-only inspection status; it never exposes evidence IDs or authorizes an external action.
+- Inputs: validated v2 dossier plus a validated market group. The trace is omitted on the protected no-market path.
+
+## MarketEvidence and LearningDecision
+
+- Sources: `schemas/career-market-learning-dossier-v1.schema.json`, `schemas/career-learning-decision-v1.schema.json`, and their build/validation scripts.
+- Description: optional offline evidence and proof-to-cost decision sections composed inside v2. They are not standalone pages, routes, or network-backed widgets; unavailable market evidence produces no learning recommendation.
 
 The exact HTML templates and CSS implementation are included in `layouts.md` and `theme.md` below.

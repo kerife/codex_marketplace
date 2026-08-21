@@ -6,6 +6,18 @@
   - `plugins/professional-growth-coach/assets/executive-career-dossier-v1.html`
   - `plugins/professional-growth-coach/assets/executive-career-dossier-v1.css`
   - `plugins/professional-growth-coach/schemas/executive-career-dossier-v1.schema.json`
+- `plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py`
+  - composes the v1 HTML shell with
+    `plugins/professional-growth-coach/assets/executive-career-dossier-v2.css`
+  - validates `plugins/professional-growth-coach/schemas/executive-career-dossier-v2.schema.json`
+  - optionally composes validated market evidence and learning decisions from
+    `career-market-learning-dossier-v1.schema.json` and
+    `career-learning-decision-v1.schema.json`
+
+The market and learning bundles are offline inputs to this dossier route, not
+separate web pages. Their build/validation scripts are
+`build_career_market_learning_dossier.py`, `validate_career_market_learning_dossier.py`,
+`build_career_learning_decision.py`, and `validate_career_learning_decision.py`.
 
 ## Recruiter reply triage
 

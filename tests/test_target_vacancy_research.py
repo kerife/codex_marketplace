@@ -392,6 +392,33 @@ class TargetVacancyResearchTests(unittest.TestCase):
                 errors = self.assert_invalid(value, "research contains forbidden private or raw content")
                 self.assertNotIn("Jane Doe", "\n".join(errors))
 
+    def test_unmarked_ascii_identity_is_rejected_from_public_research_fields(self) -> None:
+        cases = {
+            "employer display name": ("employers", 0, "display_name", "Juan Perez"),
+            "employer qualification observation": (
+                "employers",
+                0,
+                "qualification_observation",
+                "Juan Perez",
+            ),
+            "vacancy title": ("vacancies", 0, "title", "Juan Perez"),
+            "vacancy duplicate fingerprint": ("vacancies", 0, "duplicate_fingerprint", "juan-perez"),
+        }
+        for label, (collection, index, field, marker) in cases.items():
+            with self.subTest(field=label):
+                value = self.complete()
+                value[collection][index][field] = marker
+                errors = self.assert_invalid(
+                    value, "research contains forbidden private or raw content"
+                )
+                self.assertNotIn(marker, "\n".join(errors))
+
+    def test_legitimate_company_and_role_strings_remain_valid(self) -> None:
+        value = self.complete()
+        value["employers"][0]["display_name"] = "Acme Corp"
+        value["vacancies"][0]["title"] = "Platform Engineering Manager"
+        self.assertEqual([], self.validator.validate_research(value))
+
     def test_example_fixture_urls_are_rejected_outside_the_synthetic_fixture_boundary(self) -> None:
         value = self.complete()
         value["vacancies"][0]["source_url"] = "https://example.com/careers/a"

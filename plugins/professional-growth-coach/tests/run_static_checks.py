@@ -16918,41 +16918,57 @@ def validate_installed_cache_inventory(cache_root: Path) -> list[str]:
     return errors
 
 
+def _has_repository_context() -> bool:
+    """Return whether repository-level fixtures and privacy tooling are available."""
+    repository_root = PLUGIN_ROOT.parents[1]
+    return (
+        (repository_root / "plugins" / "professional-growth-coach").resolve()
+        == PLUGIN_ROOT.resolve()
+        and
+        (repository_root / "scripts" / "check_repository_privacy.py").is_file()
+        and (repository_root / "tests" / "evals").is_dir()
+    )
+
+
 def main() -> int:
     errors: list[str] = []
     errors.extend(validate_release_inventory(PLUGIN_ROOT))
-    harness = PLUGIN_ROOT / "tests" / "test_private_schema_conformance.py"
-    harness_result = run_private_schema_harness(harness)
-    if harness_result is None:
-        errors.append(f"private schema conformance harness timed out after 30s ({harness})")
-    else:
-        errors.extend(validate_harness_result(harness, harness_result))
+    repository_context = _has_repository_context()
+    if repository_context:
+        harness = PLUGIN_ROOT / "tests" / "test_private_schema_conformance.py"
+        harness_result = run_private_schema_harness(harness)
+        if harness_result is None:
+            errors.append(f"private schema conformance harness timed out after 30s ({harness})")
+        else:
+            errors.extend(validate_harness_result(harness, harness_result))
     if errors:
         for error in errors:
             print(f"ERROR: {error}", file=sys.stderr)
         return 1
-    handoff_harness = PLUGIN_ROOT / "tests" / "test_dossier_recruiter_practice_handoff.py"
-    handoff_result = run_dossier_practice_handoff_harness(handoff_harness)
-    if handoff_result is None:
-        errors.append(
-            f"dossier practice handoff conformance harness timed out after 30s ({handoff_harness})"
-        )
-    else:
-        errors.extend(
-            validate_dossier_practice_handoff_harness_result(
-                handoff_harness, handoff_result
+    if repository_context:
+        handoff_harness = PLUGIN_ROOT / "tests" / "test_dossier_recruiter_practice_handoff.py"
+        handoff_result = run_dossier_practice_handoff_harness(handoff_harness)
+        if handoff_result is None:
+            errors.append(
+                f"dossier practice handoff conformance harness timed out after 30s ({handoff_harness})"
             )
-        )
+        else:
+            errors.extend(
+                validate_dossier_practice_handoff_harness_result(
+                    handoff_harness, handoff_result
+                )
+            )
     if errors:
         for error in errors:
             print(f"ERROR: {error}", file=sys.stderr)
         return 1
-    errors.extend(
-        validate_executive_dossier_package(PLUGIN_ROOT, PLUGIN_ROOT.parents[1])
-    )
-    errors.extend(
-        validate_market_dossier_package(PLUGIN_ROOT, PLUGIN_ROOT.parents[1])
-    )
+    if repository_context:
+        errors.extend(
+            validate_executive_dossier_package(PLUGIN_ROOT, PLUGIN_ROOT.parents[1])
+        )
+        errors.extend(
+            validate_market_dossier_package(PLUGIN_ROOT, PLUGIN_ROOT.parents[1])
+        )
     errors.extend(validate_renderer_asset_paths())
     errors.extend(validate_design_token_palette())
     manifest_path = PLUGIN_ROOT / ".codex-plugin" / "plugin.json"
@@ -16980,9 +16996,10 @@ def main() -> int:
     for skill in EXPECTED_SKILLS:
         check_skill(skill, descriptions, errors)
     check_markdown_links(errors)
-    check_with_skill_evals(errors)
-    check_final_evals(errors)
-    check_executive_dossier_pressure_summary(errors)
+    if repository_context:
+        check_with_skill_evals(errors)
+        check_final_evals(errors)
+        check_executive_dossier_pressure_summary(errors)
     if len(descriptions) != len(set(descriptions)):
         errors.append("duplicate skill descriptions")
 
@@ -17004,9 +17021,12 @@ def main() -> int:
         for error in errors:
             print(f"ERROR: {error}", file=sys.stderr)
         return 1
-    print("private schema conformance passed")
-    print("dossier practice handoff conformance passed")
-    print("static checks passed")
+    if repository_context:
+        print("private schema conformance passed")
+        print("dossier practice handoff conformance passed")
+        print("static checks passed")
+    else:
+        print("static package checks passed; repository conformance not bundled")
     return 0
 
 

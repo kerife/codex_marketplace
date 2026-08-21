@@ -33,6 +33,12 @@ _CANDIDATE_SINGLE_NAME_EXCLUSIONS = frozenset(
         "developer", "engineer", "engineering", "manager", "specialist", "sre",
     }
 )
+_COMMON_GIVEN_NAMES = frozenset(
+    {
+        "ana", "carlos", "jane", "juan", "jose", "joseph", "john", "maria",
+        "michael", "miguel", "robert", "sofia", "sophia", "david", "luis",
+    }
+)
 
 
 def contains_unmarked_candidate_identity(value: object) -> bool:
@@ -65,6 +71,23 @@ def contains_unmarked_candidate_identity(value: object) -> bool:
             for token in (first, second)
         }
         if normalized.isdisjoint(_SAFE_STANDALONE_TERMS | _CANDIDATE_SINGLE_NAME_EXCLUSIONS):
+            return True
+    return False
+
+
+def contains_candidate_like_name(value: object) -> bool:
+    """Reject a bounded set of common human-name shapes in public metadata."""
+    if not isinstance(value, str):
+        return False
+    normalized = unicodedata.normalize("NFKC", value)
+    for match in re.finditer(
+        r"\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})\b",
+        normalized,
+    ):
+        if match.group(1).casefold() in _COMMON_GIVEN_NAMES:
+            return True
+    for match in re.finditer(r"\b([a-z][a-záéíóúñ]{2,})-([a-záéíóúñ]{2,})\b", normalized.casefold()):
+        if match.group(1) in _COMMON_GIVEN_NAMES:
             return True
     return False
 
@@ -139,16 +162,40 @@ def target_research_contains_candidate_identity(value: object) -> bool:
         strict_scalars.append(value["search_limit"].get("limitation"))
     for employer in value.get("employers", ()):
         if isinstance(employer, Mapping):
-            strict_scalars.extend(employer.get(field) for field in ("display_name", "qualification_observation", "official_source_title", "official_source_url"))
+            strict_scalars.extend(
+                employer.get(field)
+                for field in (
+                    "display_name",
+                    "qualification_observation",
+                    "official_source_title",
+                    "official_source_url",
+                )
+            )
     for vacancy in value.get("vacancies", ()):
         if not isinstance(vacancy, Mapping):
             continue
         vacancy_titles.append(vacancy.get("title"))
-        strict_scalars.extend(vacancy.get(field) for field in ("location", "source_url", "official_referrer_url"))
+        strict_scalars.extend(
+            vacancy.get(field)
+            for field in (
+                "title",
+                "location",
+                "duplicate_fingerprint",
+                "source_url",
+                "official_referrer_url",
+            )
+        )
         for collection, field in ((vacancy.get("eligibility_gates", ()), "observed_condition"), (vacancy.get("requirements", ()), "source_paraphrase")):
             if isinstance(collection, Sequence) and not isinstance(collection, (str, bytes, bytearray)):
                 strict_scalars.extend(item.get(field) for item in collection if isinstance(item, Mapping))
-    return any(contains_candidate_identity(scalar) for scalar in strict_scalars) or any(contains_candidate_identity(title, vacancy_title=True) for title in vacancy_titles)
+    return any(
+        contains_candidate_identity(scalar) or contains_candidate_like_name(scalar)
+        for scalar in strict_scalars
+    ) or any(
+        contains_candidate_identity(title, vacancy_title=True)
+        or contains_candidate_like_name(title)
+        for title in vacancy_titles
+    )
 
 
 def contains_unicode_controls(value: object) -> bool:
