@@ -899,6 +899,47 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         self.assertEqual("decide-now-authorization-title", projected["authorization_anchor"])
         self.assertEqual("Nombre", projected["inspection_state"]["target_label"])
 
+    def test_market_projection_maps_candidate_declined_and_failed_inspection_states(self) -> None:
+        dossier, market, _research, _alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        for target, expected_state, reason, decision in (
+            ("experience", "candidate_supplied", "candidate_material_supplied", None),
+            ("certifications", "declined", "inspection_declined", "declined_for_session"),
+            ("education", "failed", "authorized_inspection_failed", "authorized_inspection_failed"),
+        ):
+            with self.subTest(target=target):
+                candidate = copy.deepcopy(dossier)
+                priority = copy.deepcopy(candidate["priorities"][0])
+                priority["target_section"] = target
+                priority["evidence_ids"] = []
+                row = next(item for item in candidate["section_coverage"] if item["section"] == target)
+                row["availability"] = "candidate_supplied" if expected_state == "candidate_supplied" else "unavailable"
+                row["evidence_state"] = "candidate_reported" if expected_state == "candidate_supplied" else "unknown"
+                row["reason"] = reason
+                if decision is None:
+                    row.pop("inspection_request", None)
+                else:
+                    row["inspection_request"]["decision"] = decision
+                projected = self.renderer._derive_decision_trace(priority, candidate, market, "es")
+                self.assertEqual(expected_state, projected["inspection_state"]["state"])
+                self.assertNotIn("authorization_anchor", projected)
+
+    def test_market_projection_rejects_raw_paraphrase_values_without_echo(self) -> None:
+        dossier, market, research, alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        for value in ("https://example.invalid/profile", "/private/path/profile.json"):
+            with self.subTest(value=value):
+                invalid = copy.deepcopy(dossier)
+                invalid["evidence"][0]["paraphrase"] = value
+                with self.assertRaises(self.renderer.DossierValidationError) as context:
+                    self.renderer.render_dossier_html(
+                        invalid, market, market_research=research, market_alignment=alignment,
+                    )
+                errors = "\n".join(context.exception.errors)
+                self.assertNotIn(value, errors)
+
     def test_market_projection_rejects_unresolved_or_wrong_section_ids_without_echo(self) -> None:
         dossier, market, research, alignment = market_case(
             "complete-five-es.json", "scenario-a-es.json"
