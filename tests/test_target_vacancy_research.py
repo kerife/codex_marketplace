@@ -550,10 +550,54 @@ class TargetVacancyResearchTests(unittest.TestCase):
         )
         self.assertNotIn("script", "\n".join(errors).casefold())
 
+    def test_non_allowlisted_obfuscated_identity_forms_are_rejected_without_echo(self) -> None:
+        cases = (
+            (
+                "employer percent-encoded name",
+                ("employers", 0, "display_name"),
+                "margaret%20thatcher",
+            ),
+            (
+                "vacancy HTML-entity name",
+                ("vacancies", 0, "title"),
+                "rachel&#46;green engineer",
+            ),
+            (
+                "location leetspeak name",
+                ("vacancies", 0, "location"),
+                "m4rg4ret-th4tcher",
+            ),
+            (
+                "fingerprint compact name",
+                ("vacancies", 0, "duplicate_fingerprint"),
+                "rachelgreen-engineer",
+            ),
+        )
+        for label, (collection, index, field), marker in cases:
+            with self.subTest(field=label):
+                value = self.complete()
+                value[collection][index][field] = marker
+                errors = self.assert_invalid(
+                    value, "research contains forbidden private or raw content"
+                )
+                self.assertNotIn(marker, "\n".join(errors))
+
+        encoded_url = self.complete()
+        encoded_url["vacancies"][0]["source_url"] = (
+            "https://www.rfc-editor.org/rfc/rfc2606#fixture-v-001/margaret%20thatcher"
+        )
+        errors = self.assert_invalid(
+            encoded_url, "research contains forbidden private or raw content"
+        )
+        self.assertNotIn("margaret", "\n".join(errors).casefold())
+
     def test_obfuscated_controls_remain_valid(self) -> None:
         for field, value in (
             ("title", "Google Cloud Platform Engineer"),
             ("title", "Terraform Module Maintainer"),
+            ("title", "Kubernetes Operator"),
+            ("title", "Open Source Incident Response"),
+            ("title", "Blue Origin Platform Engineer"),
             ("duplicate_fingerprint", "cloud-native"),
             ("duplicate_fingerprint", "terraform-module"),
         ):

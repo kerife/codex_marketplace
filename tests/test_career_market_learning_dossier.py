@@ -227,6 +227,15 @@ class CareerMarketLearningDossierTests(unittest.TestCase):
             ("employers", 0, "display_name", "john.smith"),
             ("vacancies", 0, "title", "%6a%6f%68%6e%20%73%6d%69%74%68 engineer"),
             ("vacancies", 0, "duplicate_fingerprint", "johnsmith-engineer"),
+            ("employers", 0, "display_name", "margaret%20thatcher"),
+            ("vacancies", 0, "title", "rachel&#46;green engineer"),
+            ("vacancies", 0, "duplicate_fingerprint", "rachelgreen-engineer"),
+            (
+                "vacancies",
+                0,
+                "source_url",
+                "https://www.rfc-editor.org/rfc/rfc2606#fixture-v-001/margaret%20thatcher",
+            ),
         )
         for collection, index, field, marker in cases:
             with self.subTest(field=field, marker=marker):

@@ -25,7 +25,7 @@ _IDENTITY_TOKEN = re.compile(r"[^\W\d_]{2,}(?:['’][^\W\d_]{2,})*|[^\W\d_](?:\.
 _CANDIDATE_MARKERS = frozenset({"candidate", "applicant", "candidato", "candidata"})
 _ROLE_TITLE_HEADS = frozenset({"architect", "developer", "engineer", "engineering", "manager", "specialist", "sre"})
 _IDENTITY_LABELS = frozenset({"identity", "identidad", "name", "named", "nombre", "perfil", "profile", "llamado", "llamada"})
-_ROLE_PRODUCT_TERMS = frozenset({"acquisition", "architect", "career", "careers", "cloud", "developer", "development", "devops", "engineer", "engineering", "experience", "index", "infrastructure", "jobs", "management", "manager", "operations", "platform", "portal", "product", "products", "reliability", "role", "search", "service", "services", "site", "software", "specialist", "sre", "success", "systems", "talent", "team", "workflow", "automation"})
+_ROLE_PRODUCT_TERMS = frozenset({"acquisition", "architect", "automation", "blue", "career", "careers", "cloud", "developer", "development", "devops", "engineer", "engineering", "experience", "incident", "index", "infrastructure", "jobs", "kubernetes", "management", "manager", "open", "operator", "operations", "origin", "platform", "portal", "product", "products", "reliability", "response", "role", "search", "service", "services", "site", "software", "source", "specialist", "sre", "success", "systems", "talent", "team", "workflow"})
 _ROLE_TITLE_TECHNICAL_MODIFIERS = _ROLE_PRODUCT_TERMS | frozenset({"analytics", "api", "architecture", "data", "gateway", "journey", "mesh", "principal", "security"})
 _PUBLIC_RESEARCH_TERMS = frozenset({"evidence", "free", "match", "material", "only", "reference", "references", "reported", "supplied"})
 _SAFE_STANDALONE_TERMS = _ROLE_PRODUCT_TERMS | _PUBLIC_RESEARCH_TERMS
@@ -39,7 +39,7 @@ _COMMON_GIVEN_NAMES = frozenset(
     {
         "alicia", "ana", "carlos", "david", "elodie", "emily", "jane", "jean",
         "john", "jordan", "juan", "jose", "joseph", "kevin", "luc", "luis",
-        "maria", "michael", "miguel", "robert", "sofia", "sophia", "zhang",
+        "margaret", "maria", "michael", "miguel", "rachel", "robert", "sofia", "sophia", "zhang",
     }
 )
 _ORGANIZATION_AND_LOCATION_TERMS = frozenset(
@@ -168,6 +168,9 @@ def contains_obfuscated_candidate_identity(value: object) -> bool:
         if parsed is not None:
             inspection_text = f"{parsed.path} {parsed.query} {parsed.fragment}"
     stopwords = _PERSON_NAME_STOPWORDS | _ORGANIZATION_AND_LOCATION_TERMS
+    obfuscation_hint = bool(
+        re.search(r"%[0-9a-f]{2}|&#(?:x[0-9a-f]+|[0-9]+);|[A-Za-z]\d[A-Za-z]", value, re.IGNORECASE)
+    )
     if _OBFUSCATED_EMAIL.search(inspection_text) or _EMAIL_ADDRESS.search(inspection_text):
         return True
     if _HTML_TAG.search(normalized_source):
@@ -179,11 +182,23 @@ def contains_obfuscated_candidate_identity(value: object) -> bool:
             and second not in stopwords
             or second in _COMMON_GIVEN_NAMES
             and first not in stopwords
+            or obfuscation_hint
+            and len(first) >= 4
+            and len(second) >= 4
+            and first not in stopwords
+            and second not in stopwords
         ):
             return True
     for match in _LOWERCASE_NAME_PAIR.finditer(inspection_text):
         first, second = match.groups()
-        if first in _COMMON_GIVEN_NAMES and second not in stopwords:
+        if (
+            first in _COMMON_GIVEN_NAMES and second not in stopwords
+            or obfuscation_hint
+            and len(first) >= 4
+            and len(second) >= 4
+            and first not in stopwords
+            and second not in stopwords
+        ):
             return True
     for match in _INITIAL_NAME_PAIR.finditer(inspection_text):
         _, second = match.groups()
