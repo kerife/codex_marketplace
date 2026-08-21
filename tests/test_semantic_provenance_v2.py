@@ -953,6 +953,52 @@ class CareerLearningDecisionV2Tests(unittest.TestCase):
                 research, market, dossier, provider, [self.request("build_bounded_proof")]
             )
 
+    def test_limited_en_goldens_recompute_from_the_named_committed_source(self):
+        source_path = DOSSIER_FIXTURES / "scenario-c-market-en.json"
+        self.assertTrue(
+            source_path.is_file(),
+            "the limited EN provenance source must be a committed fixture",
+        )
+        research = load_json(RESEARCH_FIXTURES / "limited-four-en.json")
+        dossier = load_json(source_path)
+        provider = load_json(PROVIDER_FIXTURES / "limited-en.json")
+        market = load_json(
+            ROOT / "tests/evals/with-skill/fixtures/career-market-learning-dossier-v2/limited-four-en.json"
+        )
+        learning = load_json(
+            ROOT / "tests/evals/with-skill/fixtures/career-learning-decision-v2/limited-en.json"
+        )
+        source_snapshot = DOSSIER_SNAPSHOT.snapshot_for_dossier(dossier)
+        self.assertEqual(source_snapshot, market["source_executive_dossier_snapshot"])
+        self.assertEqual(source_snapshot, learning["source_dossier_snapshot"])
+        self.assertEqual(
+            market, MARKET_V2_BUILDER.build_market_dossier_v2(research, dossier)
+        )
+        self.assertEqual(
+            [], MARKET_V2_VALIDATOR.validate_market_dossier_v2(market, research, dossier)
+        )
+        requests = [
+            {
+                field: row[field]
+                for field in (
+                    "decision_rank", "decision_code", "source_signals", "provider_option_id"
+                )
+            }
+            for row in learning["decisions"]
+        ]
+        self.assertEqual(
+            learning,
+            LEARNING_V2_BUILDER.build_learning_bundle_v2(
+                research, market, dossier, provider, requests
+            ),
+        )
+        self.assertEqual(
+            [],
+            LEARNING_V2_VALIDATOR.validate_learning_bundle_v2(
+                learning, research, market, dossier, provider
+            ),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

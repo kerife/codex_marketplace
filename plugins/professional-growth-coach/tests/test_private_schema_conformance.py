@@ -170,7 +170,7 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         dossier_schema = self._schema("career-market-learning-dossier-v2.schema.json")
         cases = (
             ("complete-five-es.json", "scenario-a-es.json"),
-            ("limited-four-en.json", "scenario-c-en.json"),
+            ("limited-four-en.json", "scenario-c-market-en.json"),
             ("unavailable-es.json", "scenario-a-es.json"),
         )
         for research_name, dossier_name in cases:
@@ -262,6 +262,13 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         dossier = helper.make_v2_dossier()
         schema = self._schema("executive-career-dossier-v2.schema.json")
         self.assertEqual([], validate_schema_instance(dossier, schema))
+        validator = helper.load_validator()
+        fixture_root = ROOT.parent.parent / "tests/evals/with-skill/fixtures/executive-career-dossier-v2"
+        for name in ("scenario-a-es.json", "scenario-c-en.json", "scenario-c-market-en.json"):
+            with self.subTest(name=name):
+                fixture = json.loads((fixture_root / name).read_text(encoding="utf-8"))
+                self.assertEqual([], validate_schema_instance(fixture, schema))
+                self.assertEqual([], validator.validate_dossier(fixture))
         missing_ledger = copy.deepcopy(dossier)
         del missing_ledger["section_coverage"]
         self.assertTrue(validate_schema_instance(missing_ledger, schema))

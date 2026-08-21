@@ -496,6 +496,7 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "assets/executive-career-dossier-v2.css",
                 "tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-a-es.json",
                 "tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-c-en.json",
+                "tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-c-market-en.json",
             ),
             checker_module.EXECUTIVE_DOSSIER_V2_PACKAGE_PATHS,
         )

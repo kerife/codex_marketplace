@@ -214,6 +214,7 @@ EXECUTIVE_DOSSIER_V2_PACKAGE_PATHS = (
     "assets/executive-career-dossier-v2.css",
     "tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-a-es.json",
     "tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-c-en.json",
+    "tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-c-market-en.json",
 )
 MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/candidate-market-alignment-v1.schema.json",
@@ -958,6 +959,11 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         ("limited-four-en.json", "scenario-c-en.json"),
         ("unavailable-es.json", "scenario-a-es.json"),
     )
+    v2_cases = (
+        ("complete-five-es.json", "scenario-a-es.json"),
+        ("limited-four-en.json", "scenario-c-market-en.json"),
+        ("unavailable-es.json", "scenario-a-es.json"),
+    )
     for market_name, dossier_name in cases:
         research_path = fixture_root / "target-vacancy-research" / market_name
         market_path = fixture_root / "career-market-learning-dossier" / market_name
@@ -1083,7 +1089,7 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             if not isinstance(receipt, dict) or receipt.get("artifact_type") != "text/html":
                 errors.append(f"{market_name}: market CLI receipt is invalid")
 
-    for market_name, dossier_name in cases:
+    for market_name, dossier_name in v2_cases:
         try:
             research = json.loads((fixture_root / "target-vacancy-research" / market_name).read_text(encoding="utf-8"))
             dossier = json.loads((fixture_root / "executive-career-dossier-v2" / dossier_name).read_text(encoding="utf-8"))
@@ -1100,7 +1106,7 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
 
     learning_cases = (
         ("complete-es.json", "complete-five-es.json", "scenario-a-es.json", "complete-es.json"),
-        ("limited-en.json", "limited-four-en.json", "scenario-c-en.json", "limited-en.json"),
+        ("limited-en.json", "limited-four-en.json", "scenario-c-market-en.json", "limited-en.json"),
         ("unavailable-es.json", "unavailable-es.json", "scenario-a-es.json", "unavailable-es.json"),
     )
     for learning_name, research_name, dossier_name, provider_name in learning_cases:
@@ -1109,10 +1115,6 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             dossier = json.loads((fixture_root / "executive-career-dossier-v2" / dossier_name).read_text(encoding="utf-8"))
             provider = json.loads((fixture_root / "career-learning-provider-research" / provider_name).read_text(encoding="utf-8"))
             expected_learning = json.loads((fixture_root / "career-learning-decision-v2" / learning_name).read_text(encoding="utf-8"))
-            if learning_name == "limited-en.json":
-                dossier["requested_technology_terms"] = [{"term": "Terraform", "claim_ids": ["C-002"]}]
-                dossier["claims"][1]["paraphrase"] = "Terraform experience was reported and needs bounded confirmation."
-                dossier["evidence"][2]["paraphrase"] = "Terraform experience was reported for bounded review."
             market = market_v2_builder.build_market_dossier_v2(research, dossier)
             requests = [
                 {field: row[field] for field in ("decision_rank", "decision_code", "source_signals", "provider_option_id")}
