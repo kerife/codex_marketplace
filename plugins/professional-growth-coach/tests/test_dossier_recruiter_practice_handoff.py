@@ -9,6 +9,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from validate_private_schema_conformance import validate_schema_instance
 
 ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_CONTEXT = (
+    (ROOT.parent.parent / "tests" / "evals" / "with-skill" / "fixtures").is_dir()
+    and (ROOT.parent.parent / "scripts" / "check_repository_privacy.py").is_file()
+)
+if not REPOSITORY_CONTEXT:
+    raise unittest.SkipTest("repository conformance requires repository context")
 sys.path.insert(0, str(ROOT / "scripts"))
 import build_dossier_recruiter_practice_handoff as handoff_builder
 from build_dossier_recruiter_practice_handoff import build_handoff

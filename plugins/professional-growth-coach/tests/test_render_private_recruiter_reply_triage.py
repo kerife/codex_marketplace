@@ -7,6 +7,11 @@ from pathlib import Path
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = PLUGIN_ROOT.parent.parent
+if not (
+    (REPO_ROOT / "tests" / "evals" / "with-skill" / "fixtures").is_dir()
+    and (REPO_ROOT / "scripts" / "check_repository_privacy.py").is_file()
+):
+    raise unittest.SkipTest("repository conformance requires repository context")
 SCRIPTS = PLUGIN_ROOT / "scripts"
 FIXTURES = REPO_ROOT / "tests" / "evals" / "with-skill" / "fixtures" / "private-recruiter-reply-triage"
 sys.path.insert(0, str(SCRIPTS))

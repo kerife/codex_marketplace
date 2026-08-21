@@ -47,6 +47,15 @@ immutable stage-zero blob by object ID, with regular-file, size, and UTF-8 check
 ordinary ignored, unstaged artifacts remain local. Findings expose only path,
 rule ID, and count.
 
+When the same runner is executed from an extracted marketplace cache, it enters
+package-only mode. It validates the bundled schemas, scripts, assets, skills,
+and package-local tests with the plugin root as the path anchor, then reports
+`repository conformance not bundled`. Root `tests/evals` fixtures, repository
+privacy/integration gates, and the official release validator remain
+repository-only; a cache run must not silently turn missing fixtures into a
+passing full-suite claim. Any test selector not explicitly classified as
+repository-only must still fail on an import or fixture error.
+
 The dossier's deterministic content boundary is deliberately explicit. Every
 unsupported technology from the request must be recorded in
 `requested_technology_terms`, bound to the exact claim IDs and evidence paraphrases;

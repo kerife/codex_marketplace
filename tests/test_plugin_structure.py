@@ -1298,5 +1298,35 @@ raise SystemExit(64)
             )
         self.assertEqual(0, result.returncode, result.stderr)
 
+    def test_extracted_plugin_test_discovery_has_no_fixture_file_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            extracted = Path(temporary_directory) / "professional-growth-coach"
+            shutil.copytree(
+                PLUGIN_ROOT,
+                extracted,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    "-m",
+                    "unittest",
+                    "discover",
+                    "-s",
+                    str(extracted / "tests"),
+                    "-p",
+                    "test*.py",
+                    "-q",
+                ],
+                capture_output=True,
+                text=True,
+                env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+                check=False,
+            )
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertNotIn("FileNotFoundError", result.stdout + result.stderr)
+        self.assertNotIn("ModuleNotFoundError", result.stdout + result.stderr)
+
 if __name__ == "__main__":
     unittest.main()

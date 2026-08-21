@@ -52,6 +52,10 @@ installed_cache_personal_metadata_gate: `passed`
 
 installed_cache_artifact_hygiene: `full_inventory_sha256_equal; bytecode=0; pycache_dirs=0`
 
+installed_package_static_scope: `package_static_checks=passed; repository_conformance=repository_only_not_bundled`
+
+installed_test_discovery_scope: `package_local_and_mixed_safe; repository_only_selectors_skipped_outside_source_checkout`
+
 installed_direct_smokes: `6/6`
 
 installed_validator_smokes: `4/4`

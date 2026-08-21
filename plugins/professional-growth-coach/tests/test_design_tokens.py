@@ -6,8 +6,8 @@ import unittest
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[3]
-SCRIPT = ROOT / "plugins" / "professional-growth-coach" / "scripts" / "validate_design_tokens.py"
+PLUGIN_ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = PLUGIN_ROOT / "scripts" / "validate_design_tokens.py"
 
 
 def load_checker():
@@ -30,7 +30,7 @@ class DesignTokenContractTests(unittest.TestCase):
     def test_canonical_assets_pass_their_declared_family_allowlist(self):
         checker = load_checker()
 
-        self.assertEqual([], checker.validate_palette_assets(ROOT / "plugins" / "professional-growth-coach"))
+        self.assertEqual([], checker.validate_palette_assets(PLUGIN_ROOT))
 
     def test_unapproved_color_is_rejected_without_echoing_css(self):
         checker = load_checker()

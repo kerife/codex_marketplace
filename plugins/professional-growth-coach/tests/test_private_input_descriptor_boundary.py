@@ -10,6 +10,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parent.parent
+REPOSITORY_CONTEXT = (
+    (REPO / "tests" / "evals" / "with-skill" / "fixtures").is_dir()
+    and (REPO / "scripts" / "check_repository_privacy.py").is_file()
+)
 SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
@@ -163,6 +167,13 @@ CLI_RECURSION_CASES = (
 
 
 class PrivateInputDescriptorBoundaryTests(unittest.TestCase):
+    def setUp(self):
+        if not REPOSITORY_CONTEXT and self._testMethodName in {
+            "test_intermediate_parent_symlink_is_rejected_by_every_private_loader",
+            "test_regular_file_remains_accepted_by_every_private_loader",
+        }:
+            self.skipTest("repository conformance requires repository context")
+
     def test_nul_in_parent_path_is_rejected_with_bounded_loader_error(self):
         with tempfile.TemporaryDirectory() as directory:
             malformed = Path(directory) / "bad\x00parent" / "input.json"

@@ -16,6 +16,32 @@ from validate_private_schema_conformance import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_CONTEXT = (
+    (ROOT.parent.parent / "tests" / "evals" / "with-skill" / "fixtures").is_dir()
+    and (ROOT.parent.parent / "scripts" / "check_repository_privacy.py").is_file()
+)
+REPOSITORY_ONLY_TESTS = {
+    "test_career_learning_decision_schema_accepts_evaluated_and_unavailable_states",
+    "test_career_market_dossier_schemas_accept_closed_synthetic_states",
+    "test_dependency_free_checker_rejects_nested_quantifier_patterns",
+    "test_dossier_handoff_rejects_unlabelled_person_name_source_fact",
+    "test_dossier_schema_prose_mutations_match_custom_unicode_boundary",
+    "test_executive_dossier_v2_runtime_uses_the_schema_checker",
+    "test_executive_dossier_v2_schema_accepts_ledger_and_closes_new_fields",
+    "test_handoff_pair_rejects_an_unrelated_shape_valid_projection",
+    "test_practice_question_rank_custom_validator_accepts_json_numeric_one",
+    "test_practice_question_rank_custom_validator_matches_schema_for_boolean_values",
+    "test_practice_schema_binds_source_to_snapshot_prefix",
+    "test_practice_triage_handoff_question_kind_is_closed_and_required",
+    "test_practice_v2_accepts_triage_content_bound_snapshot_and_v1_rejects_it",
+    "test_practice_v2_schema_accepts_independent_ui_and_content_locales",
+    "test_schema_prose_mutations_match_custom_unicode_boundary",
+    "test_target_vacancy_research_schema_accepts_closed_synthetic_states",
+    "test_triage_identifier_patterns_require_json_strings_in_v1_and_v2",
+    "test_triage_schema_uses_canonical_screen_opening_scope",
+    "test_triage_v2_schema_accepts_independent_ui_and_content_locales",
+    "test_triage_v2_snapshot_binding_rejects_content_drift",
+}
 sys.path.insert(0, str(ROOT / "scripts"))
 from build_dossier_recruiter_practice_handoff import build_handoff
 from validate_dossier_recruiter_practice_handoff import validate_handoff
@@ -56,6 +82,10 @@ V2_TRIAGE_PRACTICE_SNAPSHOT = (
 
 
 class PrivateSchemaConformanceTests(unittest.TestCase):
+    def setUp(self):
+        if not REPOSITORY_CONTEXT and self._testMethodName in REPOSITORY_ONLY_TESTS:
+            self.skipTest("repository conformance requires repository context")
+
     def _schema(self, name):
         return json.loads((ROOT / "schemas" / name).read_text(encoding="utf-8"))
 

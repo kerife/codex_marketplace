@@ -10,6 +10,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
+REPOSITORY_CONTEXT = (
+    (ROOT.parent.parent / "tests" / "evals" / "with-skill" / "fixtures").is_dir()
+    and (ROOT.parent.parent / "scripts" / "check_repository_privacy.py").is_file()
+)
 FIXTURE = (
     ROOT.parent.parent
     / "tests"
@@ -37,6 +41,10 @@ renderer = _load_script("render_private_recruiter_reply_triage")
 
 
 class PrivateRecruiterReplyTriageIdentityTests(unittest.TestCase):
+    def setUp(self):
+        if not REPOSITORY_CONTEXT and self._testMethodName != "test_invalid_utf8_input_is_reported_without_traceback":
+            self.skipTest("repository conformance requires repository context")
+
     def test_invalid_utf8_input_is_reported_without_traceback(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "invalid.json"

@@ -26,6 +26,15 @@ By default, a normal local LinkedIn dossier also performs a read-only bounded se
 
 The private dossier shows reproducible evidence alignment and `k/N` recurrence over the actual included sample. This does not change the LinkedIn profile score, predict hiring fit, or authorize applying, messaging, connecting, following, publishing, enrolling, or purchasing. Course and certification recommendations remain unevaluated until the separate learning step.
 
+### Installed test scope
+
+An extracted marketplace cache contains the package-local validators, renderers,
+schemas, and their package tests. Repository-only conformance tests remain in
+the source checkout because they depend on root `tests/evals` fixtures and
+repository integration tools; their absence from an installed cache is not a
+runtime or package failure. The installed static runner reports package checks
+separately and never claims repository conformance from an extracted cache.
+
 ## Installation
 
 This source tree is repo-local at `plugins/professional-growth-coach`. Source edits do not update the installed plugin cache. A separate explicitly authorized installation is required to publish a source increment into the local marketplace cache; existing chats may continue using their loaded version, so verify the new installation from a fresh chat. Use the repo-local marketplace workflow only after the exact target and command are approved.

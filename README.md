@@ -45,6 +45,12 @@ The official plugin validator additionally requires the `PyYAML` package in the
 active Python environment. Do not install dependencies implicitly in release
 automation; install them explicitly when setting up a development environment.
 
+An installed plugin cache is validated against its bundled package surface.
+Repository-only conformance fixtures, root privacy/integration gates, and the
+official release validator are source-checkout gates; they are not bundled or
+guaranteed to run from an extracted cache. The cache runner reports this scope
+explicitly rather than presenting skipped repository checks as a full-suite pass.
+
 ## Plugin scope
 
 Professional Growth Coach is a local Codex plugin for evidence-based professional-growth coaching. It routes one candidate case at a time, keeps candidate records isolated, and sends work to focused modules:
