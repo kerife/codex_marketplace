@@ -843,7 +843,7 @@ def _render_decision_trace(
             f'<a href="#{html.escape(str(trace["authorization_anchor"]), quote=True)}">'
             f'{TRACE_INSPECTION_LINK_LABELS[locale]}</a>'
         )
-    return f'''<section class="decision-trace" aria-labelledby="decision-trace-title-{rank}">
+    return f'''<section class="decision-trace" aria-labelledby="decision-trace-title-{rank}" aria-describedby="decision-trace-boundary-{rank}">
             <h4 id="decision-trace-title-{rank}" class="decision-trace-title">{html.escape(str(priority['title']), quote=True)}</h4>
             <ol class="decision-trace-steps">
               <li id="decision-trace-priority-{rank}" class="decision-trace-step">
@@ -868,7 +868,7 @@ def _render_decision_trace(
                 {authorization_link}
               </li>
             </ol>
-            <p class="decision-trace-boundary">{TRACE_BOUNDARY[locale]}</p>
+            <p id="decision-trace-boundary-{rank}" class="decision-trace-boundary">{TRACE_BOUNDARY[locale]}</p>
           </section>'''
 
 
