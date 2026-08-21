@@ -19,6 +19,9 @@ RESEARCH_FIXTURES = (
 DOSSIER_FIXTURES = (
     ROOT / "tests" / "evals" / "with-skill" / "fixtures" / "executive-career-dossier-v2"
 )
+PROVIDER_FIXTURES = (
+    ROOT / "tests" / "evals" / "with-skill" / "fixtures" / "career-learning-provider-research"
+)
 
 
 def load_sibling(name: str):
@@ -37,6 +40,7 @@ MARKET_V2_BUILDER = load_sibling("build_career_market_learning_dossier_v2.py")
 MARKET_V2_VALIDATOR = load_sibling("validate_career_market_learning_dossier_v2.py")
 RESEARCH = load_sibling("validate_target_vacancy_research.py")
 DOSSIER_SNAPSHOT = load_sibling("dossier_snapshot.py")
+PROVIDER_VALIDATOR = load_sibling("validate_career_learning_provider_research.py")
 
 
 def load_json(path: Path) -> dict[str, object]:
@@ -452,6 +456,124 @@ class CareerMarketLearningDossierV2Tests(unittest.TestCase):
         self.assertEqual([], market["matrix_rows"])
         self.assertEqual([], market["recurrence_rows"])
         self.assertEqual([], MARKET_V2_VALIDATOR.validate_market_dossier_v2(market, research, dossier))
+
+
+class CareerLearningProviderResearchTests(unittest.TestCase):
+    def provider_fixture(self, name: str) -> dict[str, object]:
+        return load_json(PROVIDER_FIXTURES / name)
+
+    def assert_invalid_without_echo(self, value: object, sentinel: str) -> None:
+        errors = PROVIDER_VALIDATOR.validate_provider_research(value)
+        self.assertTrue(errors)
+        rendered = "\n".join(errors)
+        self.assertNotIn(sentinel, rendered)
+        self.assertLessEqual(len(rendered.encode("utf-8")), 16_384)
+
+    def test_provider_research_is_independent_closed_and_snapshot_bound(self):
+        provider = self.provider_fixture("complete-es.json")
+        self.assertEqual([], PROVIDER_VALIDATOR.validate_provider_research(provider))
+        self.assertRegex(
+            PROVIDER_VALIDATOR.snapshot_for_provider_research(provider),
+            r"\Asnap-provider-sha256-[0-9a-f]{64}\Z",
+        )
+        terraform = next(row for row in provider["options"] if row["option_id"] == "LP-001")
+        self.assertEqual(["terraform"], terraform["covered_signals"])
+        argo = next(row for row in provider["options"] if row["option_id"] == "LP-002")
+        self.assertEqual([], argo["covered_signals"])
+
+    def test_provider_research_rejects_caller_semantics_and_private_values_without_echo(self):
+        provider = self.provider_fixture("complete-es.json")
+        for field, value in (
+            ("provider", "Synthetic Candidate"),
+            ("url", "https://www.cncf.io/terraform-course"),
+            ("coverage_basis", "caller_claim"),
+        ):
+            with self.subTest(field=field):
+                altered = copy.deepcopy(provider)
+                altered["options"][0][field] = value
+                self.assert_invalid_without_echo(altered, str(value))
+
+    def test_provider_research_rejects_closed_structure_and_semantic_mutations(self):
+        provider = self.provider_fixture("complete-es.json")
+        sentinel = "provider-malicious-sentinel"
+        cases: list[tuple[str, object]] = []
+
+        duplicate = copy.deepcopy(provider)
+        duplicate["options"][1]["option_id"] = "LP-001"
+        cases.append(("duplicate option id", duplicate))
+        unsorted = copy.deepcopy(provider)
+        unsorted["options"][0]["covered_signals"] = ["terraform", "ansible"]
+        cases.append(("unsorted signals", unsorted))
+        repeated = copy.deepcopy(provider)
+        repeated["options"][0]["covered_signals"] = ["terraform", "terraform"]
+        cases.append(("duplicate signals", repeated))
+        bad_signal = copy.deepcopy(provider)
+        bad_signal["options"][0]["covered_signals"] = [sentinel]
+        cases.append(("invalid signal", bad_signal))
+        future = copy.deepcopy(provider)
+        future["options"][0]["source_date"] = "2099-01-01"
+        cases.append(("future date", future))
+        non_https = copy.deepcopy(provider)
+        non_https["options"][0]["url"] = f"http://{sentinel}.invalid"
+        cases.append(("non https", non_https))
+        userinfo = copy.deepcopy(provider)
+        userinfo["options"][0]["url"] = f"https://{sentinel}@developer.hashicorp.com/learn"
+        cases.append(("credential url", userinfo))
+        host_mismatch = copy.deepcopy(provider)
+        host_mismatch["options"][0]["url"] = f"https://{sentinel}.invalid/terraform"
+        cases.append(("wrong official host", host_mismatch))
+        unknown_provider = copy.deepcopy(provider)
+        unknown_provider["options"][0]["provider"] = sentinel
+        cases.append(("unreviewed provider", unknown_provider))
+        state = copy.deepcopy(provider)
+        state["state"] = "unavailable"
+        cases.append(("unavailable root with options", state))
+        unavailable_coverage = copy.deepcopy(provider)
+        unavailable_coverage["options"][0]["source_state"] = "unavailable"
+        unavailable_coverage["options"][0]["availability"] = "unavailable"
+        cases.append(("unavailable option coverage", unavailable_coverage))
+        bad_basis = copy.deepcopy(provider)
+        bad_basis["options"][0]["coverage_basis"] = sentinel
+        cases.append(("coverage basis", bad_basis))
+        arbitrary = copy.deepcopy(provider)
+        arbitrary["options"][0][sentinel] = True
+        cases.append(("arbitrary field", arbitrary))
+        controls = copy.deepcopy(provider)
+        controls["options"][0]["option"] = f"Safe {chr(0x202e)} {sentinel}"
+        cases.append(("raw control", controls))
+        surrogate = copy.deepcopy(provider)
+        surrogate["options"][0]["source_title"] = f"Safe {chr(0xD800)} {sentinel}"
+        cases.append(("lone surrogate", surrogate))
+        contact = copy.deepcopy(provider)
+        contact["options"][0]["unknowns"] = f"contact {sentinel}@example.invalid"
+        cases.append(("contact data", contact))
+        person = copy.deepcopy(provider)
+        person["options"][0]["option"] = f"Jane Smith {sentinel}"
+        cases.append(("personal data", person))
+        huge = copy.deepcopy(provider)
+        huge["options"][0]["duration"] = sentinel * 600
+        cases.append(("huge text", huge))
+        large_list = copy.deepcopy(provider)
+        large_list["options"] = [copy.deepcopy(provider["options"][0]) for _ in range(151)]
+        cases.append(("huge list", large_list))
+        cyclic: dict[str, object] = {"marker": sentinel}
+        cyclic["cycle"] = cyclic
+        cases.append(("cycle", cyclic))
+        deep: object = {"marker": sentinel}
+        for _ in range(80):
+            deep = {"child": deep}
+        cases.append(("depth", deep))
+
+        for name, altered in cases:
+            with self.subTest(name=name):
+                self.assert_invalid_without_echo(altered, sentinel)
+
+    def test_provider_research_accepts_limited_and_unavailable_closed_states(self):
+        for name in ("limited-en.json", "unavailable-es.json"):
+            with self.subTest(name=name):
+                self.assertEqual(
+                    [], PROVIDER_VALIDATOR.validate_provider_research(self.provider_fixture(name))
+                )
 
 
 if __name__ == "__main__":

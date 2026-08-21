@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/professional-growth-coach/career-learning-provider-research-v1.schema.json",
+  "title": "Career Learning Provider Research v1",
+  "type": "object",
+  "required": ["schema_version", "locale", "as_of_date", "state", "options", "privacy_boundary", "no_external_action"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "career-learning-provider-research-v1"},
+    "locale": {"enum": ["es", "en"]},
+    "as_of_date": {"$ref": "#/$defs/date"},
+    "state": {"enum": ["complete", "limited", "unavailable"]},
+    "options": {"type": "array", "minItems": 0, "maxItems": 20, "items": {"$ref": "#/$defs/option"}},
+    "privacy_boundary": {"const": "public_provider_metadata_only"},
+    "no_external_action": {"const": true}
+  },
+  "oneOf": [
+    {"properties": {"state": {"enum": ["complete", "limited"]}, "options": {"minItems": 1}}},
+    {"properties": {"state": {"const": "unavailable"}, "options": {"maxItems": 0}}}
+  ],
+  "$defs": {
+    "date": {"type": "string", "format": "date", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "text": {"type": "string", "minLength": 1, "maxLength": 500},
+    "url": {"type": "string", "minLength": 1, "maxLength": 2048, "pattern": "^https://"},
+    "signal": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+    "option": {
+      "type": "object",
+      "required": ["option_id", "option_type", "provider", "option", "source_title", "source_date", "access_date", "source_state", "url", "geography", "availability", "current_cost", "currency", "tax", "duration", "prerequisite", "renewal", "maintenance", "unknowns", "covered_signals", "coverage_basis"],
+      "additionalProperties": false,
+      "properties": {
+        "option_id": {"type": "string", "pattern": "^LP-[0-9]{3}$"},
+        "option_type": {"enum": ["course", "certification"]},
+        "provider": {"$ref": "#/$defs/text"},
+        "option": {"$ref": "#/$defs/text"},
+        "source_title": {"$ref": "#/$defs/text"},
+        "source_date": {"$ref": "#/$defs/date"},
+        "access_date": {"$ref": "#/$defs/date"},
+        "source_state": {"enum": ["active", "unknown", "unavailable"]},
+        "url": {"$ref": "#/$defs/url"},
+        "geography": {"$ref": "#/$defs/text"},
+        "availability": {"enum": ["available", "unknown", "unavailable"]},
+        "current_cost": {"$ref": "#/$defs/text"},
+        "currency": {"$ref": "#/$defs/text"},
+        "tax": {"$ref": "#/$defs/text"},
+        "duration": {"$ref": "#/$defs/text"},
+        "prerequisite": {"$ref": "#/$defs/text"},
+        "renewal": {"$ref": "#/$defs/text"},
+        "maintenance": {"$ref": "#/$defs/text"},
+        "unknowns": {"$ref": "#/$defs/text"},
+        "covered_signals": {"type": "array", "minItems": 0, "maxItems": 20, "uniqueItems": true, "items": {"$ref": "#/$defs/signal"}},
+        "coverage_basis": {"enum": ["exact_technology_title", "explicit_curriculum", "explicit_exam_objective"]}
+      }
+    }
+  }
+}

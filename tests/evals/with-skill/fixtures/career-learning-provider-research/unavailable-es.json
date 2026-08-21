@@ -1,0 +1,9 @@
+{
+  "schema_version": "career-learning-provider-research-v1",
+  "locale": "es",
+  "as_of_date": "2026-08-21",
+  "state": "unavailable",
+  "options": [],
+  "privacy_boundary": "public_provider_metadata_only",
+  "no_external_action": true
+}

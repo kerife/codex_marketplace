@@ -22,6 +22,7 @@ REPOSITORY_CONTEXT = (
 )
 REPOSITORY_ONLY_TESTS = {
     "test_career_learning_decision_schema_accepts_evaluated_and_unavailable_states",
+    "test_career_learning_provider_research_schema_accepts_closed_fixtures",
     "test_career_market_dossier_schemas_accept_closed_synthetic_states",
     "test_career_market_dossier_v2_schema_accepts_recomputed_fixtures",
     "test_candidate_market_alignment_v2_schema_accepts_derived_fixture",
@@ -54,6 +55,7 @@ from validate_target_vacancy_research import validate_research
 from derive_candidate_market_alignment_v2 import derive_candidate_market_alignment_v2
 from build_career_market_learning_dossier_v2 import build_market_dossier_v2
 from validate_career_market_learning_dossier_v2 import validate_market_dossier_v2
+from validate_career_learning_provider_research import validate_provider_research
 
 
 def _load_v2_dossier_helper():
@@ -197,6 +199,18 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         inactive_provider = copy.deepcopy(evaluated)
         inactive_provider["decisions"][1]["provider_source"]["source_state"] = "unknown"
         self.assertTrue(validate_schema_instance(inactive_provider, schema))
+
+    def test_career_learning_provider_research_schema_accepts_closed_fixtures(self):
+        schema = self._schema("career-learning-provider-research-v1.schema.json")
+        fixture_root = ROOT.parent.parent / "tests/evals/with-skill/fixtures/career-learning-provider-research"
+        for name in ("complete-es.json", "limited-en.json", "unavailable-es.json"):
+            with self.subTest(name=name):
+                value = json.loads((fixture_root / name).read_text(encoding="utf-8"))
+                self.assertEqual([], validate_schema_instance(value, schema))
+                self.assertEqual([], validate_provider_research(value))
+        extra = json.loads((fixture_root / "complete-es.json").read_text(encoding="utf-8"))
+        extra["options"][0]["unexpected"] = True
+        self.assertTrue(validate_schema_instance(extra, schema))
 
     def test_target_vacancy_research_schema_accepts_closed_synthetic_states(self):
         schema = self._schema("target-vacancy-research-v1.schema.json")

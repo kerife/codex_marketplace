@@ -221,6 +221,7 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/career-market-learning-dossier-v1.schema.json",
     "schemas/career-market-learning-dossier-v2.schema.json",
     "schemas/career-learning-decision-v1.schema.json",
+    "schemas/career-learning-provider-research-v1.schema.json",
     "scripts/validate_target_vacancy_research.py",
     "scripts/derive_candidate_market_alignment_v2.py",
     "scripts/build_career_market_learning_dossier.py",
@@ -229,6 +230,7 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "scripts/validate_career_market_learning_dossier.py",
     "scripts/validate_career_market_learning_dossier_v2.py",
     "scripts/validate_career_learning_decision.py",
+    "scripts/validate_career_learning_provider_research.py",
     "assets/career-market-learning-dossier-v1.css",
     "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
     "tests/evals/with-skill/fixtures/target-vacancy-research/limited-four-en.json",
@@ -239,6 +241,9 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "tests/evals/with-skill/fixtures/career-market-learning-dossier-v2/complete-five-es.json",
     "tests/evals/with-skill/fixtures/career-market-learning-dossier-v2/limited-four-en.json",
     "tests/evals/with-skill/fixtures/career-market-learning-dossier-v2/unavailable-es.json",
+    "tests/evals/with-skill/fixtures/career-learning-provider-research/complete-es.json",
+    "tests/evals/with-skill/fixtures/career-learning-provider-research/limited-en.json",
+    "tests/evals/with-skill/fixtures/career-learning-provider-research/unavailable-es.json",
 )
 EXECUTIVE_DOSSIER_OFFLINE_TOKENS = (
     "http://",
@@ -753,6 +758,7 @@ def _load_market_package_modules(plugin_root: Path) -> dict[str, object]:
             "validate_career_market_learning_dossier",
             "validate_career_market_learning_dossier_v2",
             "validate_career_learning_decision",
+            "validate_career_learning_provider_research",
             "render_executive_career_dossier_v2",
         ):
             path = scripts_root / f"{name}.py"
@@ -827,6 +833,7 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         "schemas/career-market-learning-dossier-v1.schema.json": "source_research_snapshot",
         "schemas/career-market-learning-dossier-v2.schema.json": "source_alignment_snapshot",
         "schemas/career-learning-decision-v1.schema.json": "source_market_snapshot",
+        "schemas/career-learning-provider-research-v1.schema.json": "options",
     }
     for relative_path, required_field in schema_requirements.items():
         try:
@@ -884,6 +891,11 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             "validate_learning_bundle",
             "load_learning_bundle",
         ),
+        "validate_career_learning_provider_research": (
+            "validate_provider_research",
+            "load_provider_research",
+            "snapshot_for_provider_research",
+        ),
         "render_executive_career_dossier_v2": ("render_dossier_html",),
     }
     for module_name, interfaces in required_interfaces.items():
@@ -904,9 +916,24 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
     market_validator = modules["validate_career_market_learning_dossier"]
     market_v2_builder = modules["build_career_market_learning_dossier_v2"]
     market_v2_validator = modules["validate_career_market_learning_dossier_v2"]
+    provider_validator = modules["validate_career_learning_provider_research"]
     renderer = modules["render_executive_career_dossier_v2"]
 
     fixture_root = repo_root / "tests/evals/with-skill/fixtures"
+    for provider_name in ("complete-es.json", "limited-en.json", "unavailable-es.json"):
+        try:
+            provider = json.loads(
+                (fixture_root / "career-learning-provider-research" / provider_name).read_text(
+                    encoding="utf-8"
+                )
+            )
+            provider_errors = provider_validator.validate_provider_research(provider)
+            provider_validator.snapshot_for_provider_research(provider)
+        except Exception:
+            errors.append(f"{provider_name}: provider research fixture composition failed")
+        else:
+            if provider_errors:
+                errors.append(f"{provider_name}: provider research validator rejected package fixture")
     cases = (
         ("complete-five-es.json", "scenario-a-es.json"),
         ("limited-four-en.json", "scenario-c-en.json"),

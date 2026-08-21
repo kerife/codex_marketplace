@@ -1,0 +1,33 @@
+{
+  "schema_version": "career-learning-provider-research-v1",
+  "locale": "en",
+  "as_of_date": "2026-08-21",
+  "state": "limited",
+  "options": [
+    {
+      "option_id": "LP-003",
+      "option_type": "course",
+      "provider": "HashiCorp",
+      "option": "Terraform course",
+      "source_title": "Terraform learning catalog",
+      "source_date": "2026-08-20",
+      "access_date": "2026-08-21",
+      "source_state": "active",
+      "url": "https://developer.hashicorp.com/terraform/tutorials",
+      "geography": "online",
+      "availability": "available",
+      "current_cost": "unknown",
+      "currency": "unknown",
+      "tax": "unknown",
+      "duration": "unknown",
+      "prerequisite": "unknown",
+      "renewal": "unknown",
+      "maintenance": "unknown",
+      "unknowns": "cost and duration are unknown",
+      "covered_signals": ["terraform"],
+      "coverage_basis": "exact_technology_title"
+    }
+  ],
+  "privacy_boundary": "public_provider_metadata_only",
+  "no_external_action": true
+}
