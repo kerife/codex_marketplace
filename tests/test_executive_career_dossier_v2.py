@@ -2012,6 +2012,10 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 region = unavailable_region[0]
                 self.assertEqual(1, region.count('class="market-next-safe-action"'))
                 self.assertEqual(1, region.count(copy))
+                self.assertLess(
+                    region.index('class="market-next-safe-action"'),
+                    region.index('class="market-learning-state"'),
+                )
                 self.assertNotIn("href=", region)
                 self.assertNotIn("authorize", region.casefold())
                 self.assertNotIn("autoriza", region.casefold())
