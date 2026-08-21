@@ -23,6 +23,7 @@ REPOSITORY_CONTEXT = (
 REPOSITORY_ONLY_TESTS = {
     "test_career_learning_decision_schema_accepts_evaluated_and_unavailable_states",
     "test_career_market_dossier_schemas_accept_closed_synthetic_states",
+    "test_candidate_market_alignment_v2_schema_accepts_derived_fixture",
     "test_dependency_free_checker_rejects_nested_quantifier_patterns",
     "test_dossier_handoff_rejects_unlabelled_person_name_source_fact",
     "test_dossier_schema_prose_mutations_match_custom_unicode_boundary",
@@ -49,6 +50,7 @@ from private_prose_safety import is_safe_prose_text
 from validate_private_recruiter_reply_triage import validate_triage
 from validate_recruiter_practice_session import validate_session
 from validate_target_vacancy_research import validate_research
+from derive_candidate_market_alignment_v2 import derive_candidate_market_alignment_v2
 
 
 def _load_v2_dossier_helper():
@@ -134,6 +136,26 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         invalid = json.loads((fixture_root / "complete-five-es.json").read_text(encoding="utf-8"))
         invalid["unexpected"] = True
         self.assertTrue(validate_schema_instance(invalid, dossier_schema))
+
+    def test_candidate_market_alignment_v2_schema_accepts_derived_fixture(self):
+        fixture_root = ROOT.parent.parent / "tests/evals/with-skill/fixtures"
+        research = json.loads(
+            (fixture_root / "target-vacancy-research/complete-five-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        dossier = json.loads(
+            (fixture_root / "executive-career-dossier-v2/scenario-a-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        schema = self._schema("candidate-market-alignment-v2.schema.json")
+        alignment = derive_candidate_market_alignment_v2(research, dossier)
+
+        self.assertEqual([], validate_schema_instance(alignment, schema))
+        with_extra_field = copy.deepcopy(alignment)
+        with_extra_field["signal_bindings"][0]["unexpected"] = True
+        self.assertTrue(validate_schema_instance(with_extra_field, schema))
 
     def test_career_learning_decision_schema_accepts_evaluated_and_unavailable_states(self):
         helper = _load_learning_contract_helper()

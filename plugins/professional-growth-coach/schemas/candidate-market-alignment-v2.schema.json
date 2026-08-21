@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/professional-growth-coach/candidate-market-alignment-v2.schema.json",
+  "title": "Candidate Market Alignment v2",
+  "type": "object",
+  "required": ["schema_version", "research_snapshot", "executive_dossier_snapshot", "signal_bindings", "privacy_boundary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "candidate-market-alignment-v2"},
+    "research_snapshot": {"type": "string", "pattern": "^snap-market-sha256-[0-9a-f]{64}$"},
+    "executive_dossier_snapshot": {"type": "string", "pattern": "^snap-dossier-sha256-[0-9a-f]{64}$"},
+    "signal_bindings": {
+      "type": "array",
+      "maxItems": 150,
+      "items": {"$ref": "#/$defs/signal_binding"}
+    },
+    "privacy_boundary": {"const": "identity_free_structured_provenance_only"}
+  },
+  "$defs": {
+    "signal_binding": {
+      "type": "object",
+      "required": ["signal", "support_state", "claim_ids", "evidence_ids", "requirement_ids", "vacancy_ids"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "support_state": {"const": "unknown"},
+                "claim_ids": {"maxItems": 0},
+                "evidence_ids": {"maxItems": 0}
+              }
+            },
+            {
+              "properties": {
+                "support_state": {"enum": ["verified_match", "candidate_reported_match"]},
+                "claim_ids": {"minItems": 1},
+                "evidence_ids": {"minItems": 1}
+              }
+            }
+          ]
+        }
+      ],
+      "properties": {
+        "signal": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "support_state": {"enum": ["verified_match", "candidate_reported_match", "unknown"]},
+        "claim_ids": {"type": "array", "maxItems": 150, "uniqueItems": true, "items": {"type": "string", "pattern": "^C-[0-9]{3}$"}},
+        "evidence_ids": {"type": "array", "maxItems": 150, "uniqueItems": true, "items": {"type": "string", "pattern": "^E-[0-9]{3}$"}},
+        "requirement_ids": {"type": "array", "maxItems": 150, "uniqueItems": true, "items": {"type": "string", "pattern": "^V-[0-9]{3}-R-[0-9]{2}$"}},
+        "vacancy_ids": {"type": "array", "maxItems": 150, "uniqueItems": true, "items": {"type": "string", "pattern": "^V-[0-9]{3}$"}}
+      }
+    }
+  }
+}

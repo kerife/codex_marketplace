@@ -502,9 +502,11 @@ class FullPluginIntegrationTests(unittest.TestCase):
         self.assertEqual(
             (
                 "schemas/candidate-market-alignment-v1.schema.json",
+                "schemas/candidate-market-alignment-v2.schema.json",
                 "schemas/career-market-learning-dossier-v1.schema.json",
                 "schemas/career-learning-decision-v1.schema.json",
                 "scripts/validate_target_vacancy_research.py",
+                "scripts/derive_candidate_market_alignment_v2.py",
                 "scripts/build_career_market_learning_dossier.py",
                 "scripts/build_career_learning_decision.py",
                 "scripts/validate_career_market_learning_dossier.py",
