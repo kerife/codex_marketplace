@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-21T20:30:00Z`
+release_timestamp: `2026-08-21T21:00:00Z`
 
-installed_access_timestamp: `2026-08-21T20:30:00Z`
+installed_access_timestamp: `2026-08-21T21:00:00Z`
 
-source_commit: `028193a8adefd46eb7c60858f57ee3f84c3b1a53`
+source_commit: `67a2c0a6152032aaf2633adcda6bf218bacad05e`
 
-source_tree: `a59caa9aebbac69a3380a69add9ecfe407e1a7ef`
+source_tree: `924bfe571ee68449b6803c2994217cef49611f26`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260821203000`
+installed_cache_version: `0.2.0+codex.20260821210000`
 
 installed_enabled: `true`
 
@@ -34,7 +34,7 @@ source_file_count: `124`
 
 installed_file_count: `124`
 
-normalized_source_cache_sha256: `17fff5d3cd28316ff550ddeac6674516a9050aeda6be8053aac4000a8f8b0604`
+normalized_source_cache_sha256: `a784902e91bffe0342b9b758691014ea16a5fa551035609038d8de0a8eb4e1e3`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
@@ -77,6 +77,8 @@ installed_current_cycle_organization_allowlist_smokes: `18/18; Grant_Thornton_Br
 installed_current_cycle_progress_boundary_aria_smokes: `5/5; localized_market_render; unique_boundary_ids; progress_aria_references_resolved; no_external_controls`
 
 installed_current_cycle_recurrence_boundary_aria_smokes: `9/9; ES_EN_localized_market_render; recurrence_progress_described; unique_boundary_id; no_external_controls`
+
+installed_current_cycle_learning_boundary_aria_smokes: `10/10; ES_EN_localized_learning_render; boundary_before_cards; three_cards_described; unique_boundary_id; no_external_controls`
 
 installed_current_cycle_contrast_smokes: `3/3; muted_text_contrast; light_line_token; forced_colors_text_override`
 
