@@ -493,6 +493,54 @@ class CareerLearningProviderResearchTests(unittest.TestCase):
                 altered["options"][0][field] = value
                 self.assert_invalid_without_echo(altered, str(value))
 
+    def test_provider_research_rejects_empty_and_nonempty_url_userinfo_without_echo(self):
+        provider = self.provider_fixture("complete-es.json")
+        sentinel = "provider-userinfo-sentinel"
+        for name, url in (
+            ("empty username", "https://@developer.hashicorp.com/terraform/tutorials"),
+            ("empty username and password", "https://:@developer.hashicorp.com/terraform/tutorials"),
+            ("nonempty userinfo", f"https://{sentinel}@developer.hashicorp.com/terraform/tutorials"),
+        ):
+            with self.subTest(name=name):
+                altered = copy.deepcopy(provider)
+                altered["options"][0]["url"] = url
+                self.assert_invalid_without_echo(altered, sentinel)
+
+    def test_provider_research_requires_strict_iso_dates_without_echo(self):
+        provider = self.provider_fixture("complete-es.json")
+        sentinel = "provider-date-sentinel"
+        invalid_values: tuple[object, ...] = (
+            "20260821",
+            "2026-W34-5",
+            "2026-02-30",
+            {sentinel: True},
+        )
+        for field in ("as_of_date", "source_date", "access_date"):
+            for value in invalid_values:
+                with self.subTest(field=field, value=repr(value)):
+                    altered = copy.deepcopy(provider)
+                    target = altered if field == "as_of_date" else altered["options"][0]
+                    target[field] = value
+                    self.assert_invalid_without_echo(altered, sentinel)
+
+    def test_provider_research_rejects_private_url_components_after_decoding_without_echo(self):
+        provider = self.provider_fixture("complete-es.json")
+        sentinel = "provider-url-component-sentinel"
+        cases = (
+            ("direct contact path", f"https://developer.hashicorp.com/contact-{sentinel}@example.invalid"),
+            ("encoded contact path", f"https://developer.hashicorp.com/contact-{sentinel}%40example.invalid"),
+            ("direct person query", f"https://developer.hashicorp.com/?person=Jane Smith {sentinel}"),
+            ("encoded person query", f"https://developer.hashicorp.com/?person=Jane%20Smith%20{sentinel}"),
+            ("direct local path", f"https://developer.hashicorp.com/Users/{sentinel}"),
+            ("encoded local path", f"https://developer.hashicorp.com/%55sers/{sentinel}"),
+            ("html encoded contact fragment", f"https://developer.hashicorp.com/#contact-{sentinel}%26%2364%3Bexample.invalid"),
+        )
+        for name, url in cases:
+            with self.subTest(name=name):
+                altered = copy.deepcopy(provider)
+                altered["options"][0]["url"] = url
+                self.assert_invalid_without_echo(altered, sentinel)
+
     def test_provider_research_rejects_closed_structure_and_semantic_mutations(self):
         provider = self.provider_fixture("complete-es.json")
         sentinel = "provider-malicious-sentinel"

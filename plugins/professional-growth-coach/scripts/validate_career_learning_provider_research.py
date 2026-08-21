@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import datetime as dt
+import html
 import hashlib
 import importlib.util
 import ipaddress
@@ -15,7 +16,7 @@ import unicodedata
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 
 def _sibling(name: str) -> Any:
@@ -49,9 +50,14 @@ _MAX_INPUT_BYTES = 256 * 1024
 _MAX_TEXT = 500
 _SIGNAL = re.compile(r"[a-z][a-z0-9_]{1,63}\Z")
 _OPTION_ID = re.compile(r"LP-[0-9]{3}\Z")
+_DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}\Z")
 _EMAIL = re.compile(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}")
 _PHONE = re.compile(r"(?:^|\s)\+?\d[\d .()_-]{6,}\d(?:$|\s)")
 _HTML = re.compile(r"<\s*/?\s*(?:script|style|html|body|div|span|iframe|[a-z][a-z0-9-]*)\b", re.I)
+_LOCAL_PATH = re.compile(
+    r"(?:^|[\s?&#=])(?:~[\\/]|/(?:Users|private|var|tmp|home|root)(?:[\\/]|$)|[A-Za-z]:[\\/])",
+    re.I,
+)
 _ROOT_FIELDS = frozenset(
     {"schema_version", "locale", "as_of_date", "state", "options", "privacy_boundary", "no_external_action"}
 )
@@ -139,7 +145,7 @@ def _bounded_plain_copy(value: object) -> dict[str, object] | None:
 
 
 def _date(value: object) -> dt.date | None:
-    if not isinstance(value, str):
+    if not isinstance(value, str) or not _DATE.fullmatch(value):
         return None
     try:
         return dt.date.fromisoformat(value)
@@ -176,6 +182,27 @@ def _valid_text(value: object, *, provider: bool = False, strict_name: bool = Fa
     )
 
 
+def _decoded_url_component(value: object) -> str | None:
+    if not isinstance(value, str) or len(value) > 2048:
+        return None
+    decoded = value
+    for _ in range(3):
+        next_value = html.unescape(unquote(decoded))
+        if next_value == decoded:
+            break
+        decoded = next_value
+    return unicodedata.normalize("NFKC", decoded)
+
+
+def _safe_url_component(value: object) -> bool:
+    decoded = _decoded_url_component(value)
+    return (
+        decoded is not None
+        and (not decoded or _valid_text(decoded, strict_name=True))
+        and not _LOCAL_PATH.search(decoded)
+    )
+
+
 def _official_https_url(provider: object, value: object) -> bool:
     if not isinstance(provider, str) or provider not in _OFFICIAL_PROVIDER_HOSTS:
         return False
@@ -196,11 +223,12 @@ def _official_https_url(provider: object, value: object) -> bool:
         pass
     return (
         parsed.scheme == "https"
-        and not parsed.username
-        and not parsed.password
+        and parsed.username is None
+        and parsed.password is None
         and port is None
         and bool(host)
         and host in _OFFICIAL_PROVIDER_HOSTS[provider]
+        and all(_safe_url_component(component) for component in (parsed.path, parsed.query, parsed.fragment))
     )
 
 
