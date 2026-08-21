@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-21T13:30:41Z`
+release_timestamp: `2026-08-21T13:51:45Z`
 
-installed_access_timestamp: `2026-08-21T13:30:41Z`
+installed_access_timestamp: `2026-08-21T13:51:45Z`
 
-source_commit: `772a681fafb7850087530d29b06d0aaa1ddeb07c`
+source_commit: `15db7db3ca5035bfa6ac1d3ebe11d1425e550c03`
 
-source_tree: `33129850cc55f43c912c4218248eb899a97d56e4`
+source_tree: `3d8cf52ad74ad7565f14cbe8c5bfc96c65cb46c3`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260821132901`
+installed_cache_version: `0.2.0+codex.20260821135042`
 
 installed_enabled: `true`
 
@@ -34,7 +34,7 @@ source_file_count: `124`
 
 installed_file_count: `124`
 
-normalized_source_cache_sha256: `9d7729c400d6c88a9d7052e60b1c52ebb46da740d4df261e7a64496143b8fb4b`
+normalized_source_cache_sha256: `efa17377fcd1b64c3b431b90c2d4983505f0d6b8af2667f523d4d9b0a4d7d121`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
@@ -68,13 +68,17 @@ installed_visible_privacy_smokes: `2/2`
 
 installed_schema_pattern_smokes: `2/2`
 
-installed_target_research_identity_smokes: `6/6; obfuscated_and_embedded_name_fields_fail_closed; diagnostics_no_echo`
+installed_target_research_identity_smokes: `12/12; common_and_non_allowlisted_obfuscated_forms_fail_closed; diagnostics_no_echo`
 
 installed_market_learning_disclosure_smokes: `3/3; localized; raw_enum_not_visible`
 
 installed_market_coverage_band_smokes: `3/3; localized; raw_band_enum_not_visible; progress_aria_bound`
 
 installed_decision_trace_layout_smokes: `2/2; desktop_two_columns; mobile_one_column; css_theme_parity`
+
+installed_mobile_market_matrix_label_smokes: `source_contract=2/2; short_V1_to_VN_data_labels; full_headers_and_key_preserved`
+
+deferred_privacy_boundary: `arbitrary_non_allowlisted_compact_names_need_contextual_role_classifier`
 
 fresh_agent_smoke: `not_run_in_current_process`
 
