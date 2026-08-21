@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-21T23:00:00Z`
+release_timestamp: `2026-08-22T00:00:00Z`
 
-installed_access_timestamp: `2026-08-21T23:00:00Z`
+installed_access_timestamp: `2026-08-22T00:00:00Z`
 
-source_commit: `16bf3c64050454f67af31a277232431758dbe5b2`
+source_commit: `7ef81cd9ec25613d8737d5229d8666404ed5bfb5`
 
-source_tree: `0bb455c641c39acd5381b42ca3f336f70bd7fda8`
+source_tree: `68cac61c39d33f332521bd4bb22cb5bcc9b3b953`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260821230000`
+installed_cache_version: `0.2.0+codex.20260822000000`
 
 installed_enabled: `true`
 
@@ -34,7 +34,7 @@ source_file_count: `124`
 
 installed_file_count: `124`
 
-normalized_source_cache_sha256: `6d51158f4788280ad609c4b103c717f74f38562e7663ee78584bde3b16b13e54`
+normalized_source_cache_sha256: `1e483aeeb30f4f82c3b72b92f46733d18bc37478ce9cd6b0b3cbfe61ae63e9ee`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
@@ -56,7 +56,7 @@ installed_package_static_scope: `package_static_checks=passed; repository_confor
 
 installed_test_discovery_scope: `package_local_and_mixed_safe; repository_only_selectors_skipped_outside_source_checkout`
 
-installed_test_discovery: `172/172; errors=0; skips=31; repository_only_scope_explicit`
+installed_test_discovery: `173/173; errors=0; skips=32; repository_only_scope_explicit`
 
 source_provenance_gate: `passed; immutable_historical_commit_tree_ancestor_verified`
 
@@ -85,6 +85,8 @@ installed_current_cycle_learning_boundary_aria_smokes: `10/10; ES_EN_localized_l
 installed_current_cycle_market_freshness_smokes: `12/12; ES_EN_localized_validated_date; semantic_time; marker_before_learning; unavailable_and_legacy_absent; no_external_controls`
 
 installed_current_cycle_limited_sample_aria_smokes: `4_states_ES_EN; limitation_id_unique; market_region_described; limitation_before_learning_and_vacancies; complete_unavailable_legacy_absent`
+
+installed_current_cycle_triage_identity_alias_smokes: `7/7; v1_v2_safe_context_packet_reentry_fail_closed; one_legitimate_candidate_fact_control_passed; diagnostics_and_renderer_no_echo`
 
 installed_current_cycle_authorization_impact_smokes: `6/6; ES_EN_ranked_priority_impact; coverage_only_fallback; no_pending_absent; one_question; no_external_controls`
 
