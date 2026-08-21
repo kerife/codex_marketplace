@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-21T18:40:00Z`
+release_timestamp: `2026-08-21T18:50:00Z`
 
-installed_access_timestamp: `2026-08-21T18:40:00Z`
+installed_access_timestamp: `2026-08-21T18:50:00Z`
 
-source_commit: `1bbbd4ff33377b065eafbc785d26899538ef4e7a`
+source_commit: `a0da18bc5f0a3b1646353542e6dd5c06451ad82d`
 
-source_tree: `6539ded15669ff94ff030286b3f6e97271c984fd`
+source_tree: `a624fd34d835121c6ec15d1aa5c725e9a123f628`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260821184000`
+installed_cache_version: `0.2.0+codex.20260821185000`
 
 installed_enabled: `true`
 
@@ -34,7 +34,7 @@ source_file_count: `124`
 
 installed_file_count: `124`
 
-normalized_source_cache_sha256: `09ed72ed8ce6b2f34acbdeca75d78e1379bd70475ed1977cf482447df47efbf2`
+normalized_source_cache_sha256: `b64069b85bd853ab98e68f61a90d60f02e98dfb2942c289a435abd2f996db25f`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
@@ -83,6 +83,8 @@ installed_current_cycle_superdesign_docs_smokes: `1/1; unavailable_market_safe_n
 installed_current_cycle_learning_proof_to_cost_aria_smokes: `2/2; localized; unique_aria_refs; no_external_controls`
 
 installed_current_cycle_decision_trace_boundary_aria_smokes: `2/2; localized; unique_aria_refs; no_external_controls`
+
+installed_current_cycle_learning_proof_group_smokes: `2/2; localized; role_group; unique_aria_refs`
 
 installed_market_coverage_band_smokes: `3/3; localized; raw_band_enum_not_visible; progress_aria_bound`
 
