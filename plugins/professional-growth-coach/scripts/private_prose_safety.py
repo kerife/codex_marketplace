@@ -25,7 +25,7 @@ _IDENTITY_TOKEN = re.compile(r"[^\W\d_]{2,}(?:['’][^\W\d_]{2,})*|[^\W\d_](?:\.
 _CANDIDATE_MARKERS = frozenset({"candidate", "applicant", "candidato", "candidata"})
 _ROLE_TITLE_HEADS = frozenset({"architect", "developer", "engineer", "engineering", "manager", "specialist", "sre"})
 _IDENTITY_LABELS = frozenset({"identity", "identidad", "name", "named", "nombre", "perfil", "profile", "llamado", "llamada"})
-_ROLE_PRODUCT_TERMS = frozenset({"acquisition", "accessibility", "accountability", "architect", "architecture", "authentication", "authorization", "automation", "availability", "blue", "build", "career", "careers", "chain", "cloud", "collaboration", "compatibility", "computer", "configuration", "containerization", "developer", "development", "devops", "documentation", "engineer", "engineering", "experience", "experimentation", "incident", "index", "infrastructure", "internationalization", "implementation", "jobs", "kubernetes", "language", "learning", "localization", "machine", "maintainability", "management", "manager", "modernization", "natural", "open", "operator", "operations", "orchestration", "origin", "personalization", "platform", "portal", "processing", "product", "products", "professional", "productivity", "recommendation", "release", "reliability", "research", "response", "role", "scientist", "search", "service", "services", "site", "software", "source", "specialist", "sre", "standardization", "success", "supply", "sustainability", "systems", "talent", "team", "telecommunications", "transformation", "trust", "vision", "virtualization", "workflow", "zero"})
+_ROLE_PRODUCT_TERMS = frozenset({"acquisition", "accessibility", "accountability", "architect", "architecture", "authentication", "authorization", "automation", "availability", "blue", "build", "career", "careers", "chain", "cloud", "collaboration", "compatibility", "computer", "configuration", "containerization", "developer", "development", "devops", "documentation", "engineer", "engineering", "experience", "experimentation", "incident", "index", "infrastructure", "internationalization", "implementation", "jobs", "kubernetes", "language", "learning", "localization", "machine", "maintainability", "management", "manager", "modernization", "natural", "open", "operator", "operations", "orchestration", "origin", "personalization", "platform", "portal", "processing", "product", "products", "professional", "productivity", "recommendation", "relations", "release", "reliability", "research", "response", "role", "scientist", "search", "service", "services", "site", "software", "source", "specialist", "sre", "standardization", "success", "supply", "sustainability", "systems", "talent", "team", "telecommunications", "tracking", "transformation", "trust", "vision", "virtualization", "workflow", "zero"})
 _ROLE_TITLE_TECHNICAL_MODIFIERS = _ROLE_PRODUCT_TERMS | frozenset({"analytics", "api", "architecture", "data", "gateway", "journey", "mesh", "principal", "security"})
 _PUBLIC_RESEARCH_TERMS = frozenset({"evidence", "free", "match", "material", "only", "reference", "references", "reported", "supplied"})
 _SAFE_STANDALONE_TERMS = _ROLE_PRODUCT_TERMS | _PUBLIC_RESEARCH_TERMS
@@ -102,8 +102,13 @@ _SAFE_COMPACT_ROLE_TERMS = frozenset(
         "observability", "platform", "sitereliability", "terraform", "terraformmodule",
     }
 )
-
-
+_SAFE_CANDIDATE_HYPHEN_COMPOUNDS = frozenset(
+    {
+        "approved", "evidence", "estimated", "facing", "fact", "isolated",
+        "led", "market", "named", "owned", "provided", "related", "reported",
+        "safe", "specific", "supplied", "supported", "synthetic",
+    }
+)
 def contains_unmarked_candidate_identity(value: object) -> bool:
     """Reject short candidate-name forms that lack the usual two-token marker."""
     if isinstance(value, Mapping):
@@ -112,17 +117,60 @@ def contains_unmarked_candidate_identity(value: object) -> bool:
         return any(contains_unmarked_candidate_identity(item) for item in value)
     if not isinstance(value, str):
         return False
-    candidate_match = re.search(
-        r"\b(?:candidate|applicant|candidato|candidata)\s+([^\W\d_]{2,})\b",
-        value,
+    normalized_value = unicodedata.normalize("NFKC", value)
+    explicit_label_matches = re.finditer(
+        r"\b(?:candidate|applicant|candidato|candidata)"
+        r"\s*((?:_+|[^\w\s]+))\s*"
+        r"([^\W\d_]{2,})\b",
+        normalized_value,
         re.IGNORECASE | re.UNICODE,
     )
-    if candidate_match:
-        token = unicodedata.normalize("NFKC", candidate_match.group(1)).casefold()
-        if token not in _CANDIDATE_SINGLE_NAME_EXCLUSIONS and token not in _SAFE_STANDALONE_TERMS:
+    for explicit_label_match in explicit_label_matches:
+        separator, original_token = explicit_label_match.groups()
+        token = original_token.casefold()
+        if (
+            token not in _CANDIDATE_MARKERS
+            and token not in _CANDIDATE_SINGLE_NAME_EXCLUSIONS
+            and token not in _SAFE_STANDALONE_TERMS
+            and not (
+                separator == "-"
+                and original_token.islower()
+                and token in _SAFE_CANDIDATE_HYPHEN_COMPOUNDS
+            )
+        ):
             return True
     for match in re.finditer(
-        r"\b([^\W\d_]{2,})\s+([^\W\d_]{2,})\b", value, re.UNICODE
+        r"\b(?:candidate|applicant|candidato|candidata)\s+"
+        r"([^\W\d_][^\W\d_.'’\-]{1,})\s+"
+        r"(?:([^\W\d_])\.\s+)?"
+        r"([^\W\d_][^\W\d_.'’\-]{1,})\b",
+        normalized_value,
+        re.IGNORECASE | re.UNICODE,
+    ):
+        first, initial, second = match.groups()
+        original_match = match.group(0)
+        if (
+            first[0].isupper()
+            and second[0].isupper()
+            and (initial is None or initial[0].isupper())
+            and {first.casefold(), second.casefold()}.isdisjoint(_PERSON_NAME_STOPWORDS)
+            and not original_match.casefold().endswith(tuple(f" {head}" for head in _ROLE_TITLE_HEADS))
+        ):
+            return True
+    spaced_match = re.search(
+        r"\b(?:candidate|applicant|candidato|candidata)\s+([^\W\d_]{2,})\b",
+        normalized_value,
+        re.IGNORECASE | re.UNICODE,
+    )
+    if spaced_match:
+        token = spaced_match.group(1).casefold()
+        if (
+            token in _IDENTITY_LABELS
+            or token in _COMMON_GIVEN_NAMES
+        ) and token not in _CANDIDATE_SINGLE_NAME_EXCLUSIONS and token not in _SAFE_STANDALONE_TERMS:
+            return True
+    for match in re.finditer(
+        r"\b([^\W\d_]{2,})\s+([^\W\d_]{2,})\b", normalized_value, re.UNICODE
     ):
         first, second = match.groups()
         if not first[0].isupper() or not second[0].isupper():
@@ -317,6 +365,24 @@ def contains_candidate_identity(value: object, *, vacancy_title: bool = False) -
         return any(contains_candidate_identity(item, vacancy_title=vacancy_title) for item in value)
     if not isinstance(value, str):
         return False
+    normalized_value = unicodedata.normalize("NFKC", value)
+    for match in re.finditer(
+        r"\b([^\W\d_][^\W\d_.'’\-]{1,})\s+"
+        r"(?:([^\W\d_])\.\s+)?"
+        r"([^\W\d_][^\W\d_.'’\-]{1,})\s+"
+        r"(?:(?:is|was|es|era)\s+(?:the|a|an|el|la|un|una)\s+)?"
+        r"(?:candidate|applicant|candidato|candidata)\b",
+        normalized_value,
+        re.UNICODE,
+    ):
+        first, initial, second = match.groups()
+        if (
+            first[0].isupper()
+            and second[0].isupper()
+            and (initial is None or initial[0].isupper())
+            and {first.casefold(), second.casefold()}.isdisjoint(_PERSON_NAME_STOPWORDS)
+        ):
+            return True
     tokens = _candidate_identity_tokens(value)
     for index, token in enumerate(tokens):
         if token not in _CANDIDATE_MARKERS:
@@ -330,7 +396,17 @@ def contains_candidate_identity(value: object, *, vacancy_title: bool = False) -
             has_identity_label = True
             after_start += 1
         after = tokens[after_start:after_start + 2]
-        if _looks_like_name_pair(before):
+        if has_identity_label and len(after) == 1:
+            labeled_token = after[0].rstrip(".")
+            if (
+                labeled_token not in _SAFE_STANDALONE_TERMS
+                and labeled_token not in _CANDIDATE_SINGLE_NAME_EXCLUSIONS
+            ):
+                return True
+        if _looks_like_name_pair(before) and (
+            before[0].rstrip(".") in _COMMON_GIVEN_NAMES
+            or before[1].rstrip(".") in _COMMON_SURNAME_TOKENS
+        ):
             return True
         if vacancy_title and not has_identity_label and index == 0 and tokens[after_start:] and tokens[-1].rstrip(".") in _ROLE_TITLE_HEADS:
             if _is_role_shaped_title(tokens, index):
@@ -339,7 +415,13 @@ def contains_candidate_identity(value: object, *, vacancy_title: bool = False) -
         if _looks_like_name_pair(after):
             if vacancy_title and not has_identity_label and _is_role_shaped_title(tokens, index):
                 continue
-            return True
+            if (
+                vacancy_title
+                or has_identity_label
+                or after[0].rstrip(".") in _COMMON_GIVEN_NAMES
+                or after[1].rstrip(".") in _COMMON_SURNAME_TOKENS
+            ):
+                return True
     return False
 
 
@@ -385,6 +467,7 @@ def target_research_contains_candidate_identity(value: object) -> bool:
                 return False
         return (
             contains_candidate_identity(scalar, vacancy_title=vacancy_title)
+            or contains_unmarked_candidate_identity(scalar)
             or contains_candidate_like_name(scalar)
             or contains_obfuscated_candidate_identity(scalar)
         )

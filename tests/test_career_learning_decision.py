@@ -227,6 +227,59 @@ class CareerLearningDecisionContractTests(unittest.TestCase):
         for value in mutations:
             self.assertTrue(self.validator.validate_learning_bundle(value, self.market, self.dossier, self.research))
 
+    def test_validator_rejects_single_token_identity_labels_without_echo(self) -> None:
+        for marker in (
+            "Candidate: SyntheticAlias.",
+            "Candidate—SyntheticAlias.",
+            "Candidate：SyntheticAlias.",
+            "Candidate - SyntheticAlias.",
+            "Candidate, SyntheticAlias.",
+            "Candidate; SyntheticAlias.",
+            "Candidate-SyntheticAlias.",
+            "Candidate-syntheticalias.",
+            "Candidate_SyntheticAlias.",
+            "Candidate.SyntheticAlias.",
+            "Candidate · SyntheticAlias.",
+            "Candidate’SyntheticAlias.",
+            "Candidate's name: SyntheticAlias.",
+            "Applicant # SyntheticAlias.",
+            "Candidato: AliasSintetico.",
+            "Candidata—AliasSintetico.",
+        ):
+            with self.subTest(marker=marker):
+                value = _bundle(count=3)
+                value["decisions"][0]["decision_basis"] = marker
+                errors = self.validator.validate_learning_bundle(
+                    value, self.market, self.dossier, self.research
+                )
+                self.assertTrue(errors)
+                self.assertNotIn(marker, "\n".join(errors))
+        safe = _bundle(count=3)
+        safe["decisions"][0]["decision_basis"] = (
+            "Candidate-owned proof remains a bounded private task before any purchase."
+        )
+        self.assertEqual(
+            [],
+            self.validator.validate_learning_bundle(
+                safe, self.market, self.dossier, self.research
+            ),
+        )
+        for marker in (
+            "Candidate Synthetic Alias.",
+            "Applicant Synthetic Alias.",
+            "Synthetic Alias candidate requested a bounded proof.",
+            "Synthetic Alias is the candidate for private review.",
+            "Synthetic Q. Alias candidate requested a bounded proof.",
+        ):
+            with self.subTest(reverse_marker=marker):
+                value = _bundle(count=3)
+                value["decisions"][0]["decision_basis"] = marker
+                errors = self.validator.validate_learning_bundle(
+                    value, self.market, self.dossier, self.research
+                )
+                self.assertTrue(errors)
+                self.assertNotIn(marker, "\n".join(errors))
+
     def test_validator_rejects_cycles_without_echoing_private_value(self) -> None:
         value = _bundle(count=3)
         private = "private-person@example.invalid"

@@ -392,6 +392,63 @@ class TargetVacancyResearchTests(unittest.TestCase):
                 errors = self.assert_invalid(value, "research contains forbidden private or raw content")
                 self.assertNotIn("Jane Doe", "\n".join(errors))
 
+    def test_single_token_identity_labels_are_rejected_without_echo(self) -> None:
+        for marker in (
+            "Candidate: SyntheticAlias.",
+            "Candidate—SyntheticAlias.",
+            "Candidate：SyntheticAlias.",
+            "Candidate - SyntheticAlias.",
+            "Candidate, SyntheticAlias.",
+            "Candidate; SyntheticAlias.",
+            "Candidate-SyntheticAlias.",
+            "Candidate-syntheticalias.",
+            "Candidate_SyntheticAlias.",
+            "Candidate.SyntheticAlias.",
+            "Candidate · SyntheticAlias.",
+            "Candidate’SyntheticAlias.",
+            "Candidate's name: SyntheticAlias.",
+            "Applicant # SyntheticAlias.",
+            "Candidato: AliasSintetico.",
+            "Candidata—AliasSintetico.",
+        ):
+            with self.subTest(marker=marker):
+                value = self.complete()
+                value["search_limit"]["limitation"] = marker
+                errors = self.assert_invalid(
+                    value, "research contains forbidden private or raw content"
+                )
+                self.assertNotIn(marker, "\n".join(errors))
+        safe = self.complete()
+        safe["search_limit"]["limitation"] = (
+            "Candidate-owned evidence remains bounded to public vacancy sources."
+        )
+        self.assertEqual([], self.validator.validate_research(safe))
+        for public_prose in (
+            "The candidate will support production systems.",
+            "The successful candidate will build Terraform modules.",
+            "Candidate pool remains bounded to the current posting.",
+            "Candidate/applicant evidence remains bounded.",
+            "Candidate|applicant requirements are public.",
+            "Candidato/candidata con experiencia técnica.",
+            "Candidate-reported evidence remains bounded.",
+            "Candidate-safe evidence remains bounded.",
+            "Candidate-specific evidence remains bounded.",
+            "Candidate-related evidence remains bounded.",
+            "Candidate-supplied evidence remains bounded.",
+        ):
+            with self.subTest(public_prose=public_prose):
+                safe = self.complete()
+                safe["search_limit"]["limitation"] = public_prose
+                self.assertEqual([], self.validator.validate_research(safe))
+        for title in (
+            "Applicant Tracking Platform Engineer",
+            "Candidate Relations Platform Engineer",
+        ):
+            with self.subTest(title=title):
+                safe = self.complete()
+                safe["vacancies"][0]["title"] = title
+                self.assertEqual([], self.validator.validate_research(safe))
+
     def test_unmarked_ascii_identity_is_rejected_from_public_research_fields(self) -> None:
         cases = {
             "employer display name": ("employers", 0, "display_name", "Juan Perez"),
