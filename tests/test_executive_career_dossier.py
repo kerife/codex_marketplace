@@ -1893,11 +1893,11 @@ class ExecutiveCareerDossierRuntimeTests(unittest.TestCase):
         )
 
     def test_loader_rejects_duplicate_keys_without_echoing_content(self) -> None:
-        path = REPO_ROOT / "tests" / "tmp-executive-dossier-duplicate.json"
-        self.addCleanup(path.unlink, missing_ok=True)
-        path.write_text('{"locale":"es","locale":"en"}', encoding="utf-8")
-        with self.assertRaisesRegex(self.validator.DossierLoadError, "duplicate JSON key"):
-            self.validator.load_dossier(path)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "duplicate.json"
+            path.write_text('{"locale":"es","locale":"en"}', encoding="utf-8")
+            with self.assertRaisesRegex(self.validator.DossierLoadError, "duplicate JSON key"):
+                self.validator.load_dossier(path)
 
     def test_locale_enum_rejects_non_string_json_values_without_crashing(self) -> None:
         dossier = load_fixture("scenario-a-es.json")

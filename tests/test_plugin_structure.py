@@ -1015,6 +1015,76 @@ raise SystemExit(64)
             self.assertIn("VALIDATOR_CHECKSUM_MISMATCH", result.stderr)
             self.assertFalse(sentinel.exists())
 
+    def test_root_test_import_does_not_expose_plugin_test_directory(self) -> None:
+        module_path = REPO_ROOT / "tests" / "test_career_learning_decision.py"
+        plugin_tests = PLUGIN_ROOT / "tests"
+        probe = (
+            "import importlib.util,sys\n"
+            f"module_path={str(module_path)!r}\n"
+            f"plugin_tests={str(plugin_tests)!r}\n"
+            "spec=importlib.util.spec_from_file_location('root_learning_contract_probe', module_path)\n"
+            "assert spec is not None and spec.loader is not None\n"
+            "module=importlib.util.module_from_spec(spec)\n"
+            "spec.loader.exec_module(module)\n"
+            "if plugin_tests in sys.path:\n"
+            "    raise SystemExit('plugin test directory leaked into sys.path')\n"
+        )
+        result = subprocess.run(
+            [sys.executable, "-B", "-c", probe],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+            check=False,
+        )
+
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_release_runner_routes_all_repository_gates_through_pinned_python(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            trace = root / "python-invocations.txt"
+            fake_python = root / "validation-python"
+            fake_python.write_text(
+                "#!/usr/bin/env python3\n"
+                "import os, sys\n"
+                "from pathlib import Path\n"
+                "with Path(os.environ['RELEASE_RUNNER_TRACE']).open('a', encoding='utf-8') as stream:\n"
+                "    stream.write(' '.join(sys.argv[1:]) + '\\n')\n",
+                encoding="utf-8",
+            )
+            fake_python.chmod(0o755)
+            environment = {
+                **os.environ,
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "RELEASE_RUNNER_TRACE": str(trace),
+                "VALIDATION_PYTHON": str(fake_python),
+            }
+            result = subprocess.run(
+                ["bash", str(RELEASE_RUNNER_PATH)],
+                cwd=REPO_ROOT,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            invocations = trace.read_text(encoding="utf-8").splitlines()
+
+        required = (
+            str(PLUGIN_ROOT / "tests" / "run_static_checks.py"),
+            f"-m unittest discover -s {PLUGIN_ROOT / 'tests'} -p test*.py -q",
+            f"-m unittest discover -s {REPO_ROOT / 'tests'} -p test*.py -q",
+            str(REPO_ROOT / "scripts" / "check_repository_privacy.py"),
+        )
+        for contract in required:
+            with self.subTest(contract=contract):
+                self.assertTrue(
+                    any(contract in invocation for invocation in invocations),
+                    invocations,
+                )
+
     def test_bootstrap_replaces_stale_final_environment_and_is_repeatable(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

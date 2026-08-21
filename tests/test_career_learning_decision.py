@@ -18,14 +18,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "plugins" / "professional-growth-coach" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
-sys.path.insert(0, str(ROOT / "plugins" / "professional-growth-coach" / "tests"))
 
 from dossier_snapshot import snapshot_for_dossier  # noqa: E402
 from build_career_learning_decision import (  # noqa: E402
     build_learning_bundle,
     snapshot_for_learning_bundle,
 )
-from validate_private_schema_conformance import (  # noqa: E402
+from validate_json_schema_subset import (  # noqa: E402
     validate_schema_instance,
 )
 from validate_target_vacancy_research import (  # noqa: E402
