@@ -25,7 +25,7 @@ _IDENTITY_TOKEN = re.compile(r"[^\W\d_]{2,}(?:['’][^\W\d_]{2,})*|[^\W\d_](?:\.
 _CANDIDATE_MARKERS = frozenset({"candidate", "applicant", "candidato", "candidata"})
 _ROLE_TITLE_HEADS = frozenset({"architect", "developer", "engineer", "engineering", "manager", "specialist", "sre"})
 _IDENTITY_LABELS = frozenset({"identity", "identidad", "name", "named", "nombre", "perfil", "profile", "llamado", "llamada"})
-_ROLE_PRODUCT_TERMS = frozenset({"acquisition", "architect", "automation", "blue", "career", "careers", "cloud", "developer", "development", "devops", "engineer", "engineering", "experience", "incident", "index", "infrastructure", "jobs", "kubernetes", "management", "manager", "open", "operator", "operations", "origin", "platform", "portal", "product", "products", "reliability", "response", "role", "search", "service", "services", "site", "software", "source", "specialist", "sre", "success", "systems", "talent", "team", "workflow"})
+_ROLE_PRODUCT_TERMS = frozenset({"acquisition", "accessibility", "accountability", "architect", "architecture", "authentication", "authorization", "automation", "availability", "blue", "build", "career", "careers", "chain", "cloud", "collaboration", "compatibility", "computer", "configuration", "containerization", "developer", "development", "devops", "documentation", "engineer", "engineering", "experience", "experimentation", "incident", "index", "infrastructure", "internationalization", "implementation", "jobs", "kubernetes", "language", "learning", "localization", "machine", "maintainability", "management", "manager", "modernization", "natural", "open", "operator", "operations", "orchestration", "origin", "personalization", "platform", "portal", "processing", "product", "products", "professional", "productivity", "recommendation", "release", "reliability", "research", "response", "role", "scientist", "search", "service", "services", "site", "software", "source", "specialist", "sre", "standardization", "success", "supply", "sustainability", "systems", "talent", "team", "telecommunications", "transformation", "trust", "vision", "virtualization", "workflow", "zero"})
 _ROLE_TITLE_TECHNICAL_MODIFIERS = _ROLE_PRODUCT_TERMS | frozenset({"analytics", "api", "architecture", "data", "gateway", "journey", "mesh", "principal", "security"})
 _PUBLIC_RESEARCH_TERMS = frozenset({"evidence", "free", "match", "material", "only", "reference", "references", "reported", "supplied"})
 _SAFE_STANDALONE_TERMS = _ROLE_PRODUCT_TERMS | _PUBLIC_RESEARCH_TERMS
@@ -37,9 +37,19 @@ _CANDIDATE_SINGLE_NAME_EXCLUSIONS = frozenset(
 )
 _COMMON_GIVEN_NAMES = frozenset(
     {
-        "alicia", "ana", "carlos", "david", "elodie", "emily", "jane", "jean",
+        "alex", "alexander", "alicia", "amelia", "ana", "carlos", "david", "elodie", "emily", "franklin", "george", "jane", "jean",
         "john", "jordan", "juan", "jose", "joseph", "kevin", "luc", "luis",
-        "margaret", "maria", "michael", "miguel", "rachel", "robert", "sofia", "sophia", "zhang",
+        "margaret", "maria", "marco", "mary", "michael", "mike", "miguel", "natalie", "nina", "rachel", "robert", "sarah", "sofia", "sophia", "tony", "zhang",
+    }
+)
+_SAFE_PUBLIC_RESEARCH_PHRASES = frozenset(
+    {
+        "jane street",
+        "john deere",
+        "johnstone engineer",
+        "maria db engineer",
+        "maria-db engineer",
+        "mariadb engineer",
     }
 )
 _ORGANIZATION_AND_LOCATION_TERMS = frozenset(
@@ -71,6 +81,17 @@ _OBFUSCATED_EMAIL = re.compile(
 )
 _EMAIL_ADDRESS = re.compile(r"\b[^\s@]+@[^\s@]+\.[A-Za-z]{2,}\b")
 _HTML_TAG = re.compile(r"</?[A-Za-z][^>]{0,80}>")
+_CONTEXTUAL_ROLE_TAIL = re.compile(
+    r"\b((?:[^\s]+\s+){0,2}[^\s]{4,})\s*[-_./+]?\s*"
+    r"(architect|developer|engineer|manager|specialist|sre)\b",
+    re.IGNORECASE,
+)
+_SAFE_COMPACT_ROLE_TERMS = frozenset(
+    {
+        "cloudnative", "devops", "googlecloud", "infrastructure", "kubernetes",
+        "observability", "platform", "sitereliability", "terraform", "terraformmodule",
+    }
+)
 
 
 def contains_unmarked_candidate_identity(value: object) -> bool:
@@ -166,7 +187,7 @@ def contains_obfuscated_candidate_identity(value: object) -> bool:
         except ValueError:
             parsed = None
         if parsed is not None:
-            inspection_text = f"{parsed.path} {parsed.query} {parsed.fragment}"
+            inspection_text = f"{parsed.hostname or ''} {parsed.path} {parsed.query} {parsed.fragment}"
     stopwords = _PERSON_NAME_STOPWORDS | _ORGANIZATION_AND_LOCATION_TERMS
     obfuscation_hint = bool(
         re.search(r"%[0-9a-f]{2}|&#(?:x[0-9a-f]+|[0-9]+);|[A-Za-z]\d[A-Za-z]", value, re.IGNORECASE)
@@ -175,6 +196,17 @@ def contains_obfuscated_candidate_identity(value: object) -> bool:
         return True
     if _HTML_TAG.search(normalized_source):
         return True
+    leet = inspection_text.translate(str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t"}))
+    for candidate_text in (inspection_text, leet):
+        for match in _CONTEXTUAL_ROLE_TAIL.finditer(candidate_text):
+            prefix = match.group(1).casefold()
+            parts = [part for part in re.split(r"[\s._/+\\-]+", prefix) if part]
+            if any(part in _COMMON_GIVEN_NAMES for part in parts):
+                return True
+            if prefix in stopwords or prefix in _SAFE_COMPACT_ROLE_TERMS:
+                continue
+            if len(parts) >= 2 and all(part not in stopwords and len(part) >= 4 for part in parts):
+                return True
     for match in re.finditer(r"\b([^\W\d_]{2,})[._/+\\-]+([^\W\d_]{2,})\b", inspection_text, re.UNICODE):
         first, second = match.groups()
         if (
@@ -206,7 +238,6 @@ def contains_obfuscated_candidate_identity(value: object) -> bool:
             return True
     if re.search(r"\b[A-ZÁÉÍÓÚÑ]{2,},\s*[A-ZÁÉÍÓÚÑ]{2,}\b", normalized_source):
         return True
-    leet = inspection_text.translate(str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t"}))
     for match in _OBFUSCATED_NAME_PAIR.finditer(leet):
         first, second = match.groups()
         if first in _COMMON_GIVEN_NAMES and second not in stopwords:
@@ -321,16 +352,19 @@ def target_research_contains_candidate_identity(value: object) -> bool:
         for collection, field in ((vacancy.get("eligibility_gates", ()), "observed_condition"), (vacancy.get("requirements", ()), "source_paraphrase")):
             if isinstance(collection, Sequence) and not isinstance(collection, (str, bytes, bytearray)):
                 strict_scalars.extend(item.get(field) for item in collection if isinstance(item, Mapping))
-    return any(
-        contains_candidate_identity(scalar)
-        or contains_candidate_like_name(scalar)
-        or contains_obfuscated_candidate_identity(scalar)
-        for scalar in strict_scalars
-    ) or any(
-        contains_candidate_identity(title, vacancy_title=True)
-        or contains_candidate_like_name(title)
-        or contains_obfuscated_candidate_identity(title)
-        for title in vacancy_titles
+    def unsafe(scalar: object, *, vacancy_title: bool = False) -> bool:
+        if isinstance(scalar, str):
+            normalized = " ".join(unicodedata.normalize("NFKC", scalar).casefold().split())
+            if normalized in _SAFE_PUBLIC_RESEARCH_PHRASES:
+                return False
+        return (
+            contains_candidate_identity(scalar, vacancy_title=vacancy_title)
+            or contains_candidate_like_name(scalar)
+            or contains_obfuscated_candidate_identity(scalar)
+        )
+
+    return any(unsafe(scalar) for scalar in strict_scalars) or any(
+        unsafe(title, vacancy_title=True) for title in vacancy_titles
     )
 
 

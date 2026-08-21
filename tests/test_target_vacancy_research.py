@@ -572,6 +572,32 @@ class TargetVacancyResearchTests(unittest.TestCase):
                 ("vacancies", 0, "duplicate_fingerprint"),
                 "rachelgreen-engineer",
             ),
+            (
+                "title arbitrary slug with role",
+                ("vacancies", 0, "title"),
+                "alexander-hamilton engineer",
+            ),
+            (
+                "title arbitrary compact name with role",
+                ("vacancies", 0, "title"),
+                "alexanderhamilton engineer",
+            ),
+            (
+                "title arbitrary leet name with role",
+                ("vacancies", 0, "title"),
+                "al3xander-h4milton engineer",
+            ),
+            ("title compact common name with role", ("vacancies", 0, "title"), "alexjohnson engineer"),
+            ("title dotted common name with role", ("vacancies", 0, "title"), "sarah.connor engineer"),
+            ("title underscore common name with role", ("vacancies", 0, "title"), "mary_smith engineer"),
+            ("title compact common name", ("vacancies", 0, "title"), "natalieportman"),
+            ("title compact common name two", ("vacancies", 0, "title"), "marcopolo"),
+            ("title dotted common name three", ("vacancies", 0, "title"), "nina.simone"),
+            ("title compact common name four", ("vacancies", 0, "title"), "franklinroosevelt"),
+            ("title compact common name five", ("vacancies", 0, "title"), "georgewashington"),
+            ("title dotted common name six", ("vacancies", 0, "title"), "amelia.earhart"),
+            ("title compact common name seven", ("vacancies", 0, "title"), "mikejordan"),
+            ("title dotted common name eight", ("vacancies", 0, "title"), "tony.stark"),
         )
         for label, (collection, index, field), marker in cases:
             with self.subTest(field=label):
@@ -591,6 +617,15 @@ class TargetVacancyResearchTests(unittest.TestCase):
         )
         self.assertNotIn("margaret", "\n".join(errors).casefold())
 
+        for host in ("alexjohnson.github.io", "johnsmith.dev", "alex%6aohnson.github.io"):
+            with self.subTest(host=host):
+                host_value = self.complete()
+                host_value["vacancies"][0]["source_url"] = f"https://{host}/rfc"
+                errors = self.assert_invalid(
+                    host_value, "research contains forbidden private or raw content"
+                )
+                self.assertNotIn(host.casefold(), "\n".join(errors).casefold())
+
     def test_obfuscated_controls_remain_valid(self) -> None:
         for field, value in (
             ("title", "Google Cloud Platform Engineer"),
@@ -598,6 +633,17 @@ class TargetVacancyResearchTests(unittest.TestCase):
             ("title", "Kubernetes Operator"),
             ("title", "Open Source Incident Response"),
             ("title", "Blue Origin Platform Engineer"),
+            ("title", "Jane Street"),
+            ("title", "John Deere"),
+            ("title", "Maria DB Engineer"),
+            ("title", "maria-db engineer"),
+            ("title", "MariaDB Engineer"),
+            ("title", "Johnstone Engineer"),
+            ("title", "Productivity Engineer"),
+            ("title", "Authorization Engineer"),
+            ("title", "Machine Learning Engineer"),
+            ("title", "Computer Vision Engineer"),
+            ("title", "Software Supply Chain Engineer"),
             ("duplicate_fingerprint", "cloud-native"),
             ("duplicate_fingerprint", "terraform-module"),
         ):
@@ -605,6 +651,11 @@ class TargetVacancyResearchTests(unittest.TestCase):
                 research = self.complete()
                 research["vacancies"][0][field] = value
                 self.assertEqual([], self.validator.validate_research(research))
+        for title in ("Cloud John Engineer", "John Cloud Engineer"):
+            with self.subTest(field="title", value=title):
+                research = self.complete()
+                research["vacancies"][0]["title"] = title
+                self.assert_invalid(research, "research contains forbidden private or raw content")
 
     def test_example_fixture_urls_are_rejected_outside_the_synthetic_fixture_boundary(self) -> None:
         value = self.complete()
@@ -646,6 +697,7 @@ class TargetVacancyResearchTests(unittest.TestCase):
             "85efa33d3d58256da22fe860d35c40933d02109873483096a7bbf6f4aa405729",
             digest,
         )
+
         self.assertEqual(
             f"snap-market-sha256-{digest}", self.validator.snapshot_for_market_dossier(value)
         )

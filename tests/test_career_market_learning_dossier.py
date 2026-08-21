@@ -230,6 +230,9 @@ class CareerMarketLearningDossierTests(unittest.TestCase):
             ("employers", 0, "display_name", "margaret%20thatcher"),
             ("vacancies", 0, "title", "rachel&#46;green engineer"),
             ("vacancies", 0, "duplicate_fingerprint", "rachelgreen-engineer"),
+            ("vacancies", 0, "title", "alexander-hamilton engineer"),
+            ("vacancies", 0, "title", "alexanderhamilton engineer"),
+            ("vacancies", 0, "title", "al3xander-h4milton engineer"),
             (
                 "vacancies",
                 0,
