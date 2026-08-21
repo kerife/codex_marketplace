@@ -27,6 +27,46 @@ _ROLE_PRODUCT_TERMS = frozenset({"acquisition", "architect", "career", "careers"
 _ROLE_TITLE_TECHNICAL_MODIFIERS = _ROLE_PRODUCT_TERMS | frozenset({"analytics", "api", "architecture", "data", "gateway", "journey", "mesh", "principal", "security"})
 _PUBLIC_RESEARCH_TERMS = frozenset({"evidence", "free", "match", "material", "only", "reference", "references", "reported", "supplied"})
 _SAFE_STANDALONE_TERMS = _ROLE_PRODUCT_TERMS | _PUBLIC_RESEARCH_TERMS
+_CANDIDATE_SINGLE_NAME_EXCLUSIONS = frozenset(
+    {
+        "senior", "junior", "lead", "staff", "principal", "architect",
+        "developer", "engineer", "engineering", "manager", "specialist", "sre",
+    }
+)
+
+
+def contains_unmarked_candidate_identity(value: object) -> bool:
+    """Reject short candidate-name forms that lack the usual two-token marker."""
+    if isinstance(value, Mapping):
+        return any(contains_unmarked_candidate_identity(item) for item in value.values())
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return any(contains_unmarked_candidate_identity(item) for item in value)
+    if not isinstance(value, str):
+        return False
+    candidate_match = re.search(
+        r"\b(?:candidate|applicant|candidato|candidata)\s+([^\W\d_]{2,})\b",
+        value,
+        re.IGNORECASE | re.UNICODE,
+    )
+    if candidate_match:
+        token = unicodedata.normalize("NFKC", candidate_match.group(1)).casefold()
+        if token not in _CANDIDATE_SINGLE_NAME_EXCLUSIONS and token not in _SAFE_STANDALONE_TERMS:
+            return True
+    for match in re.finditer(
+        r"\b([^\W\d_]{2,})\s+([^\W\d_]{2,})\b", value, re.UNICODE
+    ):
+        first, second = match.groups()
+        if not first[0].isupper() or not second[0].isupper():
+            continue
+        if not any(ord(character) > 127 for character in second):
+            continue
+        normalized = {
+            unicodedata.normalize("NFKC", token).casefold()
+            for token in (first, second)
+        }
+        if normalized.isdisjoint(_SAFE_STANDALONE_TERMS | _CANDIDATE_SINGLE_NAME_EXCLUSIONS):
+            return True
+    return False
 
 
 def _candidate_identity_tokens(value: str) -> list[str]:

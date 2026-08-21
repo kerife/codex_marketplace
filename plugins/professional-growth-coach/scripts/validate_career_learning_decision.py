@@ -152,6 +152,14 @@ _UNSAFE_ACTION_RE = re.compile(
     r"|job\s+placement"
     r"|offer\s+after\s+completion"
     r"|employer\s+will\s+contact\s+you"
+    r"|you\s+are\s+assured\s+(?:a\s+)?job"
+    r"|(?:this\s+credential\s+)?leads?\s+to\s+(?:an?\s+)?interview"
+    r"|this\s+gets?\s+an?\s+interview"
+    r"|this\s+makes?\s+hiring\s+likely"
+    r"|this\s+results?\s+in\s+hiring"
+    r"|improv(?:e|es|ed|ing)\s+(?:your\s+)?interview\s+chances"
+    r"|book\s+your\s+course|\benroll\b|register\s+now|apply\s+to\s+this\s+role"
+    r"|send\s+an?\s+email|message\s+the\s+recruiter"
     r"|will\s+get|guarantee[sd]?|interview\s+probability|offer\s+probability|salary\s+increase|time[- ]to[- ]hire|return\s+on\s+investment"
     r"|compra\s+este\s+curso|inscr[ií]bete\s+ahora|aplica\s+ahora"
     r"|programa\s+el\s+examen|agenda\s+entrevista|contacta\s+al\s+proveedor|publica\s+este\s+proyecto|env[ií]a\s+un\s+mensaje"
@@ -240,6 +248,7 @@ def _text_has_identity_action_or_outcome_risk(value: object) -> bool:
     action_candidate = _SAFE_OUTCOME_BOUNDARY_RE.sub("safe technical context", value)
     return bool(
         _prose.contains_candidate_identity(identity_candidate)
+        or _prose.contains_unmarked_candidate_identity(identity_candidate)
         or _UNSAFE_ACTION_RE.search(action_candidate)
     )
 

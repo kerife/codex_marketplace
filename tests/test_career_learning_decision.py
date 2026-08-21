@@ -356,6 +356,20 @@ class CareerLearningDecisionContractTests(unittest.TestCase):
             ("option_name", "Éxito de entrevista"),
             ("decision_basis", "Obtendrás empleo"),
             ("target_role", "Te conseguirás un trabajo"),
+            ("decision_basis", "You are assured a job"),
+            ("option_name", "This credential leads to an interview"),
+            ("provider_or_owner", "This gets an interview"),
+            ("decision_basis", "This makes hiring likely"),
+            ("option_name", "This results in hiring"),
+            ("target_role", "Improves interview chances"),
+            ("option_name", "Book your course"),
+            ("decision_basis", "Enroll"),
+            ("provider_or_owner", "Register now"),
+            ("option_name", "Apply to this role"),
+            ("next_action_gate", "exact authorization required before Send an email"),
+            ("decision_basis", "Message the recruiter"),
+            ("option_name", "Candidate Kevin"),
+            ("target_role", "Kevin Ríos"),
         )
         for field, unsafe_text in cases:
             with self.subTest(field=field, unsafe_text=unsafe_text):

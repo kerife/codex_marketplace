@@ -202,6 +202,10 @@ COPY = {
         "learning_option": "Opción",
         "learning_owner": "Proveedor o dueño",
         "learning_evidence": "Señal recurrente",
+        "learning_basis": "Base de la decisión",
+        "learning_cost_time": "Costo y tiempo",
+        "learning_signal_boundary": "Señal esperada",
+        "learning_source": "Fuente oficial",
         "learning_alternative": "Alternativa de menor costo",
         "learning_risk": "Riesgo de sobreinvertir",
         "learning_decision": "Decisión del coach",
@@ -253,6 +257,10 @@ COPY = {
         "learning_option": "Option",
         "learning_owner": "Provider or owner",
         "learning_evidence": "Recurring signal",
+        "learning_basis": "Decision basis",
+        "learning_cost_time": "Cost and time",
+        "learning_signal_boundary": "Expected signal",
+        "learning_source": "Official source",
         "learning_alternative": "Lower-cost alternative",
         "learning_risk": "Overinvestment risk",
         "learning_decision": "Coach decision",
@@ -608,6 +616,14 @@ def _render_learning_decision(
         option_type = labels["learning_option_types"].get(str(row["option_type"]), str(row["option_type"]))
         decision_label = labels["learning_decisions"].get(str(row["decision"]), str(row["decision"]))
         gap_label = labels["learning_gap_types"].get(str(row["gap_type"]), str(row["gap_type"]))
+        provider_source = row.get("provider_source")
+        source_markup = ""
+        if isinstance(provider_source, Mapping):
+            source_markup = (
+                f'<p><span class="label">{labels["learning_source"]}</span>'
+                f'{html.escape(str(provider_source.get("source_date", "")), quote=True)}; '
+                f'{html.escape(str(provider_source.get("unknowns", "")), quote=True)}</p>'
+            )
         cards.append(
             f'''<article class="card span-4 learning-decision-card" aria-labelledby="{heading_id}">
           <div class="learning-decision-header"><span class="learning-decision-rank" aria-hidden="true">{rank}</span><h3 id="{heading_id}">{html.escape(str(row['option_name']), quote=True)}</h3></div>
@@ -616,6 +632,12 @@ def _render_learning_decision(
           <p><span class="label">{labels['learning_option']}</span>{html.escape(option_type, quote=True)}</p>
           <p><span class="label">{labels['learning_owner']}</span>{html.escape(str(row['provider_or_owner']), quote=True)}</p>
           <p><span class="label">{labels['learning_evidence']}</span>{html.escape(_learning_signal_labels(market_dossier, row.get('source_gap_ids'), locale), quote=True)}</p>
+          <div class="learning-decision-proof">
+            <p><span class="label">{labels['learning_basis']}</span>{html.escape(str(row['decision_basis']), quote=True)}</p>
+            <p><span class="label">{labels['learning_cost_time']}</span>{html.escape(str(row['cost_time_band']), quote=True)}</p>
+            <p><span class="label">{labels['learning_signal_boundary']}</span>{html.escape(str(row['expected_signal_boundary']), quote=True)}</p>
+            {source_markup}
+          </div>
           <p><span class="label">{labels['learning_alternative']}</span>{html.escape(str(row['portfolio_or_no_learning_alternative']), quote=True)}</p>
           <p><span class="label">{labels['learning_risk']}</span>{html.escape(str(row['overbuying_risk']), quote=True)}</p>
           <p><span class="label">{labels['learning_decision']}</span>{html.escape(decision_label, quote=True)}</p>

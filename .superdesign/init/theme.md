@@ -1558,6 +1558,13 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   overflow-wrap: anywhere;
 }
 .learning-decision-card p { margin-block: .7rem 0; }
+.learning-decision-proof {
+  margin-top: .85rem;
+  padding: .75rem;
+  border-left: 3px solid var(--gold);
+  background: var(--paper);
+}
+.learning-decision-proof p { margin-top: .45rem; }
 .learning-decision-header {
   display: flex;
   align-items: flex-start;
@@ -1653,6 +1660,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 
 @media screen and (prefers-color-scheme: dark) {
   .learning-decision-card { border-color: var(--forest); background: var(--surface); color: var(--ink); }
+  .learning-decision-proof { background: var(--paper); }
   .learning-decision-rank { background: var(--coral); color: var(--paper); }
 }
 
@@ -1673,7 +1681,8 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 }
 
 @media (forced-colors: active) {
-  .learning-decision-card { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .learning-decision-card,
+  .learning-decision-proof { background: Canvas; color: CanvasText; border-color: CanvasText; }
   .learning-decision-rank { background: Highlight; color: HighlightText; }
   .learning-decision-sample,
   .learning-decision-role,

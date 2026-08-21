@@ -1616,6 +1616,10 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             ("decision_basis", "foo.xyz/profile"),
             ("option_name", "Ensures an interview"),
             ("option_name", "Esta opción garantiza contratación"),
+            ("option_name", "This gets an interview"),
+            ("option_name", "Enroll"),
+            ("option_name", "Candidate Kevin"),
+            ("target_role", "Kevin Ríos"),
         ):
             with self.subTest(field=field, unsafe_text=unsafe_text):
                 invalid = copy.deepcopy(case[4])
@@ -1639,6 +1643,74 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                         market_alignment=case[3],
                         learning_decision=invalid,
                     )
+
+    def test_learning_cards_explain_proof_to_cost_before_action_boundary(self) -> None:
+        for locale, research_name, dossier_name in (
+            ("es", "complete-five-es.json", "scenario-a-es.json"),
+            ("en", "limited-four-en.json", "scenario-c-en.json"),
+        ):
+            with self.subTest(locale=locale):
+                case = learning_case(
+                    research_name,
+                    dossier_name,
+                    count=5 if locale == "es" else 3,
+                    decision_count=3,
+                )
+                rendered = self.renderer.render_dossier_html(
+                    case[0],
+                    case[1],
+                    market_research=case[2],
+                    market_alignment=case[3],
+                    learning_decision=case[4],
+                )
+                panel = re.search(
+                    r'<section class="section-block learning-decision".*?</section>',
+                    rendered,
+                    re.DOTALL,
+                )
+                self.assertIsNotNone(panel)
+                panel_text = visible_text(panel.group(0))
+                for expected in (
+                    "Base de la decisión" if locale == "es" else "Decision basis",
+                    "Costo y tiempo" if locale == "es" else "Cost and time",
+                    "Señal esperada" if locale == "es" else "Expected signal",
+                ):
+                    self.assertIn(expected, panel_text)
+                self.assertLess(
+                    panel_text.index("Base de la decisión" if locale == "es" else "Decision basis"),
+                    panel_text.index("Costo y tiempo" if locale == "es" else "Cost and time"),
+                )
+                self.assertLess(
+                    panel_text.index("Costo y tiempo" if locale == "es" else "Cost and time"),
+                    panel_text.index("Señal esperada" if locale == "es" else "Expected signal"),
+                )
+                self.assertRegex(
+                    panel_text,
+                    r"(?:México|Mexico) eligibility and preparation time are not stated",
+                )
+                self.assertIn("2026-08-13", panel_text)
+                self.assertNotRegex(panel.group(0), r"<a href=\"https?://")
+                self.assertNotRegex(panel.group(0), r"<(?:button|input|select|textarea|form)\b")
+
+    def test_learning_card_proof_to_cost_fields_remain_absent_without_provider_source(self) -> None:
+        case = learning_case(
+            "complete-five-es.json", "scenario-a-es.json", count=5, decision_count=3
+        )
+        rendered = self.renderer.render_dossier_html(
+            case[0],
+            case[1],
+            market_research=case[2],
+            market_alignment=case[3],
+            learning_decision=case[4],
+        )
+        cards = re.findall(
+            r'<article class="card span-4 learning-decision-card".*?</article>',
+            rendered,
+            re.DOTALL,
+        )
+        self.assertEqual(3, len(cards))
+        self.assertNotIn("Fuente oficial", visible_text(cards[0]))
+        self.assertIn("Fuente oficial", visible_text(cards[1]))
 
     def test_learning_panel_uses_dynamic_one_to_five_sample_counts(self) -> None:
         for count in range(1, 6):
