@@ -60,6 +60,8 @@ _SAFE_PUBLIC_RESEARCH_PHRASES = frozenset(
     }
 )
 _SAFE_PUBLIC_RESEARCH_ORGANIZATIONS = frozenset({"jane street", "john deere", "maria db", "mariadb"})
+_SAFE_FIELD_PUBLIC_RESEARCH_ORGANIZATIONS = frozenset({"grant thornton", "brown university", "miller lite"})
+_SAFE_FIELD_PUBLIC_RESEARCH_FIELDS = frozenset({"display_name", "qualification_observation", "official_source_title", "title"})
 _ORGANIZATION_AND_LOCATION_TERMS = frozenset(
     {
         "aerospace", "angeles", "canada", "city", "cloud", "corp", "corporation",
@@ -345,14 +347,14 @@ def target_research_contains_candidate_identity(value: object) -> bool:
     """Scan only public prose and URL scalars allowed by target research."""
     if not isinstance(value, Mapping):
         return False
-    strict_scalars: list[object] = []
-    vacancy_titles: list[object] = []
+    strict_scalars: list[tuple[object, str]] = []
+    vacancy_titles: list[tuple[object, str]] = []
     if isinstance(value.get("search_limit"), Mapping):
-        strict_scalars.append(value["search_limit"].get("limitation"))
+        strict_scalars.append((value["search_limit"].get("limitation"), "limitation"))
     for employer in value.get("employers", ()):
         if isinstance(employer, Mapping):
             strict_scalars.extend(
-                employer.get(field)
+                (employer.get(field), field)
                 for field in (
                     "display_name",
                     "qualification_observation",
@@ -363,9 +365,9 @@ def target_research_contains_candidate_identity(value: object) -> bool:
     for vacancy in value.get("vacancies", ()):
         if not isinstance(vacancy, Mapping):
             continue
-        vacancy_titles.append(vacancy.get("title"))
+        vacancy_titles.append((vacancy.get("title"), "title"))
         strict_scalars.extend(
-            vacancy.get(field)
+            (vacancy.get(field), field)
             for field in (
                 "location",
                 "duplicate_fingerprint",
@@ -375,11 +377,11 @@ def target_research_contains_candidate_identity(value: object) -> bool:
         )
         for collection, field in ((vacancy.get("eligibility_gates", ()), "observed_condition"), (vacancy.get("requirements", ()), "source_paraphrase")):
             if isinstance(collection, Sequence) and not isinstance(collection, (str, bytes, bytearray)):
-                strict_scalars.extend(item.get(field) for item in collection if isinstance(item, Mapping))
-    def unsafe(scalar: object, *, vacancy_title: bool = False) -> bool:
+                strict_scalars.extend((item.get(field), field) for item in collection if isinstance(item, Mapping))
+    def unsafe(scalar: object, *, field: str, vacancy_title: bool = False) -> bool:
         if isinstance(scalar, str):
             normalized = " ".join(unicodedata.normalize("NFKC", scalar).casefold().split())
-            if normalized in _SAFE_PUBLIC_RESEARCH_PHRASES or _safe_public_research_context(normalized):
+            if normalized in _SAFE_PUBLIC_RESEARCH_PHRASES or _safe_public_research_context(normalized, field=field):
                 return False
         return (
             contains_candidate_identity(scalar, vacancy_title=vacancy_title)
@@ -387,12 +389,12 @@ def target_research_contains_candidate_identity(value: object) -> bool:
             or contains_obfuscated_candidate_identity(scalar)
         )
 
-    return any(unsafe(scalar) for scalar in strict_scalars) or any(
-        unsafe(title, vacancy_title=True) for title in vacancy_titles
+    return any(unsafe(scalar, field=field) for scalar, field in strict_scalars) or any(
+        unsafe(title, field=field, vacancy_title=True) for title, field in vacancy_titles
     )
 
 
-def _safe_public_research_context(value: str) -> bool:
+def _safe_public_research_context(value: str, *, field: str | None = None) -> bool:
     """Allow known organization names with an explicitly technical suffix."""
     candidates = [value]
     if "://" in value:
@@ -411,7 +413,10 @@ def _safe_public_research_context(value: str) -> bool:
             candidates.append(f"{host} {parsed.path}")
     for candidate in candidates:
         compact = re.sub(r"[^a-z0-9]+", " ", candidate.casefold()).strip()
-        for organization in _SAFE_PUBLIC_RESEARCH_ORGANIZATIONS:
+        organizations = _SAFE_PUBLIC_RESEARCH_ORGANIZATIONS
+        if field in _SAFE_FIELD_PUBLIC_RESEARCH_FIELDS:
+            organizations |= _SAFE_FIELD_PUBLIC_RESEARCH_ORGANIZATIONS
+        for organization in organizations:
             organization_compact = organization.replace(" ", "")
             if compact == organization:
                 return True

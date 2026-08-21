@@ -450,6 +450,43 @@ class TargetVacancyResearchTests(unittest.TestCase):
                 value["vacancies"][0]["title"] = title
                 self.assertEqual([], self.validator.validate_research(value))
 
+    def test_exact_organization_allowlist_is_field_aware_and_bounded(self) -> None:
+        organizations = ("Grant Thornton", "Brown University", "Miller Lite")
+        positive_cases = (
+            ("employers", 0, "display_name", lambda organization: organization),
+            ("employers", 0, "qualification_observation", lambda organization: organization),
+            (
+                "employers",
+                0,
+                "official_source_title",
+                lambda organization: f"{organization} Platform Engineer",
+            ),
+            (
+                "vacancies",
+                0,
+                "title",
+                lambda organization: f"{organization} Platform Engineer",
+            ),
+        )
+        for organization in organizations:
+            for collection, index, field, render in positive_cases:
+                with self.subTest(organization=organization, field=field):
+                    value = self.complete()
+                    value[collection][index][field] = render(organization)
+                    self.assertEqual([], self.validator.validate_research(value))
+
+            for field, marker in (
+                ("location", organization),
+                ("duplicate_fingerprint", organization.casefold().replace(" ", "-") + "-engineer"),
+            ):
+                with self.subTest(organization=organization, field=field):
+                    value = self.complete()
+                    value["vacancies"][0][field] = marker
+                    errors = self.assert_invalid(
+                        value, "research contains forbidden private or raw content"
+                    )
+                    self.assertNotIn(marker.casefold(), "\n".join(errors).casefold())
+
     def test_embedded_unmarked_person_names_are_rejected_without_blocking_safe_slugs(self) -> None:
         embedded_titles = (
             "Emily Stone Engineer",
