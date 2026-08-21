@@ -480,6 +480,88 @@ class TargetVacancyResearchTests(unittest.TestCase):
                 value["vacancies"][0]["duplicate_fingerprint"] = marker
                 self.assertEqual([], self.validator.validate_research(value))
 
+    def test_obfuscated_identity_forms_are_rejected_without_echo(self) -> None:
+        cases = (
+            ("employer dotted name", ("employers", 0, "display_name"), "john.smith"),
+            ("employer encoded name", ("employers", 0, "display_name"), "john%20smith"),
+            ("vacancy possessive name", ("vacancies", 0, "title"), "john smith's role"),
+            ("vacancy underscore name", ("vacancies", 0, "title"), "john_smith engineer"),
+            ("vacancy slash name", ("vacancies", 0, "title"), "john/smith engineer"),
+            ("vacancy plus name", ("vacancies", 0, "title"), "john+smith engineer"),
+            ("vacancy entity name", ("vacancies", 0, "title"), "john&#46;smith engineer"),
+            ("vacancy initial name", ("vacancies", 0, "title"), "J. Smith engineer"),
+            ("vacancy reversed capitals", ("vacancies", 0, "title"), "SMITH, JOHN engineer"),
+            ("vacancy leet name", ("vacancies", 0, "title"), "j0hn-sm1th engineer"),
+            ("vacancy compact name", ("vacancies", 0, "title"), "johnsmith engineer"),
+            ("vacancy repeated separators", ("vacancies", 0, "title"), "john..smith engineer"),
+            ("vacancy underscore separators", ("vacancies", 0, "title"), "john__smith engineer"),
+            ("location dotted name", ("vacancies", 0, "location"), "john.smith"),
+            ("fingerprint compact name", ("vacancies", 0, "duplicate_fingerprint"), "johnsmith-engineer"),
+        )
+        for label, (collection, index, field), marker in cases:
+            with self.subTest(field=label):
+                value = self.complete()
+                value[collection][index][field] = marker
+                errors = self.assert_invalid(
+                    value, "research contains forbidden private or raw content"
+                )
+                self.assertNotIn(marker, "\n".join(errors))
+
+        encoded_url = self.complete()
+        encoded_url["vacancies"][0]["source_url"] = (
+            "https://www.rfc-editor.org/rfc/rfc2606#fixture-v-001/john.smith"
+        )
+        errors = self.assert_invalid(
+            encoded_url, "research contains forbidden private or raw content"
+        )
+        self.assertNotIn("john.smith", "\n".join(errors))
+
+        encoded_name = self.complete()
+        encoded_name["vacancies"][0]["title"] = "%6a%6f%68%6e%20%73%6d%69%74%68 engineer"
+        errors = self.assert_invalid(
+            encoded_name, "research contains forbidden private or raw content"
+        )
+        self.assertNotIn("smith", "\n".join(errors).casefold())
+
+        obfuscated_email = self.complete()
+        obfuscated_email["vacancies"][0]["requirements"][0]["source_paraphrase"] = (
+            "john [at] example [dot] com"
+        )
+        errors = self.assert_invalid(
+            obfuscated_email, "research contains forbidden private or raw content"
+        )
+        self.assertNotIn("example", "\n".join(errors).casefold())
+
+        encoded_email = self.complete()
+        encoded_email["vacancies"][0]["requirements"][0]["source_paraphrase"] = (
+            "john%40example.com"
+        )
+        errors = self.assert_invalid(
+            encoded_email, "research contains forbidden private or raw content"
+        )
+        self.assertNotIn("example.com", "\n".join(errors).casefold())
+
+        encoded_html = self.complete()
+        encoded_html["vacancies"][0]["requirements"][0]["source_paraphrase"] = (
+            "&#60;script&#62;candidate&#60;/script&#62;"
+        )
+        errors = self.assert_invalid(
+            encoded_html, "research contains forbidden private or raw content"
+        )
+        self.assertNotIn("script", "\n".join(errors).casefold())
+
+    def test_obfuscated_controls_remain_valid(self) -> None:
+        for field, value in (
+            ("title", "Google Cloud Platform Engineer"),
+            ("title", "Terraform Module Maintainer"),
+            ("duplicate_fingerprint", "cloud-native"),
+            ("duplicate_fingerprint", "terraform-module"),
+        ):
+            with self.subTest(field=field, value=value):
+                research = self.complete()
+                research["vacancies"][0][field] = value
+                self.assertEqual([], self.validator.validate_research(research))
+
     def test_example_fixture_urls_are_rejected_outside_the_synthetic_fixture_boundary(self) -> None:
         value = self.complete()
         value["vacancies"][0]["source_url"] = "https://example.com/careers/a"

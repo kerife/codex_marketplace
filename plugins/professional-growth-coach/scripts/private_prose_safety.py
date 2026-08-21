@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import html
 import re
 import unicodedata
 from collections.abc import Mapping, Sequence
+from urllib.parse import unquote, urlsplit
 
 
 MAX_DIAGNOSTIC_BYTES = 16_384
@@ -35,8 +37,9 @@ _CANDIDATE_SINGLE_NAME_EXCLUSIONS = frozenset(
 )
 _COMMON_GIVEN_NAMES = frozenset(
     {
-        "ana", "carlos", "jane", "juan", "jose", "joseph", "john", "maria",
-        "michael", "miguel", "robert", "sofia", "sophia", "david", "luis",
+        "alicia", "ana", "carlos", "david", "elodie", "emily", "jane", "jean",
+        "john", "jordan", "juan", "jose", "joseph", "kevin", "luc", "luis",
+        "maria", "michael", "miguel", "robert", "sofia", "sophia", "zhang",
     }
 )
 _ORGANIZATION_AND_LOCATION_TERMS = frozenset(
@@ -59,6 +62,15 @@ _PROPER_NAME_PAIR = re.compile(
     re.UNICODE,
 )
 _NAME_SLUG_SEQUENCE = re.compile(r"^\s*([^\W\d_]+(?:-[^\W\d_]+)+)\s*$", re.UNICODE)
+_OBFUSCATED_NAME_PAIR = re.compile(r"\b([^\W\d_]{2,})[._/+\\-]([^\W\d_]{2,})\b", re.IGNORECASE | re.UNICODE)
+_LOWERCASE_NAME_PAIR = re.compile(r"\b([^\W\d_]{2,})\s+([^\W\d_]{2,})(?:['’]s)?\b", re.IGNORECASE | re.UNICODE)
+_INITIAL_NAME_PAIR = re.compile(r"\b([^\W\d_])\.\s*([^\W\d_]{2,})\b", re.IGNORECASE | re.UNICODE)
+_OBFUSCATED_EMAIL = re.compile(
+    r"\b[^\s@\[]+\s*(?:\[at\]|\(at\)|\bat\b)\s*[^\s.\[]+\s*(?:\[dot\]|\(dot\)|\bdot\b)\s*[A-Za-z]{2,}\b",
+    re.IGNORECASE,
+)
+_EMAIL_ADDRESS = re.compile(r"\b[^\s@]+@[^\s@]+\.[A-Za-z]{2,}\b")
+_HTML_TAG = re.compile(r"</?[A-Za-z][^>]{0,80}>")
 
 
 def contains_unmarked_candidate_identity(value: object) -> bool:
@@ -104,7 +116,10 @@ def contains_candidate_like_name(value: object) -> bool:
         r"\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})\b",
         normalized,
     ):
-        if match.group(1).casefold() in _COMMON_GIVEN_NAMES:
+        if (
+            match.group(1).casefold() in _COMMON_GIVEN_NAMES
+            and match.group(2).casefold() not in _PERSON_NAME_STOPWORDS
+        ):
             return True
     for match in re.finditer(r"\b([a-z][a-záéíóúñ]{2,})-([a-záéíóúñ]{2,})\b", normalized.casefold()):
         if match.group(1) in _COMMON_GIVEN_NAMES:
@@ -130,6 +145,69 @@ def contains_candidate_like_name(value: object) -> bool:
         for first, second in zip(parts, parts[1:]):
             if {first, second}.isdisjoint(_PERSON_NAME_STOPWORDS):
                 return True
+    return False
+
+
+def contains_obfuscated_candidate_identity(value: object) -> bool:
+    """Reject common-name forms hidden by URL encoding or username punctuation."""
+    if not isinstance(value, str):
+        return False
+    normalized_source = unicodedata.normalize("NFKC", value)
+    for _ in range(3):
+        decoded = html.unescape(unquote(normalized_source, errors="replace"))
+        if decoded == normalized_source:
+            break
+        normalized_source = unicodedata.normalize("NFKC", decoded)
+    normalized = normalized_source.casefold()
+    inspection_text = normalized
+    if "://" in normalized:
+        try:
+            parsed = urlsplit(normalized)
+        except ValueError:
+            parsed = None
+        if parsed is not None:
+            inspection_text = f"{parsed.path} {parsed.query} {parsed.fragment}"
+    stopwords = _PERSON_NAME_STOPWORDS | _ORGANIZATION_AND_LOCATION_TERMS
+    if _OBFUSCATED_EMAIL.search(inspection_text) or _EMAIL_ADDRESS.search(inspection_text):
+        return True
+    if _HTML_TAG.search(normalized_source):
+        return True
+    for match in re.finditer(r"\b([^\W\d_]{2,})[._/+\\-]+([^\W\d_]{2,})\b", inspection_text, re.UNICODE):
+        first, second = match.groups()
+        if (
+            first in _COMMON_GIVEN_NAMES
+            and second not in stopwords
+            or second in _COMMON_GIVEN_NAMES
+            and first not in stopwords
+        ):
+            return True
+    for match in _LOWERCASE_NAME_PAIR.finditer(inspection_text):
+        first, second = match.groups()
+        if first in _COMMON_GIVEN_NAMES and second not in stopwords:
+            return True
+    for match in _INITIAL_NAME_PAIR.finditer(inspection_text):
+        _, second = match.groups()
+        if second not in stopwords:
+            return True
+    if re.search(r"\b[A-ZÁÉÍÓÚÑ]{2,},\s*[A-ZÁÉÍÓÚÑ]{2,}\b", normalized_source):
+        return True
+    leet = inspection_text.translate(str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t"}))
+    for match in _OBFUSCATED_NAME_PAIR.finditer(leet):
+        first, second = match.groups()
+        if first in _COMMON_GIVEN_NAMES and second not in stopwords:
+            return True
+    for match in _LOWERCASE_NAME_PAIR.finditer(leet):
+        first, second = match.groups()
+        if first in _COMMON_GIVEN_NAMES and second not in stopwords:
+            return True
+    for token in re.findall(r"\b[^\W\d_]{6,}\b", inspection_text, re.UNICODE):
+        if token in stopwords:
+            continue
+        for given_name in _COMMON_GIVEN_NAMES:
+            if token.startswith(given_name) and len(token) > len(given_name) + 2:
+                remainder = token[len(given_name):]
+                if remainder not in stopwords:
+                    return True
     return False
 
 
@@ -229,11 +307,14 @@ def target_research_contains_candidate_identity(value: object) -> bool:
             if isinstance(collection, Sequence) and not isinstance(collection, (str, bytes, bytearray)):
                 strict_scalars.extend(item.get(field) for item in collection if isinstance(item, Mapping))
     return any(
-        contains_candidate_identity(scalar) or contains_candidate_like_name(scalar)
+        contains_candidate_identity(scalar)
+        or contains_candidate_like_name(scalar)
+        or contains_obfuscated_candidate_identity(scalar)
         for scalar in strict_scalars
     ) or any(
         contains_candidate_identity(title, vacancy_title=True)
         or contains_candidate_like_name(title)
+        or contains_obfuscated_candidate_identity(title)
         for title in vacancy_titles
     )
 

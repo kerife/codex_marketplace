@@ -221,6 +221,22 @@ class CareerMarketLearningDossierTests(unittest.TestCase):
         self.assertEqual("bounded_search_exhausted", result["search_summary"]["limit_reason"])
         self.assertEqual([], validate_market_dossier(result, research, dossier, alignment))
 
+    def test_obfuscated_public_identity_cannot_reach_market_builder(self) -> None:
+        research, dossier = source_pair("complete-five-es.json", "scenario-a-es.json")
+        cases = (
+            ("employers", 0, "display_name", "john.smith"),
+            ("vacancies", 0, "title", "%6a%6f%68%6e%20%73%6d%69%74%68 engineer"),
+            ("vacancies", 0, "duplicate_fingerprint", "johnsmith-engineer"),
+        )
+        for collection, index, field, marker in cases:
+            with self.subTest(field=field, marker=marker):
+                mutated = copy.deepcopy(research)
+                mutated[collection][index][field] = marker
+                alignment = alignment_for(mutated, dossier)
+                with self.assertRaises(ValueError) as raised:
+                    build_market_dossier(mutated, dossier, alignment)
+                self.assertNotIn(marker, str(raised.exception))
+
     def test_trusted_validator_rejects_cross_artifact_locale_mismatch(self) -> None:
         research, es_dossier = source_pair("complete-five-es.json", "scenario-a-es.json")
         _, en_dossier = source_pair("complete-five-es.json", "scenario-c-en.json")
