@@ -9,6 +9,7 @@ import html
 import importlib.util
 import json
 import os
+import re
 import sys
 from collections.abc import Mapping
 from pathlib import Path
@@ -313,6 +314,61 @@ TRACE_INSPECTION_LABELS = {
     },
 }
 
+TRACE_RAW_REFERENCE_RE = re.compile(r"\b(?:E-\d{3}|CAP-\d{3})\b")
+TRACE_MARKET_STATES = frozenset({"complete", "limited_market_evidence", "market_evidence_unavailable"})
+
+
+def _trace_market_preflight(value: object) -> None:
+    """Reject malformed direct market graphs before projection can inspect them."""
+    if not isinstance(value, Mapping):
+        raise DossierValidationError(["decision trace market is unavailable"])
+    pending: list[tuple[str, object, int]] = [("visit", value, 0)]
+    active: set[int] = set()
+    nodes = 0
+    while pending:
+        operation, current, depth = pending.pop()
+        if operation == "leave":
+            active.discard(id(current))
+            continue
+        if not isinstance(current, (Mapping, list, tuple)):
+            continue
+        if depth > 12 or id(current) in active:
+            raise DossierValidationError(["decision trace market is unavailable"])
+        nodes += 1
+        if nodes > 10_000:
+            raise DossierValidationError(["decision trace market is unavailable"])
+        active.add(id(current))
+        pending.append(("leave", current, depth))
+        children = current.values() if isinstance(current, Mapping) else current
+        pending.extend(("visit", child, depth + 1) for child in children)
+    if value.get("state") not in TRACE_MARKET_STATES or not isinstance(value.get("vacancies"), (list, tuple)):
+        raise DossierValidationError(["decision trace market is unavailable"])
+
+
+def _trace_safe_paraphrase(value: object) -> str:
+    """Apply the learning bundle prose/privacy guards to evidence display text."""
+    if not isinstance(value, str):
+        raise DossierValidationError(["decision trace evidence is unavailable"])
+    try:
+        safe_text = LEARNING_VALIDATOR._text(value)
+        unsafe_semantics = LEARNING_VALIDATOR._text_has_identity_action_or_outcome_risk(value)
+        v1 = VALIDATOR._v1
+        privacy_errors = v1._privacy_errors(value)
+        unsafe_action = v1.candidate_text_has_external_action(value)
+        unsafe_outcome = v1.candidate_text_has_outcome_guarantee(value)
+    except (AttributeError, TypeError, ValueError):
+        raise DossierValidationError(["decision trace evidence is unavailable"]) from None
+    if (
+        not safe_text
+        or unsafe_semantics
+        or privacy_errors
+        or unsafe_action
+        or unsafe_outcome
+        or TRACE_RAW_REFERENCE_RE.search(value)
+    ):
+        raise DossierValidationError(["decision trace evidence is unavailable"])
+    return value
+
 
 def _derive_decision_trace(
     priority: Mapping[str, object],
@@ -324,6 +380,7 @@ def _derive_decision_trace(
     if locale not in TRACE_STEP_LABELS or not isinstance(priority, Mapping):
         raise DossierValidationError(["decision trace input is unavailable"])
     try:
+        _trace_market_preflight(market_dossier)
         plain_dossier = _plain(dossier)
         dossier_errors = VALIDATOR.validate_dossier(plain_dossier)
         if dossier_errors:
@@ -348,6 +405,7 @@ def _derive_decision_trace(
             paraphrase = record.get("paraphrase")
             if state not in TRACE_EVIDENCE_LABELS[locale] or not isinstance(paraphrase, str):
                 raise DossierValidationError(["decision trace evidence is unavailable"])
+            paraphrase = _trace_safe_paraphrase(paraphrase)
             evidence_views.append({
                 "state": state,
                 "state_label": TRACE_EVIDENCE_LABELS[locale][state],

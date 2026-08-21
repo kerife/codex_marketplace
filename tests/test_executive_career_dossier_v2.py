@@ -929,7 +929,13 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         dossier, market, research, alignment = market_case(
             "complete-five-es.json", "scenario-a-es.json"
         )
-        for value in ("https://example.invalid/profile", "/private/path/profile.json"):
+        for value in (
+            "https://example.invalid/profile",
+            "/private/path/profile.json",
+            "Publish this to LinkedIn now.",
+            "My name is John Doe.",
+            "See E-001 CAP-001",
+        ):
             with self.subTest(value=value):
                 invalid = copy.deepcopy(dossier)
                 invalid["evidence"][0]["paraphrase"] = value
@@ -939,6 +945,47 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     )
                 errors = "\n".join(context.exception.errors)
                 self.assertNotIn(value, errors)
+
+    def test_market_projection_direct_helper_rejects_private_action_identity_and_raw_refs(self) -> None:
+        dossier, market, research, alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        for value in (
+            "/private/path/profile.json",
+            "Publish this to LinkedIn now.",
+            "My name is John Doe.",
+            "See E-001 CAP-001",
+        ):
+            with self.subTest(value=value):
+                invalid = copy.deepcopy(dossier)
+                invalid["evidence"][0]["paraphrase"] = value
+                with self.assertRaises(self.renderer.DossierValidationError) as context:
+                    self.renderer._derive_decision_trace(
+                        invalid["priorities"][0], invalid, market, "es"
+                    )
+                self.assertNotIn(value, "\n".join(context.exception.errors))
+
+    def test_market_projection_direct_helper_rejects_malformed_or_cyclic_market(self) -> None:
+        dossier, market, research, alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        cyclic: dict[str, object] = {"state": "complete_market_evidence"}
+        cyclic["self"] = cyclic
+        for invalid_market in ({"state": "not-a-market", "vacancies": []}, cyclic):
+            with self.subTest(cyclic=invalid_market is cyclic):
+                with self.assertRaises(self.renderer.DossierValidationError) as context:
+                    self.renderer._derive_decision_trace(
+                        dossier["priorities"][0], dossier, invalid_market, "es"
+                    )
+                self.assertNotIn("not-a-market", "\n".join(context.exception.errors))
+                with self.assertRaises(self.renderer.DossierValidationError) as render_context:
+                    self.renderer.render_dossier_html(
+                        dossier,
+                        invalid_market,
+                        market_research=research,
+                        market_alignment=alignment,
+                    )
+                self.assertNotIn("not-a-market", "\n".join(render_context.exception.errors))
 
     def test_market_projection_rejects_unresolved_or_wrong_section_ids_without_echo(self) -> None:
         dossier, market, research, alignment = market_case(
