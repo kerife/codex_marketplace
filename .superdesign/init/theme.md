@@ -1505,4 +1505,42 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   .gap-closure-route { border-width: 2px; }
   .matrix-state-symbol { text-decoration: underline; text-decoration-thickness: .12em; }
 }
+
+.decide-now, .decide-now-grid, .decide-now-card { min-width: 0; }
+.decide-now-card { padding: 1rem; border: 1px solid var(--forest-soft); background: var(--surface); overflow-wrap: anywhere; }
+.decide-now-card h3, .decide-now-card h4 { margin-top: 0; }
+.decide-now-summary { margin-top: -.5rem; color: var(--muted); }
+.decide-now-navigation ul, .decide-now-list, .decide-now-recurrence { margin: .5rem 0 0; padding-left: 1.25rem; }
+.decide-now-navigation a { color: inherit; text-decoration-thickness: .12em; text-underline-offset: .15em; }
+.decide-now-rank { display: inline-grid; min-width: 1.5rem; place-items: center; margin-right: .25rem; border-radius: 999px; background: var(--coral); color: var(--paper); font-weight: 700; }
+.decide-now-target { color: var(--muted); }
+.decide-now-facts { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem 1rem; }
+.decide-now-facts dd { margin: 0; font-weight: 700; }
+.decide-now-authorization { border-left: 4px solid var(--gold); }
+.decide-now-market { border-top: 4px solid var(--forest); }
+.decide-now-signal { display: inline-block; min-width: 11rem; }
+@media screen and (prefers-color-scheme: dark) {
+  .decide-now-card { border-color: var(--forest); background: var(--surface); color: var(--ink); }
+}
+@media (max-width: 640px) {
+  .decide-now, .decide-now-grid, .decide-now-card { min-width: 0; }
+  .decide-now-signal { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .decide-now-card { animation: none !important; transition: none !important; transform: none !important; }
+}
+@media print {
+  .decide-now-card { break-inside: avoid; page-break-inside: avoid; }
+}
+@media (forced-colors: active) {
+  .decide-now-card { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .decide-now-rank { background: Highlight; color: HighlightText; }
+  .decide-now-market { border-top-color: Highlight; }
+  .decide-now-authorization { border-left-color: Highlight; }
+}
+@media (prefers-contrast: more) {
+  .decide-now-card { border-width: 2px; }
+  .decide-now-market { border-top-width: 5px; }
+  .decide-now-authorization { border-left-width: 5px; }
+}
 ```
