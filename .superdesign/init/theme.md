@@ -1583,6 +1583,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   border-left: 3px solid var(--gold);
   background: var(--paper);
 }
+.learning-decision-proof h4 { margin: 0; font-size: 1rem; }
 .learning-decision-proof p { margin-top: .45rem; }
 .learning-decision-header {
   display: flex;
