@@ -73,7 +73,7 @@ FORBIDDEN_PROSE = {
     "raw": re.compile(r"\b(?:raw|verbatim|quoted|original|inbound)\s+(?:(?:recruiter\s+)?(?:reply|message|text)|content)\b|\b(?:texto|contenido|respuesta)\s+(?:crudo|original|citado)\b", re.IGNORECASE),
     "identity": re.compile(
         r"\b(?:recruiter|reclutador(?:a)?|contact|contacto|"
-        r"candidate(?:\s+name)?|candidat[oa]|"
+        r"candidate(?:\s+(?:name|identity))?|candidat[oa]|"
         r"nombre\s+(?:del|de\s+la)\s+candidat[oa])\s*"
         r"(?::\s*|(?:is|es|named|called|llamad[oa])\s+)\S+|"
         r"\b(?:my\s+name\s+is|me\s+llamo|nombre\s+(?:del\s+)?"

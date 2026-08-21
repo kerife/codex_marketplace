@@ -181,6 +181,40 @@ class PrivateRecruiterReplyTriageIdentityTests(unittest.TestCase):
                     renderer.render_triage_html(triage)
                 self.assertNotIn(sentinel, str(raised.exception))
 
+    def test_candidate_identity_alias_is_rejected_in_v1_and_v2_handoff_without_echo(self):
+        baseline = json.loads((FIXTURE.parent / "ready-en.json").read_text(encoding="utf-8"))
+        sentinel = "Candidate identity: Alex Example"
+        locations = (
+            ("safe_context", "summary"),
+            ("handoff", "packet", "context_summary"),
+            ("handoff", "reentry_packet", "context_summary"),
+        )
+
+        for schema_version in (validator.SCHEMA_VERSION, validator.V2_SCHEMA_VERSION):
+            for location in locations:
+                triage = copy.deepcopy(baseline)
+                if schema_version == validator.V2_SCHEMA_VERSION:
+                    triage["schema_version"] = schema_version
+                    triage["ui_locale"] = "en"
+                    triage["content_locale"] = "en"
+                    del triage["locale"]
+                target = triage
+                for component in location[:-1]:
+                    target = target[component]
+                target[location[-1]] = sentinel
+                if schema_version == validator.V2_SCHEMA_VERSION:
+                    snapshot = validator.snapshot_for_triage(triage)
+                    triage["handoff"]["packet"]["source_snapshot"] = snapshot
+                    triage["handoff"]["reentry_packet"]["source_snapshot"] = snapshot
+
+                with self.subTest(schema_version=schema_version, location=location):
+                    errors = validator.validate_triage(triage)
+                    self.assertIn("session contains forbidden identity prose", errors)
+                    self.assertNotIn(sentinel, "\n".join(errors))
+                    with self.assertRaises(renderer.TriageValidationError) as raised:
+                        renderer.render_triage_html(triage)
+                    self.assertNotIn(sentinel, str(raised.exception))
+
     def test_spanish_candidate_identity_marker_is_rejected(self):
         triage = json.loads(
             (
