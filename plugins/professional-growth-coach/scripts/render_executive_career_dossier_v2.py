@@ -173,6 +173,8 @@ COPY = {
         "decide_recurrence": "Señales recurrentes",
         "decide_no_market": "No hay puntuación ni recurrencia sin vacantes verificadas.",
         "decide_no_pending": "No hay una autorización pendiente en esta sesión.",
+        "decide_authorization_informs": "La inspección de solo lectura de {section} puede informar estas prioridades:",
+        "decide_authorization_coverage_only": "La inspección de solo lectura de {section} completa la cobertura visible; cualquier cambio de prioridad requiere otra revisión.",
         "decide_navigation": "Navegación del resumen",
         "coverage_title": "Cobertura de secciones",
         "availability": "Disponibilidad", "reason": "Motivo", "request": "Decisión de inspección",
@@ -230,6 +232,8 @@ COPY = {
         "decide_recurrence": "Recurring signals",
         "decide_no_market": "No score or recurrence without verified vacancies.",
         "decide_no_pending": "There is no pending authorization in this session.",
+        "decide_authorization_informs": "Read-only inspection of the {section} section may inform these priorities:",
+        "decide_authorization_coverage_only": "Read-only inspection of the {section} section completes visible coverage; any reprioritization requires another review.",
         "decide_navigation": "Summary navigation",
         "coverage_title": "Section coverage", "availability": "Availability", "reason": "Reason",
         "request": "Inspection decision", "priorities": "Coaching priorities",
@@ -751,6 +755,37 @@ def _render_decide_now(
         if pending is not None
         else labels["decide_no_pending"]
     )
+    authorization_description_attr = ""
+    authorization_impact = ""
+    if pending is not None:
+        authorization_description_attr = ' aria-describedby="decide-now-authorization-impact"'
+        section_label = SECTION_LABELS[locale][pending]
+        matching_priorities = sorted(
+            (
+                priority
+                for priority in priorities
+                if priority.get("target_section") == pending
+            ),
+            key=lambda priority: int(priority["rank"]),
+        )
+        if matching_priorities:
+            items = "".join(
+                f'<li><span class="decide-now-rank">{html.escape(str(priority["rank"]), quote=True)}</span> '
+                f'{html.escape(str(priority["title"]), quote=True)}</li>'
+                for priority in matching_priorities
+            )
+            impact_body = (
+                f'<p>{html.escape(labels["decide_authorization_informs"].format(section=section_label), quote=True)}</p>'
+                f'<ol class="decide-now-list">{items}</ol>'
+            )
+        else:
+            impact_body = (
+                f'<p>{html.escape(labels["decide_authorization_coverage_only"].format(section=section_label), quote=True)}</p>'
+            )
+        authorization_impact = (
+            f'<div id="decide-now-authorization-impact" class="decide-now-authorization-impact">'
+            f'{impact_body}</div>'
+        )
     market_state = str(market_dossier["state"])
     vacancies = BASE._rows(market_dossier.get("vacancies"))
     sample_count = len(vacancies)
@@ -800,8 +835,9 @@ def _render_decide_now(
             <dt>{labels['decide_unavailable']}</dt><dd>{unavailable}</dd>
           </dl>
         </article>
-        <article class="card span-4 decide-now-card decide-now-authorization" aria-labelledby="decide-now-authorization-title">
+        <article class="card span-4 decide-now-card decide-now-authorization" aria-labelledby="decide-now-authorization-title"{authorization_description_attr}>
           <h3 id="decide-now-authorization-title">{labels['decide_authorization']}</h3>
+          {authorization_impact}
           <p>{html.escape(authorization, quote=True)}</p>
         </article>
         <article class="card span-12 decide-now-card decide-now-market" aria-labelledby="decide-now-market-title">

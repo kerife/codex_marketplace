@@ -48,6 +48,13 @@ Limited market summaries additionally expose the visible sample limitation
 before the learning state and as the region description; complete, unavailable,
 and legacy no-market states do not claim that limitation.
 
+When a read-only section inspection is pending, Decide now names the visible
+priorities that the inspection may inform before asking the single localized
+authorization question. If no priority targets that section, it states that the
+inspection completes visible coverage and that reprioritization requires a
+separate review. With no pending inspection, no impact block or authorization
+question is rendered.
+
 The learning decision boundary appears before the cards, and every learning
 card references the shared boundary with `aria-describedby`. The localized,
 visible boundary remains printable and does not predict an interview, offer,

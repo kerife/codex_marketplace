@@ -1709,6 +1709,148 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     all(f"/{count}" in fraction for fraction in re.findall(r"\b\d+/\d+\b", text))
                 )
 
+    def test_decide_now_authorization_explains_ranked_priority_impact_in_es_and_en(self) -> None:
+        for locale, research_name, dossier_name, section_label, expected_intro in (
+            (
+                "es",
+                "complete-five-es.json",
+                "scenario-a-es.json",
+                "Titular",
+                "La inspección de solo lectura de Titular puede informar estas prioridades:",
+            ),
+            (
+                "en",
+                "limited-four-en.json",
+                "scenario-c-en.json",
+                "Headline",
+                "Read-only inspection of the Headline section may inform these priorities:",
+            ),
+        ):
+            with self.subTest(locale=locale):
+                dossier = make_v2_dossier(locale)
+                for row in dossier["section_coverage"]:
+                    request = row.get("inspection_request")
+                    if isinstance(request, dict):
+                        request["decision"] = "declined_for_session"
+                        row["reason"] = "inspection_declined"
+                    if row["section"] == "headline":
+                        row.update({
+                            "availability": "unavailable",
+                            "evidence_state": "unknown",
+                            "reason": "authorization_required",
+                            "inspection_request": {
+                                "access_type": "read_only_visible_section_inspection",
+                                "decision": "pending_response",
+                                "scope": "current_session_only",
+                                "carry_forward": False,
+                            },
+                        })
+                dossier["priorities"][1]["target_section"] = "headline"
+                _source_dossier, market, research, _alignment = market_case(
+                    research_name, dossier_name
+                )
+
+                rendered = self.renderer._render_decide_now(
+                    dossier, locale, market
+                )
+                impact = re.search(
+                    r'<div id="decide-now-authorization-impact".*?</div>',
+                    rendered,
+                    re.DOTALL,
+                )
+                self.assertIsNotNone(impact)
+                impact_html = impact.group(0)
+                impact_text = visible_text(impact_html)
+                self.assertIn(expected_intro, impact_text)
+                self.assertIn(section_label, impact_text)
+                matching = sorted(
+                    (
+                        priority
+                        for priority in dossier["priorities"]
+                        if priority["target_section"] == "headline"
+                    ),
+                    key=lambda priority: priority["rank"],
+                )
+                self.assertEqual(2, len(matching))
+                self.assertLess(
+                    impact_text.index(str(matching[0]["title"])),
+                    impact_text.index(str(matching[1]["title"])),
+                )
+                self.assertRegex(
+                    rendered,
+                    r'class="card span-4 decide-now-card decide-now-authorization"[^>]*'
+                    r'aria-describedby="decide-now-authorization-impact"',
+                )
+                question = self.renderer.AUTHORIZATION_QUESTIONS[locale]["headline"]
+                self.assertEqual(1, visible_text(rendered).count(question))
+                audit = DossierDOMAudit()
+                audit.feed(rendered)
+                self.assertIn("decide-now-authorization-impact", audit.ids)
+                self.assertIn("decide-now-authorization-impact", audit.references)
+                for forbidden in (
+                    market["source_research_snapshot"],
+                    market["source_executive_dossier_snapshot"],
+                    *(vacancy["source_url"] for vacancy in research["vacancies"]),
+                ):
+                    self.assertNotIn(forbidden, impact_html)
+                self.assertNotRegex(impact_html, r"<(?:a|button|input|select|textarea|form)\b")
+
+    def test_decide_now_authorization_impact_is_bounded_or_absent_without_pending(self) -> None:
+        for locale, research_name, dossier_name, expected in (
+            (
+                "es",
+                "complete-five-es.json",
+                "scenario-a-es.json",
+                "La inspección de solo lectura de Nombre completa la cobertura visible; "
+                "cualquier cambio de prioridad requiere otra revisión.",
+            ),
+            (
+                "en",
+                "limited-four-en.json",
+                "scenario-c-en.json",
+                "Read-only inspection of the Banner section completes visible coverage; "
+                "any reprioritization requires another review.",
+            ),
+        ):
+            with self.subTest(locale=locale, state="coverage-only"):
+                dossier = make_v2_dossier(locale)
+                _source_dossier, market, _research, _alignment = market_case(
+                    research_name, dossier_name
+                )
+                pending = self.validator.select_pending_inspection_section(dossier)
+                rendered = self.renderer._render_decide_now(dossier, locale, market)
+                impact = re.search(
+                    r'<div id="decide-now-authorization-impact".*?</div>',
+                    rendered,
+                    re.DOTALL,
+                )
+                self.assertIsNotNone(impact)
+                impact_text = visible_text(impact.group(0))
+                self.assertEqual(expected, impact_text)
+                for priority in dossier["priorities"]:
+                    self.assertNotIn(str(priority["title"]), impact_text)
+                self.assertEqual(
+                    1,
+                    visible_text(rendered).count(
+                        self.renderer.AUTHORIZATION_QUESTIONS[locale][pending]
+                    ),
+                )
+
+            with self.subTest(locale=locale, state="no-pending"):
+                for row in dossier["section_coverage"]:
+                    request = row.get("inspection_request")
+                    if isinstance(request, dict):
+                        request["decision"] = "declined_for_session"
+                        row["reason"] = "inspection_declined"
+                rendered = self.renderer._render_decide_now(dossier, locale, market)
+                self.assertNotIn("decide-now-authorization-impact", rendered)
+                self.assertFalse(
+                    any(
+                        question in visible_text(rendered)
+                        for question in self.renderer.AUTHORIZATION_QUESTIONS[locale].values()
+                    )
+                )
+
     def test_decide_now_styles_cover_responsive_print_and_forced_colors_without_fixed_tracks(self) -> None:
         css = (REPO_ROOT / "plugins" / "professional-growth-coach" / "assets" / "career-market-learning-dossier-v1.css").read_text(encoding="utf-8")
         for contract in (
