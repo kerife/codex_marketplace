@@ -14,6 +14,7 @@ PAGES = ROOT / ".superdesign" / "init" / "pages.md"
 ROUTES = ROOT / ".superdesign" / "init" / "routes.md"
 COMPONENTS = ROOT / ".superdesign" / "init" / "components.md"
 EXTRACTABLE = ROOT / ".superdesign" / "init" / "extractable-components.md"
+DESIGN_SYSTEM = ROOT / ".superdesign" / "design-system.md"
 ASSETS = ROOT / "plugins" / "professional-growth-coach" / "assets"
 ASSET_NAMES = (
     "career-market-learning-dossier-v1.css",
@@ -138,6 +139,14 @@ class SuperdesignThemeAssetParityTests(unittest.TestCase):
         self.assertIn("MarketEvidence and LearningDecision", components)
         self.assertIn("## DecisionTrace", extractable)
         self.assertIn("## LearningDecision", extractable)
+
+    def test_design_system_documents_unavailable_market_safe_next_step(self):
+        text = DESIGN_SYSTEM.read_text(encoding="utf-8")
+        start = text.index("A validated unavailable")
+        paragraph = text[start : text.index("\n\n", start)]
+        self.assertRegex(paragraph, r"(?i)safe next step")
+        self.assertRegex(paragraph, r"(?i)locali[sz]ed")
+        self.assertRegex(paragraph, r"(?i)no external action")
 
 
 if __name__ == "__main__":

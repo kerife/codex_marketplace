@@ -36,9 +36,10 @@ The composed market region is source-aware and all-or-none: its derived market
 dossier, normalized research, and identity-free alignment must validate
 together before any market UI renders. Legacy dossier renders with no optional
 market inputs keep the existing generic placeholder. A validated unavailable
-bundle instead shows its bounded limitation without exposing snapshots, URLs,
-referrers, internal vacancy/employer/evidence/requirement IDs, raw requirement
-paraphrases, or inferred eligibility.
+bundle instead shows its bounded limitation and one localized safe next step,
+without exposing snapshots, URLs, referrers, internal vacancy/employer/evidence/
+requirement IDs, raw requirement paraphrases, or inferred eligibility; it makes
+no external action.
 
 Vacancy alignment uses one native `progress` per vacancy, labelled by the
 vacancy heading, its visible `N de 100` / `N out of 100` score, evidence
