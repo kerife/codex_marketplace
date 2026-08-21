@@ -299,6 +299,7 @@ TRACE_INSPECTION_LABELS = {
         "inspected_absent": "Revisada y ausente",
         "candidate_supplied": "Material proporcionado",
         "pending": "Respuesta pendiente",
+        "pending_other": "Otra inspección está pendiente",
         "declined": "Declinada para esta sesión",
         "failed": "Inspección no completada",
         "unavailable": "No disponible",
@@ -308,6 +309,7 @@ TRACE_INSPECTION_LABELS = {
         "inspected_absent": "Inspected and absent",
         "candidate_supplied": "Candidate-supplied material",
         "pending": "Response pending",
+        "pending_other": "Another section is pending",
         "declined": "Declined for this session",
         "failed": "Inspection not completed",
         "unavailable": "Unavailable",
@@ -430,6 +432,7 @@ def _derive_decision_trace(
         )
         if coverage is None:
             raise DossierValidationError(["decision trace inspection state is unavailable"])
+        selected_pending = VALIDATOR.select_pending_inspection_section(plain_dossier)
         availability = coverage.get("availability")
         inspection_state = str(availability) if availability in {
             "inspected_present", "inspected_absent", "candidate_supplied"
@@ -440,8 +443,11 @@ def _derive_decision_trace(
             inspection_request = coverage.get("inspection_request")
             decision = inspection_request.get("decision") if isinstance(inspection_request, Mapping) else None
             if reason == "authorization_required" and decision == "pending_response":
-                inspection_state = "pending"
-                authorization_anchor = "decide-now-authorization-title"
+                if target == selected_pending:
+                    inspection_state = "pending"
+                    authorization_anchor = "decide-now-authorization-title"
+                else:
+                    inspection_state = "pending_other"
             elif reason == "inspection_declined" and decision == "declined_for_session":
                 inspection_state = "declined"
             elif reason == "authorized_inspection_failed" and decision == "authorized_inspection_failed":
@@ -801,7 +807,6 @@ def _render_decision_trace(
               <li id="decision-trace-priority-{rank}" class="decision-trace-step">
                 <span class="decision-trace-step-label">{html.escape(str(steps[0]['label']), quote=True)}</span>
                 <p><span class="label">{COPY[locale]['target']}</span>{html.escape(str(trace['target_section_label']), quote=True)}</p>
-                <p><span class="label">{html.escape(TEMPLATE_FIELD_LABELS[locale]['target_role'], quote=True)}</span>{html.escape(str(trace['target_section_label']), quote=True)}</p>
               </li>
               <li id="decision-trace-evidence-step-{rank}" class="decision-trace-step">
                 <span class="decision-trace-step-label">{html.escape(str(steps[1]['label']), quote=True)}</span>

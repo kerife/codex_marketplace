@@ -925,6 +925,20 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 self.assertEqual(expected_state, projected["inspection_state"]["state"])
                 self.assertNotIn("authorization_anchor", projected)
 
+    def test_market_projection_does_not_authorize_a_nonselected_pending_section(self) -> None:
+        dossier, market, _research, _alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        candidate = copy.deepcopy(dossier)
+        priority = copy.deepcopy(candidate["priorities"][0])
+        priority["target_section"] = "profile_url"
+        priority["evidence_ids"] = []
+        self.assertEqual("name", self.validator.select_pending_inspection_section(candidate))
+        projected = self.renderer._derive_decision_trace(priority, candidate, market, "es")
+        self.assertEqual("pending_other", projected["inspection_state"]["state"])
+        self.assertEqual("Otra inspección está pendiente", projected["inspection_state"]["label"])
+        self.assertNotIn("authorization_anchor", projected)
+
     def test_market_projection_rejects_raw_paraphrase_values_without_echo(self) -> None:
         dossier, market, research, alignment = market_case(
             "complete-five-es.json", "scenario-a-es.json"
@@ -1069,7 +1083,8 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     self.assertIn(f'id="decision-trace-evidence-{rank}-1"', trace_body)
                     self.assertIn(f'id="decision-trace-template-{rank}"', trace_body)
                     self.assertIn(f'id="decision-trace-inspection-{rank}"', trace_body)
-                    self.assertIn("Rol objetivo" if locale == "es" else "Target role", trace_body)
+                    self.assertIn("Sección objetivo" if locale == "es" else "Target section", trace_body)
+                    self.assertNotIn("Rol objetivo" if locale == "es" else "Target role", trace_body)
                     self.assertNotRegex(trace_body, r"<(?:form|button|input|select|textarea)\b")
                     hrefs = re.findall(r'<a\s+[^>]*href="([^"]+)"', trace_body)
                     self.assertTrue(all(href == "#decide-now-authorization-title" for href in hrefs))
