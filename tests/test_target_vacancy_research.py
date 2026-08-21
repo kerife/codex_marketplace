@@ -675,6 +675,58 @@ class TargetVacancyResearchTests(unittest.TestCase):
                 value["vacancies"][0][field] = marker
                 self.assertEqual([], self.validator.validate_research(value))
 
+    def test_unknown_surname_families_are_rejected_across_strict_fields_without_echo(self) -> None:
+        families = (
+            ("samuel-jackson", "samueljackson", "samuel.jackson", "samuel_jackson"),
+            ("thomas-jefferson", "thomasjefferson", "thomas.jefferson", "thomas_jefferson"),
+            ("elizabeth-warren", "elizabethwarren", "elizabeth.warren", "elizabeth_warren"),
+            ("isabel-allende", "isabelallende", "isabel.allende", "isabel_allende"),
+            ("benjamin-franklin", "benjaminfranklin", "benjamin.franklin", "benjamin_franklin"),
+        )
+        for family, compact, dotted, underscored in families:
+            cases = (
+                ("employer display", "employers", 0, "display_name", compact),
+                ("qualification observation", "employers", 0, "qualification_observation", dotted),
+                ("vacancy title", "vacancies", 0, "title", f"{compact} engineer"),
+                ("vacancy location", "vacancies", 0, "location", underscored),
+                ("duplicate fingerprint", "vacancies", 0, "duplicate_fingerprint", f"{compact}-engineer"),
+                (
+                    "official referrer URL",
+                    "vacancies",
+                    0,
+                    "official_referrer_url",
+                    f"https://{compact}.dev/platform-engineer",
+                ),
+                (
+                    "source URL path",
+                    "vacancies",
+                    0,
+                    "source_url",
+                    f"https://www.rfc-editor.org/rfc/{compact}-engineer",
+                ),
+            )
+            for label, collection, index, field, marker in cases:
+                with self.subTest(family=family, field=label, marker=marker):
+                    value = self.complete()
+                    value[collection][index][field] = marker
+                    errors = self.assert_invalid(
+                        value, "research contains forbidden private or raw content"
+                    )
+                    self.assertNotIn(marker.casefold(), "\n".join(errors).casefold())
+
+            for label, marker in (
+                ("dotted title alias", f"{dotted} engineer"),
+                ("underscored title alias", f"{underscored} engineer"),
+                ("encoded compact title alias", f"{compact.replace('e', '%65', 1)} engineer"),
+            ):
+                with self.subTest(family=family, field=label, marker=marker):
+                    value = self.complete()
+                    value["vacancies"][0]["title"] = marker
+                    errors = self.assert_invalid(
+                        value, "research contains forbidden private or raw content"
+                    )
+                    self.assertNotIn(marker.casefold(), "\n".join(errors).casefold())
+
     def test_obfuscated_controls_remain_valid(self) -> None:
         for field, value in (
             ("title", "Google Cloud Platform Engineer"),
