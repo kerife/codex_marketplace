@@ -44,6 +44,9 @@ no external action.
 Complete and limited market summaries expose one localized, validated research
 date before the learning boundary so the client can judge evidence freshness;
 unavailable and legacy no-market states expose no date marker.
+Limited market summaries additionally expose the visible sample limitation
+before the learning state and as the region description; complete, unavailable,
+and legacy no-market states do not claim that limitation.
 
 The learning decision boundary appears before the cards, and every learning
 card references the shared boundary with `aria-describedby`. The localized,

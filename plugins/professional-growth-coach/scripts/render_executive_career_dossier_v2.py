@@ -974,9 +974,12 @@ def _render_market_context(
         else labels["market_limited"].format(count=count)
     )
     limitation_markup = ""
+    summary_description_attr = ""
     if state == "limited_market_evidence":
+        summary_description_attr = ' aria-describedby="market-sample-limitation"'
         limitation_markup = (
-            f'<p class="market-limitation"><strong>{labels["market_limitation"]}:</strong> '
+            f'<p id="market-sample-limitation" class="market-limitation">'
+            f'<strong>{labels["market_limitation"]}:</strong> '
             f'{labels["market_limited_reason"]}</p>'
         )
 
@@ -1055,14 +1058,14 @@ def _render_market_context(
     gap_steps = "".join(f"<li>{step}</li>" for step in labels["gap_steps"])
     learning_markup = _render_learning_decision(market_dossier, learning_decision, locale)
 
-    return f'''<section class="section-block market-summary" aria-labelledby="market-context-title">
+    return f'''<section class="section-block market-summary" aria-labelledby="market-context-title"{summary_description_attr}>
         <div class="market-summary-card">
           <h2 id="market-context-title">{labels['market_context']}</h2>
           <p class="market-summary-heading">{summary_heading}</p>
           <p>{labels['market_boundary']}</p>
           <p id="market-evidence-as-of" class="market-summary-as-of"><span class="label">{labels['market_as_of']}</span><time datetime="{as_of_date}">{as_of_date}</time></p>
-          <p class="market-learning-state">{labels['market_learning_state']}</p>
           {limitation_markup}
+          <p class="market-learning-state">{labels['market_learning_state']}</p>
         </div>
         <section class="market-vacancy-section" aria-labelledby="vacancy-alignment-title">
           <h2 id="vacancy-alignment-title">{labels['vacancy_alignment']}</h2>

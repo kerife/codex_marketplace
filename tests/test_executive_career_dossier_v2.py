@@ -2100,6 +2100,90 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     ),
                 )
 
+    def test_limited_market_summary_is_described_by_its_sample_limitation(self) -> None:
+        es_dossier, _market, es_research, _alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        es_research["employers"] = es_research["employers"][:3]
+        es_research["vacancies"] = es_research["vacancies"][:3]
+        es_research["state"] = "limited_market_evidence"
+        es_research["search_limit"] = {
+            "bounded_queries_run": 12,
+            "limit_reason": "bounded_search_exhausted",
+            "distinct_employer_search_exhausted": False,
+            "limitation": "Synthetic test limit.",
+        }
+        es_alignment = market_alignment(es_research, es_dossier)
+        scripts = str(SCRIPTS)
+        if scripts not in sys.path:
+            sys.path.insert(0, scripts)
+        from build_career_market_learning_dossier import build_market_dossier
+
+        limited_cases = (
+            (
+                "es",
+                "Limitación de la muestra",
+                (
+                    es_dossier,
+                    build_market_dossier(es_research, es_dossier, es_alignment),
+                    es_research,
+                    es_alignment,
+                ),
+            ),
+            ("en", "Sample limitation", build_limited_market_case(3)),
+        )
+        opening = (
+            '<section class="section-block market-summary" '
+            'aria-labelledby="market-context-title" '
+            'aria-describedby="market-sample-limitation">'
+        )
+        for locale, limitation_label, case in limited_cases:
+            with self.subTest(locale=locale):
+                dossier, market, research, alignment = case
+                rendered = self.renderer.render_dossier_html(
+                    dossier,
+                    market,
+                    market_research=research,
+                    market_alignment=alignment,
+                )
+                self.assertEqual(1, rendered.count(opening))
+                self.assertEqual(1, rendered.count('id="market-sample-limitation"'))
+                limitation = re.search(
+                    r'<p id="market-sample-limitation".*?</p>',
+                    rendered,
+                    re.DOTALL,
+                )
+                self.assertIsNotNone(limitation)
+                self.assertIn(limitation_label, visible_text(limitation.group(0)))
+                self.assertLess(
+                    rendered.index('id="market-sample-limitation"'),
+                    rendered.index('class="market-learning-state"'),
+                )
+                self.assertLess(
+                    rendered.index('id="market-sample-limitation"'),
+                    rendered.index('class="market-vacancy-section"'),
+                )
+                audit = DossierDOMAudit()
+                audit.feed(rendered)
+                self.assertEqual(set(), set(audit.references) - set(audit.ids))
+
+        complete = market_case("complete-five-es.json", "scenario-a-es.json")
+        unavailable = market_case("unavailable-es.json", "scenario-a-es.json")
+        for state, case in (("complete", complete), ("unavailable", unavailable)):
+            with self.subTest(state=state):
+                dossier, market, research, alignment = case
+                rendered = self.renderer.render_dossier_html(
+                    dossier,
+                    market,
+                    market_research=research,
+                    market_alignment=alignment,
+                )
+                self.assertNotIn("market-sample-limitation", rendered)
+        self.assertNotIn(
+            "market-sample-limitation",
+            self.renderer.render_dossier_html(complete[0]),
+        )
+
     def test_validated_unavailable_market_bundle_is_distinct_from_legacy_placeholder(self) -> None:
         dossier, market, research, alignment = market_case(
             "unavailable-es.json", "scenario-a-es.json"
