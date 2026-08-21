@@ -272,6 +272,148 @@ MATRIX_STATE_COPY = {
     "not_required": ("—", "No solicitado", "Not requested"),
 }
 
+TRACE_STEP_LABELS = {
+    "es": ("Prioridad", "Evidencia disponible", "Plantilla privada", "Permiso de lectura"),
+    "en": ("Priority", "Available evidence", "Private template", "Read-only permission"),
+}
+
+TRACE_EVIDENCE_LABELS = {
+    "es": {
+        "verified": "Evidencia directa",
+        "candidate_reported": "Reportado por cliente",
+        "inferred": "Inferido, requiere confirmación",
+        "unknown": "No verificado",
+    },
+    "en": {
+        "verified": "Direct evidence",
+        "candidate_reported": "Candidate reported",
+        "inferred": "Inferred, requires confirmation",
+        "unknown": "Not verified",
+    },
+}
+
+TRACE_INSPECTION_LABELS = {
+    "es": {
+        "inspected_present": "Revisada y presente",
+        "inspected_absent": "Revisada y ausente",
+        "candidate_supplied": "Material proporcionado",
+        "pending": "Respuesta pendiente",
+        "declined": "Declinada para esta sesión",
+        "failed": "Inspección no completada",
+        "unavailable": "No disponible",
+    },
+    "en": {
+        "inspected_present": "Inspected and present",
+        "inspected_absent": "Inspected and absent",
+        "candidate_supplied": "Candidate-supplied material",
+        "pending": "Response pending",
+        "declined": "Declined for this session",
+        "failed": "Inspection not completed",
+        "unavailable": "Unavailable",
+    },
+}
+
+
+def _derive_decision_trace(
+    priority: Mapping[str, object],
+    dossier: Mapping[str, object],
+    market_dossier: Mapping[str, object],
+    locale: str,
+) -> Mapping[str, object]:
+    """Project one validated market priority into immutable display data."""
+    if locale not in TRACE_STEP_LABELS or not isinstance(priority, Mapping):
+        raise DossierValidationError(["decision trace input is unavailable"])
+    try:
+        plain_dossier = _plain(dossier)
+        dossier_errors = VALIDATOR.validate_dossier(plain_dossier)
+        if dossier_errors:
+            raise DossierValidationError(dossier_errors)
+        target = priority.get("target_section")
+        if not isinstance(target, str) or target not in SECTION_LABELS[locale]:
+            raise DossierValidationError(["decision trace target section is unavailable"])
+        evidence_ids = priority.get("evidence_ids")
+        if not isinstance(evidence_ids, (list, tuple)):
+            raise DossierValidationError(["decision trace evidence references are unavailable"])
+        records = {
+            row.get("id"): row
+            for row in BASE._rows(dossier.get("evidence"))
+            if isinstance(row.get("id"), str)
+        }
+        evidence_views: list[dict[str, object]] = []
+        for evidence_id in evidence_ids:
+            record = records.get(evidence_id) if isinstance(evidence_id, str) else None
+            if record is None or record.get("profile_section") != target:
+                raise DossierValidationError(["decision trace evidence reference is unavailable"])
+            state = record.get("state")
+            paraphrase = record.get("paraphrase")
+            if state not in TRACE_EVIDENCE_LABELS[locale] or not isinstance(paraphrase, str):
+                raise DossierValidationError(["decision trace evidence is unavailable"])
+            evidence_views.append({
+                "state": state,
+                "state_label": TRACE_EVIDENCE_LABELS[locale][state],
+                "paraphrase": paraphrase,
+            })
+        coverage = next(
+            (
+                row for row in BASE._rows(dossier.get("section_coverage"))
+                if row.get("section") == target
+            ),
+            None,
+        )
+        if coverage is None:
+            raise DossierValidationError(["decision trace inspection state is unavailable"])
+        availability = coverage.get("availability")
+        inspection_state = str(availability) if availability in {
+            "inspected_present", "inspected_absent", "candidate_supplied"
+        } else "unavailable"
+        authorization_anchor: str | None = None
+        if inspection_state == "unavailable":
+            reason = coverage.get("reason")
+            inspection_request = coverage.get("inspection_request")
+            decision = inspection_request.get("decision") if isinstance(inspection_request, Mapping) else None
+            if reason == "authorization_required" and decision == "pending_response":
+                inspection_state = "pending"
+                authorization_anchor = "decide-now-authorization-title"
+            elif reason == "inspection_declined" and decision == "declined_for_session":
+                inspection_state = "declined"
+            elif reason == "authorized_inspection_failed" and decision == "authorized_inspection_failed":
+                inspection_state = "failed"
+        template = priority.get("client_template")
+        if not isinstance(template, Mapping):
+            raise DossierValidationError(["decision trace template is unavailable"])
+        template_keys = template.get("field_keys")
+        if not isinstance(template_keys, (list, tuple)):
+            raise DossierValidationError(["decision trace template fields are unavailable"])
+        template_fields = tuple(
+            {"key": key, "label": TEMPLATE_FIELD_LABELS[locale][key]}
+            for key in template_keys
+            if isinstance(key, str) and key in TEMPLATE_FIELD_LABELS[locale]
+        )
+        if len(template_fields) != len(template_keys):
+            raise DossierValidationError(["decision trace template fields are unavailable"])
+        result: dict[str, object] = {
+            "locale": locale,
+            "target_section": target,
+            "target_section_label": SECTION_LABELS[locale][target],
+            "evidence_views": tuple(evidence_views),
+            "template_fields": template_fields,
+            "inspection_state": {
+                "state": inspection_state,
+                "label": TRACE_INSPECTION_LABELS[locale][inspection_state],
+                "target_label": SECTION_LABELS[locale][target],
+            },
+            "steps": tuple({"key": key, "label": label} for key, label in zip(
+                ("priority", "evidence", "template", "inspection"), TRACE_STEP_LABELS[locale], strict=True
+            )),
+        }
+        if authorization_anchor is not None:
+            result["authorization_anchor"] = authorization_anchor
+        return BASE._mapping(BASE._freeze(result))
+    except DossierValidationError:
+        raise
+    except (AttributeError, KeyError, RecursionError, TypeError, ValueError):
+        raise DossierValidationError(["decision trace is unavailable"]) from None
+
 
 def _validate_and_freeze(dossier: Mapping[str, object]) -> Mapping[str, object]:
     errors = VALIDATOR.validate_dossier(dossier)

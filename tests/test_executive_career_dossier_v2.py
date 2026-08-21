@@ -852,6 +852,79 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     for old_value in ("problem", "action"):
                         self.assertNotIn(str(priority[old_value]), card)
 
+    def test_market_projection_derives_four_localized_trace_steps_without_raw_ids(self) -> None:
+        expected = {
+            "es": ("Prioridad", "Evidencia disponible", "Plantilla privada", "Permiso de lectura"),
+            "en": ("Priority", "Available evidence", "Private template", "Read-only permission"),
+        }
+        for locale in ("es", "en"):
+            with self.subTest(locale=locale):
+                if locale == "es":
+                    dossier, market, research, alignment = market_case(
+                        "complete-five-es.json", "scenario-a-es.json"
+                    )
+                else:
+                    dossier, market, research, alignment = build_limited_market_case(4)
+                for priority in dossier["priorities"]:
+                    projected = self.renderer._derive_decision_trace(priority, dossier, market, locale)
+                    self.assertEqual(4, len(projected["steps"]))
+                    self.assertEqual(expected[locale], tuple(step["label"] for step in projected["steps"]))
+                    self.assertEqual(locale, projected["locale"])
+                    self.assertIn("target_section", projected)
+                    self.assertIn("target_section_label", projected)
+                    self.assertTrue(projected["evidence_views"])
+                    for evidence in projected["evidence_views"]:
+                        self.assertTrue(evidence["state_label"])
+                        self.assertTrue(evidence["paraphrase"])
+                        self.assertNotRegex(evidence["paraphrase"], r"E-\d+|CAP-\d+|https?://|/private/")
+                    self.assertTrue(projected["template_fields"])
+                rendered = self.renderer.render_dossier_html(
+                    dossier, market, market_research=research, market_alignment=alignment,
+                )
+                self.assertEqual(1, visible_text(rendered).count(
+                    "¿Autorizas inspeccionar" if locale == "es" else "Do you authorize read-only inspection"
+                ))
+
+    def test_market_projection_exposes_localized_inspection_states_and_pending_anchor(self) -> None:
+        dossier, market, research, alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        priority = copy.deepcopy(dossier["priorities"][0])
+        priority["target_section"] = "name"
+        priority["evidence_ids"] = []
+        projected = self.renderer._derive_decision_trace(priority, dossier, market, "es")
+        self.assertEqual("name", projected["target_section"])
+        self.assertEqual((), projected["evidence_views"])
+        self.assertEqual("pending", projected["inspection_state"]["state"])
+        self.assertEqual("decide-now-authorization-title", projected["authorization_anchor"])
+        self.assertEqual("Nombre", projected["inspection_state"]["target_label"])
+
+    def test_market_projection_rejects_unresolved_or_wrong_section_ids_without_echo(self) -> None:
+        dossier, market, research, alignment = market_case(
+            "complete-five-es.json", "scenario-a-es.json"
+        )
+        for evidence_ids, sentinel in ((["E-999"], "E-999"), (["E-002"], "E-002")):
+            with self.subTest(evidence_ids=evidence_ids):
+                invalid = copy.deepcopy(dossier)
+                invalid["priorities"][0]["evidence_ids"] = evidence_ids
+                with self.assertRaises(self.renderer.DossierValidationError) as context:
+                    self.renderer.render_dossier_html(
+                        invalid, market, market_research=research, market_alignment=alignment,
+                    )
+                errors = "\n".join(context.exception.errors)
+                self.assertNotIn(sentinel, errors)
+
+    def test_market_projection_rejects_malformed_explicit_market_before_output_and_no_market_is_unchanged(self) -> None:
+        dossier = load_json_fixture(V2_FIXTURE_ROOT / "scenario-a-es.json")
+        malformed = {"state": "not-a-market"}
+        with self.assertRaises(self.renderer.DossierValidationError) as context:
+            self.renderer.render_dossier_html(dossier, malformed, market_research={}, market_alignment={})
+        self.assertNotIn("not-a-market", "\n".join(context.exception.errors))
+        rendered = self.renderer.render_dossier_html(dossier)
+        expected_size, expected_digest = NO_MARKET_RENDER_SNAPSHOTS["scenario-a-es.json"]
+        self.assertEqual(expected_size, len(rendered.encode("utf-8")))
+        self.assertEqual(expected_digest, hashlib.sha256(rendered.encode("utf-8")).hexdigest())
+
     def test_coach_templates_expose_localized_private_blank_and_boundary(self) -> None:
         for locale, expected in (
             ("es", ("No incluyas texto sin procesar del perfil, datos de contacto ni valores privados.", "Espacio en blanco para completar en privado")),
