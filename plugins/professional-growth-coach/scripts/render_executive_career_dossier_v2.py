@@ -992,6 +992,7 @@ def _render_market_context(
         score_id = f"vacancy-alignment-score-{index}"
         coverage_id = f"vacancy-alignment-coverage-{index}"
         band_id = f"vacancy-alignment-band-{index}"
+        boundary_id = f"vacancy-alignment-boundary-{index}"
         score = int(vacancy["alignment_percent"])
         score_text = f"{score} de 100" if locale == "es" else f"{score} out of 100"
         coverage = int(vacancy["evidence_coverage_percent"])
@@ -1001,8 +1002,8 @@ def _render_market_context(
           <p id="{employer_id}" class="vacancy-employer">{employer}</p>
           <h3 id="{heading_id}">{title}</h3>
           <p id="{score_id}" class="vacancy-alignment-score">{score_text}</p>
-          <progress class="vacancy-alignment-progress" value="{score}" max="100" aria-labelledby="{employer_id} {heading_id} {score_id} {coverage_id} {band_id}"></progress>
-          <p class="vacancy-score-boundary">{labels['score_boundary']}</p>
+          <progress class="vacancy-alignment-progress" value="{score}" max="100" aria-labelledby="{employer_id} {heading_id} {score_id} {coverage_id} {band_id} {boundary_id}"></progress>
+          <p id="{boundary_id}" class="vacancy-score-boundary">{labels['score_boundary']}</p>
           <p id="{coverage_id}" class="vacancy-evidence-coverage">{labels['evidence_coverage']}: {coverage}%</p>
           <p id="{band_id}" class="vacancy-qualitative-band">{band}</p>
         </article>''')

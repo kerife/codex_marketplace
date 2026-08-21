@@ -1362,7 +1362,15 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             employer_id = f"vacancy-alignment-employer-{index}"
             heading_id = f"vacancy-alignment-title-{index}"
             score_id = f"vacancy-alignment-score-{index}"
-            self.assertEqual(f"{employer_id} {heading_id}", labelled_by)
+            boundary_id = f"vacancy-alignment-boundary-{index}"
+            self.assertEqual(
+                f"{employer_id} {heading_id} {score_id} "
+                f"vacancy-alignment-coverage-{index} vacancy-alignment-band-{index} {boundary_id}",
+                re.search(
+                    rf'<progress class="vacancy-alignment-progress"[^>]*aria-labelledby="([^"]+)"',
+                    card,
+                ).group(1),
+            )
             self.assertIn(
                 f'<p id="{employer_id}" class="vacancy-employer">', card
             )
@@ -1386,7 +1394,11 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 card,
                 rf'<progress class="vacancy-alignment-progress" value="{vacancy["alignment_percent"]}" '
                 rf'max="100" aria-labelledby="{employer_id} {heading_id} {score_id} '
-                rf'vacancy-alignment-coverage-{index} vacancy-alignment-band-{index}">',
+                rf'vacancy-alignment-coverage-{index} vacancy-alignment-band-{index} '
+                rf'vacancy-alignment-boundary-{index}">',
+            )
+            self.assertIn(
+                f'<p id="{boundary_id}" class="vacancy-score-boundary">', card
             )
 
         audit = DossierDOMAudit()
@@ -1510,6 +1522,36 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         for value in forbidden_values:
             with self.subTest(forbidden=value):
                 self.assertNotIn(value, rendered)
+
+    def test_market_score_boundary_is_named_in_es_and_en_progress(self) -> None:
+        for research_name, dossier_name in (
+            ("complete-five-es.json", "scenario-a-es.json"),
+            ("limited-four-en.json", "scenario-c-en.json"),
+        ):
+            with self.subTest(locale=research_name):
+                dossier, market, research, alignment = market_case(
+                    research_name, dossier_name
+                )
+                rendered = self.renderer.render_dossier_html(
+                    dossier,
+                    market,
+                    market_research=research,
+                    market_alignment=alignment,
+                )
+                progress_names = re.findall(
+                    r'<progress class="vacancy-alignment-progress"[^>]*aria-labelledby="([^"]+)"',
+                    rendered,
+                )
+                self.assertEqual(len(market["vacancies"]), len(progress_names))
+                for index, labelled_by in enumerate(progress_names, start=1):
+                    boundary_id = f"vacancy-alignment-boundary-{index}"
+                    self.assertIn(boundary_id, labelled_by)
+                    self.assertEqual(
+                        1,
+                        rendered.count(
+                            f'<p id="{boundary_id}" class="vacancy-score-boundary">'
+                        ),
+                    )
 
     def test_mobile_matrix_cells_use_short_vacancy_keys_while_key_and_headers_keep_full_labels(self) -> None:
         dossier, market, research, alignment = market_case(
