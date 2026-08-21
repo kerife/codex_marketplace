@@ -22,6 +22,7 @@ REPOSITORY_CONTEXT = (
 )
 REPOSITORY_ONLY_TESTS = {
     "test_career_learning_decision_schema_accepts_evaluated_and_unavailable_states",
+    "test_career_learning_decision_v2_schema_accepts_closed_fixtures",
     "test_career_learning_provider_research_schema_accepts_closed_fixtures",
     "test_career_market_dossier_schemas_accept_closed_synthetic_states",
     "test_career_market_dossier_v2_schema_accepts_recomputed_fixtures",
@@ -56,6 +57,8 @@ from derive_candidate_market_alignment_v2 import derive_candidate_market_alignme
 from build_career_market_learning_dossier_v2 import build_market_dossier_v2
 from validate_career_market_learning_dossier_v2 import validate_market_dossier_v2
 from validate_career_learning_provider_research import validate_provider_research
+from build_career_learning_decision_v2 import build_learning_bundle_v2
+from validate_career_learning_decision_v2 import validate_learning_bundle_v2
 
 
 def _load_v2_dossier_helper():
@@ -211,6 +214,36 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         extra = json.loads((fixture_root / "complete-es.json").read_text(encoding="utf-8"))
         extra["options"][0]["unexpected"] = True
         self.assertTrue(validate_schema_instance(extra, schema))
+
+    def test_career_learning_decision_v2_schema_accepts_closed_fixtures(self):
+        schema = self._schema("career-learning-decision-v2.schema.json")
+        fixture_root = ROOT.parent.parent / "tests/evals/with-skill/fixtures"
+        for name in ("complete-es.json", "limited-en.json", "unavailable-es.json"):
+            with self.subTest(name=name):
+                value = json.loads(
+                    (fixture_root / "career-learning-decision-v2" / name).read_text(encoding="utf-8")
+                )
+                self.assertEqual([], validate_schema_instance(value, schema))
+        complete = json.loads(
+            (fixture_root / "career-learning-decision-v2/complete-es.json").read_text(encoding="utf-8")
+        )
+        extra = copy.deepcopy(complete)
+        extra["decisions"][0]["caller_basis"] = "not allowed"
+        self.assertTrue(validate_schema_instance(extra, schema))
+        mismatched_rule = copy.deepcopy(complete)
+        mismatched_rule["decisions"][0]["gap_type"] = "knowledge"
+        self.assertTrue(validate_schema_instance(mismatched_rule, schema))
+
+        research = json.loads((fixture_root / "target-vacancy-research/complete-five-es.json").read_text(encoding="utf-8"))
+        dossier = json.loads((fixture_root / "executive-career-dossier-v2/scenario-a-es.json").read_text(encoding="utf-8"))
+        market = build_market_dossier_v2(research, dossier)
+        provider = json.loads((fixture_root / "career-learning-provider-research/complete-es.json").read_text(encoding="utf-8"))
+        requests = [
+            {key: row[key] for key in ("decision_rank", "decision_code", "source_signals", "provider_option_id")}
+            for row in complete["decisions"]
+        ]
+        self.assertEqual(complete, build_learning_bundle_v2(research, market, dossier, provider, requests))
+        self.assertEqual([], validate_learning_bundle_v2(complete, research, market, dossier, provider))
 
     def test_target_vacancy_research_schema_accepts_closed_synthetic_states(self):
         schema = self._schema("target-vacancy-research-v1.schema.json")

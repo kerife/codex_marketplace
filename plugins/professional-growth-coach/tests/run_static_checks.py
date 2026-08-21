@@ -221,15 +221,19 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/career-market-learning-dossier-v1.schema.json",
     "schemas/career-market-learning-dossier-v2.schema.json",
     "schemas/career-learning-decision-v1.schema.json",
+    "schemas/career-learning-decision-v2.schema.json",
     "schemas/career-learning-provider-research-v1.schema.json",
     "scripts/validate_target_vacancy_research.py",
     "scripts/derive_candidate_market_alignment_v2.py",
     "scripts/build_career_market_learning_dossier.py",
     "scripts/build_career_market_learning_dossier_v2.py",
     "scripts/build_career_learning_decision.py",
+    "scripts/project_career_learning_decision_v2.py",
+    "scripts/build_career_learning_decision_v2.py",
     "scripts/validate_career_market_learning_dossier.py",
     "scripts/validate_career_market_learning_dossier_v2.py",
     "scripts/validate_career_learning_decision.py",
+    "scripts/validate_career_learning_decision_v2.py",
     "scripts/validate_career_learning_provider_research.py",
     "assets/career-market-learning-dossier-v1.css",
     "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
@@ -244,6 +248,9 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "tests/evals/with-skill/fixtures/career-learning-provider-research/complete-es.json",
     "tests/evals/with-skill/fixtures/career-learning-provider-research/limited-en.json",
     "tests/evals/with-skill/fixtures/career-learning-provider-research/unavailable-es.json",
+    "tests/evals/with-skill/fixtures/career-learning-decision-v2/complete-es.json",
+    "tests/evals/with-skill/fixtures/career-learning-decision-v2/limited-en.json",
+    "tests/evals/with-skill/fixtures/career-learning-decision-v2/unavailable-es.json",
 )
 EXECUTIVE_DOSSIER_OFFLINE_TOKENS = (
     "http://",
@@ -755,9 +762,12 @@ def _load_market_package_modules(plugin_root: Path) -> dict[str, object]:
             "build_career_market_learning_dossier",
             "build_career_market_learning_dossier_v2",
             "build_career_learning_decision",
+            "project_career_learning_decision_v2",
+            "build_career_learning_decision_v2",
             "validate_career_market_learning_dossier",
             "validate_career_market_learning_dossier_v2",
             "validate_career_learning_decision",
+            "validate_career_learning_decision_v2",
             "validate_career_learning_provider_research",
             "render_executive_career_dossier_v2",
         ):
@@ -833,6 +843,7 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         "schemas/career-market-learning-dossier-v1.schema.json": "source_research_snapshot",
         "schemas/career-market-learning-dossier-v2.schema.json": "source_alignment_snapshot",
         "schemas/career-learning-decision-v1.schema.json": "source_market_snapshot",
+        "schemas/career-learning-decision-v2.schema.json": "source_provider_research_snapshot",
         "schemas/career-learning-provider-research-v1.schema.json": "options",
     }
     for relative_path, required_field in schema_requirements.items():
@@ -885,11 +896,17 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             "build_learning_bundle",
             "snapshot_for_learning_bundle",
         ),
+        "project_career_learning_decision_v2": ("project_decision_v2",),
+        "build_career_learning_decision_v2": ("build_learning_bundle_v2",),
         "validate_career_market_learning_dossier": ("validate_market_dossier",),
         "validate_career_market_learning_dossier_v2": ("validate_market_dossier_v2",),
         "validate_career_learning_decision": (
             "validate_learning_bundle",
             "load_learning_bundle",
+        ),
+        "validate_career_learning_decision_v2": (
+            "validate_learning_bundle_v2",
+            "snapshot_for_learning_bundle_v2",
         ),
         "validate_career_learning_provider_research": (
             "validate_provider_research",
@@ -913,6 +930,8 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
     builder = modules["build_career_market_learning_dossier"]
     learning_builder = modules["build_career_learning_decision"]
     learning_validator = modules["validate_career_learning_decision"]
+    learning_v2_builder = modules["build_career_learning_decision_v2"]
+    learning_v2_validator = modules["validate_career_learning_decision_v2"]
     market_validator = modules["validate_career_market_learning_dossier"]
     market_v2_builder = modules["build_career_market_learning_dossier_v2"]
     market_v2_validator = modules["validate_career_market_learning_dossier_v2"]
@@ -1078,6 +1097,40 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             errors.append(f"{market_name}: market v2 fixture does not reproduce from exact sources")
         if validation_errors:
             errors.append(f"{market_name}: market v2 trusted provenance validation failed")
+
+    learning_cases = (
+        ("complete-es.json", "complete-five-es.json", "scenario-a-es.json", "complete-es.json"),
+        ("limited-en.json", "limited-four-en.json", "scenario-c-en.json", "limited-en.json"),
+        ("unavailable-es.json", "unavailable-es.json", "scenario-a-es.json", "unavailable-es.json"),
+    )
+    for learning_name, research_name, dossier_name, provider_name in learning_cases:
+        try:
+            research = json.loads((fixture_root / "target-vacancy-research" / research_name).read_text(encoding="utf-8"))
+            dossier = json.loads((fixture_root / "executive-career-dossier-v2" / dossier_name).read_text(encoding="utf-8"))
+            provider = json.loads((fixture_root / "career-learning-provider-research" / provider_name).read_text(encoding="utf-8"))
+            expected_learning = json.loads((fixture_root / "career-learning-decision-v2" / learning_name).read_text(encoding="utf-8"))
+            if learning_name == "limited-en.json":
+                dossier["requested_technology_terms"] = [{"term": "Terraform", "claim_ids": ["C-002"]}]
+                dossier["claims"][1]["paraphrase"] = "Terraform experience was reported and needs bounded confirmation."
+                dossier["evidence"][2]["paraphrase"] = "Terraform experience was reported for bounded review."
+            market = market_v2_builder.build_market_dossier_v2(research, dossier)
+            requests = [
+                {field: row[field] for field in ("decision_rank", "decision_code", "source_signals", "provider_option_id")}
+                for row in expected_learning["decisions"]
+            ]
+            built_learning = learning_v2_builder.build_learning_bundle_v2(
+                research, market, dossier, provider, requests
+            )
+            learning_errors = learning_v2_validator.validate_learning_bundle_v2(
+                expected_learning, research, market, dossier, provider
+            )
+        except Exception:
+            errors.append(f"{learning_name}: learning v2 fixture composition failed")
+            continue
+        if expected_learning != built_learning:
+            errors.append(f"{learning_name}: learning v2 fixture does not reproduce from exact sources")
+        if learning_errors:
+            errors.append(f"{learning_name}: learning v2 trusted provenance validation failed")
 
     return sorted(set(errors))
 def score_executive_dossier_pressure_sample(

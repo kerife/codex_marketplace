@@ -41,6 +41,9 @@ MARKET_V2_VALIDATOR = load_sibling("validate_career_market_learning_dossier_v2.p
 RESEARCH = load_sibling("validate_target_vacancy_research.py")
 DOSSIER_SNAPSHOT = load_sibling("dossier_snapshot.py")
 PROVIDER_VALIDATOR = load_sibling("validate_career_learning_provider_research.py")
+LEARNING_V2_PROJECTION = load_sibling("project_career_learning_decision_v2.py")
+LEARNING_V2_BUILDER = load_sibling("build_career_learning_decision_v2.py")
+LEARNING_V2_VALIDATOR = load_sibling("validate_career_learning_decision_v2.py")
 
 
 def load_json(path: Path) -> dict[str, object]:
@@ -622,6 +625,333 @@ class CareerLearningProviderResearchTests(unittest.TestCase):
                 self.assertEqual(
                     [], PROVIDER_VALIDATOR.validate_provider_research(self.provider_fixture(name))
                 )
+
+
+class CareerLearningDecisionV2Tests(unittest.TestCase):
+    def complete_v2_sources(self) -> tuple[dict[str, object], ...]:
+        research = load_json(RESEARCH_FIXTURES / "complete-five-es.json")
+        dossier = load_json(DOSSIER_FIXTURES / "scenario-a-es.json")
+        market = MARKET_V2_BUILDER.build_market_dossier_v2(research, dossier)
+        provider = load_json(PROVIDER_FIXTURES / "complete-es.json")
+        return research, market, dossier, provider
+
+    @staticmethod
+    def request(code: str, rank: int = 1, provider_id: str | None = None) -> dict[str, object]:
+        return {
+            "decision_rank": rank,
+            "decision_code": code,
+            "source_signals": ["terraform"],
+            "provider_option_id": provider_id,
+        }
+
+    @staticmethod
+    def route(locale: str) -> dict[str, object]:
+        return {
+            "signal": "terraform",
+            "term_label": "Terraform",
+            "support_state": "candidate_reported_match",
+            "recurrence": "1/5",
+            "vacancy_ordinals": ["V3"],
+        }
+
+    @staticmethod
+    def provider_option() -> dict[str, object]:
+        provider = load_json(PROVIDER_FIXTURES / "complete-es.json")
+        return copy.deepcopy(provider["options"][0])
+
+    def test_projection_pins_complete_es_and_en_objects_for_all_five_codes(self):
+        shared = {
+            "es": {
+                "source_signals": ["terraform"],
+                "signal_routes": [self.route("es")],
+                "cost_time_band": "No evaluado; requiere confirmación separada.",
+                "expected_signal_boundary": "Hipótesis acotada: una señal inspectable no predice entrevista, oferta, salario ni retorno de inversión.",
+                "portfolio_or_no_learning_alternative": "Completa primero una prueba acotada y usa la evidencia existente antes de comprar formación.",
+                "overbuying_risk": "Evita acumular credenciales o dividir el tiempo antes de completar una prueba de mayor señal.",
+                "next_action_gate": "Revisión y autorización exacta obligatorias antes de inscripción, compra, programación de examen, publicación, difusión o mensajería externa.",
+                "outcome_boundary": "not_an_interview_offer_salary_or_roi_prediction",
+                "draft_only": True,
+                "no_external_action": True,
+            },
+            "en": {
+                "source_signals": ["terraform"],
+                "signal_routes": [self.route("en")],
+                "cost_time_band": "Not evaluated; separate confirmation is required.",
+                "expected_signal_boundary": "Bounded hypothesis: an inspectable signal predicts neither an interview, offer, salary, nor return on investment.",
+                "portfolio_or_no_learning_alternative": "Complete one bounded proof first and use existing evidence before buying learning.",
+                "overbuying_risk": "Avoid collecting credentials or splitting time before one higher-signal proof is complete.",
+                "next_action_gate": "Review and exact authorization are required before enrollment, purchase, exam scheduling, publication, sharing, or external messaging.",
+                "outcome_boundary": "not_an_interview_offer_salary_or_roi_prediction",
+                "draft_only": True,
+                "no_external_action": True,
+            },
+        }
+        expected_rules = {
+            ("es", "build_bounded_proof"): {
+                "gap_type": "proof", "option_type": "portfolio_project", "decision": "do_now",
+                "option_name": "Prueba acotada de Terraform", "provider_or_owner": "candidate_owned",
+                "decision_basis": "Prioriza una prueba acotada antes de comprar formación; la ruta estructurada de evidencia es la base completa de esta decisión preliminar.",
+            },
+            ("en", "build_bounded_proof"): {
+                "gap_type": "proof", "option_type": "portfolio_project", "decision": "do_now",
+                "option_name": "Bounded Terraform proof", "provider_or_owner": "candidate_owned",
+                "decision_basis": "Prioritize one bounded proof before buying learning; the structured evidence route is the complete basis for this draft decision.",
+            },
+            ("es", "run_validation_lab"): {
+                "gap_type": "experience", "option_type": "lab", "decision": "do_now",
+                "option_name": "Laboratorio de validación de Terraform", "provider_or_owner": "candidate_owned",
+                "decision_basis": "Usa un laboratorio acotado para comprobar la señal documentada; la ruta estructurada de evidencia es la base completa de esta decisión preliminar.",
+            },
+            ("en", "run_validation_lab"): {
+                "gap_type": "experience", "option_type": "lab", "decision": "do_now",
+                "option_name": "Terraform validation lab", "provider_or_owner": "candidate_owned",
+                "decision_basis": "Use a bounded lab to test the documented signal; the structured evidence route is the complete basis for this draft decision.",
+            },
+            ("es", "research_provider_option"): {
+                "gap_type": "knowledge", "option_type": "course", "decision": "research_first",
+                "option_name": "Terraform course", "provider_or_owner": "HashiCorp",
+                "decision_basis": "Investiga esta opción verificada de proveedor antes de comprar; su vínculo estructurado de señal no predice resultados laborales.",
+            },
+            ("en", "research_provider_option"): {
+                "gap_type": "knowledge", "option_type": "course", "decision": "research_first",
+                "option_name": "Terraform course", "provider_or_owner": "HashiCorp",
+                "decision_basis": "Research this verified provider option before buying; its structured signal binding does not predict employment outcomes.",
+            },
+            ("es", "defer_learning_purchase"): {
+                "gap_type": "low_return", "option_type": "no_learning_yet", "decision": "defer",
+                "option_name": "Aplazar compra de formación para Terraform", "provider_or_owner": "candidate_owned",
+                "decision_basis": "Aplaza la compra hasta completar una prueba acotada; la ruta estructurada de evidencia no demuestra retorno de inversión.",
+            },
+            ("en", "defer_learning_purchase"): {
+                "gap_type": "low_return", "option_type": "no_learning_yet", "decision": "defer",
+                "option_name": "Defer learning purchase for Terraform", "provider_or_owner": "candidate_owned",
+                "decision_basis": "Defer the purchase until one bounded proof is complete; the structured evidence route does not establish return on investment.",
+            },
+            ("es", "run_role_search_experiment"): {
+                "gap_type": "terminology", "option_type": "role_search", "decision": "research_first",
+                "option_name": "Experimento de búsqueda para Terraform", "provider_or_owner": "candidate_owned",
+                "decision_basis": "Prueba una búsqueda acotada de roles antes de elegir formación; la ruta estructurada de evidencia no demuestra elegibilidad ni contratación.",
+            },
+            ("en", "run_role_search_experiment"): {
+                "gap_type": "terminology", "option_type": "role_search", "decision": "research_first",
+                "option_name": "Role-search experiment for Terraform", "provider_or_owner": "candidate_owned",
+                "decision_basis": "Run a bounded role search before choosing learning; the structured evidence route does not establish eligibility or hiring.",
+            },
+        }
+        for (locale, code), rule_fields in expected_rules.items():
+            with self.subTest(locale=locale, code=code):
+                provider_id = "LP-001" if code == "research_provider_option" else None
+                request = self.request(code, provider_id=provider_id)
+                expected = {
+                    "decision_rank": 1,
+                    "decision_code": code,
+                    "provider_option_id": provider_id,
+                    **shared[locale],
+                    **rule_fields,
+                }
+                actual = LEARNING_V2_PROJECTION.project_decision_v2(
+                    locale,
+                    request,
+                    [self.route(locale)],
+                    self.provider_option() if provider_id else None,
+                )
+                self.assertEqual(expected, actual)
+
+    def test_learning_v2_accepts_only_four_input_fields_and_exact_terraform_route(self):
+        sources = self.complete_v2_sources()
+        result = LEARNING_V2_BUILDER.build_learning_bundle_v2(
+            *sources, [self.request("build_bounded_proof")]
+        )
+        row = result["decisions"][0]
+        self.assertEqual(["C-002"], row["claim_ids"])
+        self.assertEqual(["E-004"], row["source_evidence_ids"])
+        self.assertEqual(["V-003-R-01"], row["requirement_ids"])
+        self.assertEqual(["V-003"], row["vacancy_ids"])
+        self.assertEqual(["devops_engineering"], row["target_role_families"])
+        self.assertEqual(
+            [{
+                "signal": "terraform", "term_label": "Terraform",
+                "support_state": "candidate_reported_match", "recurrence": "1/5",
+                "vacancy_ordinals": ["V3"],
+            }],
+            row["signal_routes"],
+        )
+        self.assertRegex(
+            LEARNING_V2_VALIDATOR.snapshot_for_learning_bundle_v2(result),
+            r"^snap-learning-v2-sha256-[0-9a-f]{64}$",
+        )
+        self.assertEqual(
+            [], LEARNING_V2_VALIDATOR.validate_learning_bundle_v2(result, *sources)
+        )
+
+    def test_multi_signal_routes_preserve_per_signal_vacancy_attribution_and_exact_unions(self):
+        research, _market, dossier, provider = self.complete_v2_sources()
+        dossier["requested_technology_terms"].append({"term": "Python", "claim_ids": ["C-001"]})
+        dossier["claims"][0]["paraphrase"] = "Python supports a concrete professional proposition."
+        dossier["evidence"][0]["paraphrase"] = "Python is present in the supplied material."
+        dossier["evidence"][1]["paraphrase"] = "Python scope is available for bounded review."
+        market = MARKET_V2_BUILDER.build_market_dossier_v2(research, dossier)
+        request = {
+            "decision_rank": 1,
+            "decision_code": "build_bounded_proof",
+            "source_signals": ["python", "terraform"],
+            "provider_option_id": None,
+        }
+        result = LEARNING_V2_BUILDER.build_learning_bundle_v2(
+            research, market, dossier, provider, [request]
+        )
+        row = result["decisions"][0]
+        self.assertEqual(["C-001", "C-002"], row["claim_ids"])
+        self.assertEqual(["E-001", "E-002", "E-004"], row["source_evidence_ids"])
+        self.assertEqual(["V-001-R-01", "V-003-R-01"], row["requirement_ids"])
+        self.assertEqual(["V-001", "V-003"], row["vacancy_ids"])
+        self.assertEqual(["devops_engineering", "site_reliability_engineering"], row["target_role_families"])
+        self.assertEqual(
+            [("python", ["V1"]), ("terraform", ["V3"])],
+            [(route["signal"], route["vacancy_ordinals"]) for route in row["signal_routes"]],
+        )
+        reordered = copy.deepcopy(request)
+        reordered["source_signals"] = ["terraform", "python"]
+        with self.assertRaisesRegex(ValueError, r"^learning decision v2 is invalid$"):
+            LEARNING_V2_BUILDER.build_learning_bundle_v2(
+                research, market, dossier, provider, [reordered]
+            )
+
+    def test_quantum_semantics_provider_displacement_and_caller_output_fields_fail_closed(self):
+        sources = self.complete_v2_sources()
+        bad_rows = [
+            {"decision_rank": 1, "decision_code": "build_bounded_proof", "source_signals": ["quantum_computing"], "provider_option_id": None},
+            {"decision_rank": 1, "decision_code": "research_provider_option", "source_signals": ["terraform"], "provider_option_id": "LP-002"},
+            {"decision_rank": 1, "decision_code": "research_provider_option", "source_signals": ["terraform"], "provider_option_id": None},
+            {"decision_rank": 1, "decision_code": "build_bounded_proof", "source_signals": ["terraform"], "provider_option_id": "LP-001"},
+        ]
+        for field in ("option_name", "decision_basis", "overbuying_risk", "cost_time_band", "next_action_gate"):
+            row = self.request("build_bounded_proof")
+            row[field] = "Quantum computing changes everything"
+            bad_rows.append(row)
+        for row in bad_rows:
+            with self.subTest(row=row):
+                with self.assertRaisesRegex(ValueError, r"^learning decision v2 is invalid$") as raised:
+                    LEARNING_V2_BUILDER.build_learning_bundle_v2(*sources, [row])
+                self.assertNotIn("Quantum", str(raised.exception))
+
+    def test_source_signal_order_duplicates_unknown_support_and_rank_shape_fail_closed(self):
+        sources = self.complete_v2_sources()
+        bad_requests = [
+            {"decision_rank": 1, "decision_code": "build_bounded_proof", "source_signals": ["terraform", "python"], "provider_option_id": None},
+            {"decision_rank": 1, "decision_code": "build_bounded_proof", "source_signals": ["terraform", "terraform"], "provider_option_id": None},
+            {"decision_rank": 1, "decision_code": "build_bounded_proof", "source_signals": ["python"], "provider_option_id": None},
+            {"decision_rank": 2, "decision_code": "build_bounded_proof", "source_signals": ["terraform"], "provider_option_id": None},
+        ]
+        for request in bad_requests:
+            with self.subTest(request=request):
+                with self.assertRaisesRegex(ValueError, r"^learning decision v2 is invalid$"):
+                    LEARNING_V2_BUILDER.build_learning_bundle_v2(*sources, [request])
+
+    def test_validator_recomputes_every_provenance_route_semantic_and_snapshot_field(self):
+        sources = self.complete_v2_sources()
+        result = LEARNING_V2_BUILDER.build_learning_bundle_v2(
+            *sources,
+            [
+                self.request("build_bounded_proof", 1),
+                self.request("research_provider_option", 2, "LP-001"),
+            ],
+        )
+        mutations: list[dict[str, object]] = []
+        for field, replacement in (
+            ("claim_ids", ["C-001"]),
+            ("source_evidence_ids", ["E-001"]),
+            ("requirement_ids", ["V-001-R-01"]),
+            ("vacancy_ids", ["V-001"]),
+            ("target_role_families", ["platform_engineering"]),
+            ("decision_basis", "Changed basis"),
+            ("cost_time_band", "Changed cost"),
+        ):
+            altered = copy.deepcopy(result)
+            altered["decisions"][0][field] = replacement
+            mutations.append(altered)
+        crossed_route = copy.deepcopy(result)
+        crossed_route["decisions"][0]["signal_routes"][0]["vacancy_ordinals"] = ["V1"]
+        mutations.append(crossed_route)
+        for root_field in (
+            "source_research_snapshot", "source_dossier_snapshot", "source_alignment_snapshot",
+            "source_market_snapshot", "source_provider_research_snapshot",
+        ):
+            altered = copy.deepcopy(result)
+            altered[root_field] = "snap-learning-v2-sha256-" + "0" * 64
+            mutations.append(altered)
+        omitted = copy.deepcopy(result)
+        del omitted["source_provider_research_snapshot"]
+        mutations.append(omitted)
+        for altered in mutations:
+            with self.subTest(keys=set(altered)):
+                self.assertEqual(
+                    ["learning decision does not match validated sources"],
+                    LEARNING_V2_VALIDATOR.validate_learning_bundle_v2(altered, *sources),
+                )
+
+    def test_validator_rejects_stale_crossed_sources_and_provider_coverage_changes(self):
+        sources = self.complete_v2_sources()
+        result = LEARNING_V2_BUILDER.build_learning_bundle_v2(
+            *sources, [self.request("research_provider_option", provider_id="LP-001")]
+        )
+        stale_research = copy.deepcopy(sources[0])
+        stale_research["vacancies"][0]["title"] = "Stale public vacancy"
+        changed_provider = copy.deepcopy(sources[3])
+        changed_provider["options"][0]["covered_signals"] = []
+        cases = [
+            (stale_research, sources[1], sources[2], sources[3]),
+            (sources[0], sources[1], load_json(DOSSIER_FIXTURES / "scenario-c-en.json"), sources[3]),
+            (sources[0], sources[1], sources[2], changed_provider),
+        ]
+        for crossed in cases:
+            with self.subTest():
+                self.assertEqual(
+                    ["learning decision does not match validated sources"],
+                    LEARNING_V2_VALIDATOR.validate_learning_bundle_v2(result, *crossed),
+                )
+
+    def test_builder_and_validator_are_total_and_do_not_echo_malformed_values(self):
+        sources = self.complete_v2_sources()
+        sentinel = "learning-malicious-sentinel"
+        cycle: dict[str, object] = {"marker": sentinel}
+        cycle["cycle"] = cycle
+        oversized = [self.request("build_bounded_proof") for _ in range(151)]
+        unicode_edge = self.request("build_bounded_proof")
+        unicode_edge["source_signals"] = [f"terraform{chr(0xD800)}{sentinel}"]
+        for malformed in (cycle, oversized, [unicode_edge]):
+            with self.subTest(kind=type(malformed).__name__):
+                with self.assertRaisesRegex(ValueError, r"^learning decision v2 is invalid$") as raised:
+                    LEARNING_V2_BUILDER.build_learning_bundle_v2(*sources, malformed)
+                self.assertNotIn(sentinel, str(raised.exception))
+                errors = LEARNING_V2_VALIDATOR.validate_learning_bundle_v2(
+                    malformed, *sources
+                )
+                self.assertEqual(["learning decision does not match validated sources"], errors)
+                self.assertNotIn(sentinel, "\n".join(errors))
+
+    def test_unavailable_market_accepts_only_absent_or_empty_requests(self):
+        research = load_json(RESEARCH_FIXTURES / "unavailable-es.json")
+        dossier = load_json(DOSSIER_FIXTURES / "scenario-a-es.json")
+        market = MARKET_V2_BUILDER.build_market_dossier_v2(research, dossier)
+        provider = load_json(PROVIDER_FIXTURES / "unavailable-es.json")
+        for requests in (None, []):
+            with self.subTest(requests=requests):
+                result = LEARNING_V2_BUILDER.build_learning_bundle_v2(
+                    research, market, dossier, provider, requests
+                )
+                self.assertEqual("unavailable", result["state"])
+                self.assertEqual([], result["decisions"])
+                self.assertEqual(
+                    [],
+                    LEARNING_V2_VALIDATOR.validate_learning_bundle_v2(
+                        result, research, market, dossier, provider
+                    ),
+                )
+        with self.assertRaisesRegex(ValueError, r"^learning decision v2 is invalid$"):
+            LEARNING_V2_BUILDER.build_learning_bundle_v2(
+                research, market, dossier, provider, [self.request("build_bounded_proof")]
+            )
 
 
 if __name__ == "__main__":

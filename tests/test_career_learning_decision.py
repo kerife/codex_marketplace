@@ -577,5 +577,62 @@ class CareerLearningDecisionContractTests(unittest.TestCase):
         self.assertEqual([], self.market["learning_decisions"])
 
 
+class CareerLearningDecisionV2ContractTests(unittest.TestCase):
+    def test_v2_schema_and_runtime_close_every_caller_authored_semantic_field(self) -> None:
+        scripts = ROOT / "plugins" / "professional-growth-coach" / "scripts"
+        projection_path = scripts / "project_career_learning_decision_v2.py"
+        specification = importlib.util.spec_from_file_location(
+            "career_learning_projection_v2_contract", projection_path
+        )
+        if specification is None or specification.loader is None:
+            raise AssertionError("learning v2 projection is unavailable")
+        module = importlib.util.module_from_spec(specification)
+        sys.modules[specification.name] = module
+        specification.loader.exec_module(module)
+        schema = json.loads(
+            (ROOT / "plugins" / "professional-growth-coach" / "schemas" / "career-learning-decision-v2.schema.json").read_text(encoding="utf-8")
+        )
+        request = {
+            "decision_rank": 1,
+            "decision_code": "build_bounded_proof",
+            "source_signals": ["terraform"],
+            "provider_option_id": None,
+        }
+        route = {
+            "signal": "terraform", "term_label": "Terraform",
+            "support_state": "candidate_reported_match", "recurrence": "1/5",
+            "vacancy_ordinals": ["V3"],
+        }
+        projected = module.project_decision_v2("es", request, [route], None)
+        root = {
+            "schema_version": "career-learning-decision-v2", "locale": "es",
+            "as_of_date": "2026-08-13", "state": "complete",
+            "source_research_snapshot": "snap-market-sha256-" + "1" * 64,
+            "source_dossier_snapshot": "snap-dossier-sha256-" + "2" * 64,
+            "source_alignment_snapshot": "snap-alignment-sha256-" + "3" * 64,
+            "source_market_snapshot": "snap-market-dossier-v2-sha256-" + "4" * 64,
+            "source_provider_research_snapshot": "snap-provider-sha256-" + "5" * 64,
+            "decisions": [{
+                **projected,
+                "claim_ids": ["C-002"], "source_evidence_ids": ["E-004"],
+                "requirement_ids": ["V-003-R-01"], "vacancy_ids": ["V-003"],
+                "target_role_families": ["devops_engineering"],
+            }],
+            "privacy_boundary": "identity_free_structured_provenance_only",
+            "no_external_action": True,
+            "outcome_boundary": "not_an_interview_offer_salary_or_roi_prediction",
+        }
+        self.assertEqual([], validate_schema_instance(root, schema))
+        for field in ("option_name", "decision_basis", "cost_time_band", "next_action_gate"):
+            with self.subTest(field=field):
+                altered_request = dict(request)
+                altered_request[field] = "caller-authored text"
+                with self.assertRaisesRegex(ValueError, r"^learning decision projection is invalid$"):
+                    module.project_decision_v2("es", altered_request, [route], None)
+        extra = copy.deepcopy(root)
+        extra["decisions"][0]["unexpected"] = True
+        self.assertTrue(validate_schema_instance(extra, schema))
+
+
 if __name__ == "__main__":
     unittest.main()
