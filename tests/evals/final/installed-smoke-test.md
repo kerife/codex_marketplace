@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-21T19:30:00Z`
+release_timestamp: `2026-08-21T20:00:00Z`
 
-installed_access_timestamp: `2026-08-21T19:30:00Z`
+installed_access_timestamp: `2026-08-21T20:00:00Z`
 
-source_commit: `543274c897a952acee10f7914869f09e686a785d`
+source_commit: `06d9f1d8c2e32cb91ea76323e4cb2b5581b75f31`
 
-source_tree: `3b513dcb88eb3ec2e2e934ada9f4e3b8a9d6632b`
+source_tree: `e1ce592e8948a7a1973e8139b21a2ca9f6daa8b9`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260821193000`
+installed_cache_version: `0.2.0+codex.20260821200000`
 
 installed_enabled: `true`
 
@@ -73,6 +73,8 @@ installed_target_research_identity_smokes: `12/12; common_and_non_allowlisted_ob
 installed_current_cycle_obfuscated_smokes: `45/45; five_surname_families_across_strict_fields; compact_role_tail_and_hostname_forms_fail_closed; technical_and_organization_controls_pass; diagnostics_no_echo`
 
 installed_current_cycle_organization_allowlist_smokes: `18/18; Grant_Thornton_Brown_University_Miller_Lite_safe_fields_only; location_and_fingerprint_fail_closed; diagnostics_no_echo`
+
+installed_current_cycle_progress_boundary_aria_smokes: `5/5; localized_market_render; unique_boundary_ids; progress_aria_references_resolved; no_external_controls`
 
 installed_current_cycle_contrast_smokes: `3/3; muted_text_contrast; light_line_token; forced_colors_text_override`
 
