@@ -108,13 +108,18 @@ _HTML_RE = re.compile(r"<\s*/?\s*(?:script|style|html|body|div|span|iframe)\b", 
 _LOCAL_PATH_RE = re.compile(r"(?:file://|(?:^|\s)(?:/Users/|/private/|/tmp/|~/|[A-Za-z]:[\\/]))", re.I)
 _PROFILE_URL_RE = re.compile(r"https?://(?:www\.)?linkedin\.com/(?:in|pub|profile|company)/", re.I)
 _GENERIC_URL_RE = re.compile(
-    r"\b(?:(?:https?://|www\.)\S+|(?:[a-z0-9-]+\.)+(?:com|org|net|io|dev|app|edu|gov|mx|xyz)(?:[/?#][^\s]*)?)",
+    r"\b(?:"
+    r"(?:https?://|www\.)\S+"
+    r"|(?:[a-z0-9-]+\.)+(?:com|org|net|io|dev|app|edu|gov|mx|xyz)(?:[/?#][^\s]*)?"
+    r"|(?:[a-z0-9-]+\.)+[a-z]{2,63}/[^\s]*"
+    r")",
     re.I,
 )
 _RAW_IDENTIFIER_RE = re.compile(
     r"\b(?:"
     r"(?:profile|user)[ _-]?id"
-    r"|id[-_: ]?\d{2,}"
+    r"|id[-_: ][a-z0-9]+"
+    r"|account[-_: ]+id[-_: ][a-z0-9]+"
     r"|case[-_: ][a-z0-9]+"
     r"|private[-_: ]+id[-_: ]?[a-z0-9]+"
     r"|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
