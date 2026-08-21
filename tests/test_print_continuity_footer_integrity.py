@@ -23,6 +23,7 @@ class PrintContinuityFooterIntegrityTests(unittest.TestCase):
         css = (ASSETS / "career-market-learning-dossier-v1.css").read_text(encoding="utf-8")
         print_css = css[css.index("@media print"):css.index("@media (forced-colors: active)")]
         for contract in (
+            ".market-summary-card",
             ".market-vacancy-key",
             ".market-matrix-row",
             ".vacancy-alignment-card",
@@ -40,6 +41,12 @@ class PrintContinuityFooterIntegrityTests(unittest.TestCase):
             print_css,
             r"\.market-vacancy-key\s*\{[^}]*break-after:\s*avoid;[^}]*page-break-after:\s*avoid;",
         )
+        for selector in (".market-summary-card", ".market-vacancy-key"):
+            with self.subTest(selector=selector):
+                self.assertRegex(
+                    print_css,
+                    rf"{re.escape(selector)}\s*\{{[^}}]*break-inside:\s*avoid;[^}}]*page-break-inside:\s*avoid;",
+                )
         self.assertNotRegex(
             print_css,
             r"\.market-matrix-group\s*\{[^}]*break-inside:\s*avoid;",
