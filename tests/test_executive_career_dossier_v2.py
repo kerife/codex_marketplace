@@ -1878,8 +1878,12 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     learning_decision=case[4],
                 )
                 expected = "Prueba y costo" if locale == "es" else "Proof and cost"
+                self.assertEqual(
+                    3,
+                    rendered.count('class="learning-decision-proof" role="group" aria-labelledby='),
+                )
                 groups = re.findall(
-                    r'<div class="learning-decision-proof" aria-labelledby="([^"]+)">(.*?)</div>',
+                    r'<div class="learning-decision-proof" role="group" aria-labelledby="([^"]+)">(.*?)</div>',
                     rendered,
                     re.DOTALL,
                 )
