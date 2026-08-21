@@ -112,15 +112,25 @@ _GENERIC_URL_RE = re.compile(
     re.I,
 )
 _RAW_IDENTIFIER_RE = re.compile(
-    r"\b(?:(?:profile|user)[ _-]?id|id[-_: ]?\d{3,}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b",
+    r"\b(?:"
+    r"(?:profile|user)[ _-]?id"
+    r"|id[-_: ]?\d{2,}"
+    r"|case[-_: ]?\d{4,}"
+    r"|private[-_: ]+id[-_: ]?[a-z0-9]{4,}"
+    r"|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    r")\b",
     re.I,
 )
 _UNSAFE_ACTION_RE = re.compile(
     r"\b(?:"
     r"enroll\s+now|purchase\s+now|buy\s+(?:this\s+)?course|sign\s+up\s+now|apply\s+now"
     r"|(?:schedule|book)\s+(?:an?\s+)?(?:exam|interview)|contact\s+provider|publish\s+this\s+project|please\s+enroll"
+    r"|send\s+(?:an?\s+)?message"
     r"|(?:this\s+)?gets?\s+interviews?"
     r"|helps?\s+you\s+get\s+hired"
+    r"|improv(?:e|es|ed|ing)\s+(?:your\s+)?chances?(?:\s+of(?:\s+getting)?\s+hired)?"
+    r"|helps?\s+you\s+land\s+(?:a\s+)?role"
+    r"|(?:get|find)\s+(?:a\s+)?job|secure\s+employment|career\s+advancement|boost\s+compensation|hiring\s+outcome"
     r"|get\s+hired\s+faster"
     r"|land\s+an?\s+interview"
     r"|secure\s+an?\s+offer"
@@ -132,7 +142,19 @@ _UNSAFE_ACTION_RE = re.compile(
     r"|offer\s+after\s+completion"
     r"|employer\s+will\s+contact\s+you"
     r"|will\s+get|guarantee[sd]?|interview\s+probability|offer\s+probability|salary\s+increase|time[- ]to[- ]hire|return\s+on\s+investment"
+    r"|compra\s+este\s+curso|inscr[ií]bete\s+ahora|aplica\s+ahora"
+    r"|programa\s+el\s+examen|agenda\s+entrevista|contacta\s+al\s+proveedor|publica\s+este\s+proyecto|env[ií]a\s+un\s+mensaje"
+    r"|esto\s+consigue\s+entrevistas?|te\s+ayuda\s+a\s+conseguir\s+empleo|conseguir[aá]s\s+trabajo"
+    r"|obt[eé]n\s+una\s+oferta|te\s+contratar[aá]n|aumenta\s+tu\s+salario|[eé]xito\s+laboral"
+    r"|oferta\s+garantizada|retorno\s+de\s+inversi[oó]n"
     r")\b",
+    re.I,
+)
+_SAFE_OUTCOME_BOUNDARY_RE = re.compile(
+    r"\b(?:"
+    r"without\s+promising|does\s+not\s+(?:predict|guarantee)"
+    r"|no\s+(?:predice|promete|garantiza)"
+    r")\s+(?:a\s+)?(?:hiring\s+outcome|[eé]xito\s+laboral)\b",
     re.I,
 )
 _SAFE_CANDIDATE_CONTEXT_RE = re.compile(
@@ -196,9 +218,10 @@ def _text_has_identity_action_or_outcome_risk(value: object) -> bool:
     if not isinstance(value, str):
         return True
     identity_candidate = _SAFE_CANDIDATE_CONTEXT_RE.sub("safe technical context", value)
+    action_candidate = _SAFE_OUTCOME_BOUNDARY_RE.sub("safe technical context", value)
     return bool(
         _prose.contains_candidate_identity(identity_candidate)
-        or _UNSAFE_ACTION_RE.search(value)
+        or _UNSAFE_ACTION_RE.search(action_candidate)
     )
 
 

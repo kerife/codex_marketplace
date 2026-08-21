@@ -1359,8 +1359,12 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             ("target_role", "candidate name Example Person Senior SRE"),
             ("decision_basis", "Guaranteed interview preparation"),
             ("option_name", "Buy this course"),
+            ("next_action_gate", "exact authorization required before Send a message"),
             ("target_role", "example.com/profile"),
             ("provider_or_owner", "ID-12345"),
+            ("option_name", "Compra este curso"),
+            ("decision_basis", "Te ayuda a conseguir empleo"),
+            ("option_name", "case-123456"),
         ):
             with self.subTest(field=field, unsafe_text=unsafe_text):
                 invalid = copy.deepcopy(case[4])
