@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-21T13:51:45Z`
+release_timestamp: `2026-08-21T14:17:23Z`
 
-installed_access_timestamp: `2026-08-21T13:51:45Z`
+installed_access_timestamp: `2026-08-21T14:17:23Z`
 
-source_commit: `15db7db3ca5035bfa6ac1d3ebe11d1425e550c03`
+source_commit: `c12aaf4df6f1325885f566e93e7b0650ccde31a5`
 
-source_tree: `3d8cf52ad74ad7565f14cbe8c5bfc96c65cb46c3`
+source_tree: `5beb3dc4431bbe9a284c3a0f5c3ecef96cca9341`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260821135042`
+installed_cache_version: `0.2.0+codex.20260821141617`
 
 installed_enabled: `true`
 
@@ -34,7 +34,7 @@ source_file_count: `124`
 
 installed_file_count: `124`
 
-normalized_source_cache_sha256: `efa17377fcd1b64c3b431b90c2d4983505f0d6b8af2667f523d4d9b0a4d7d121`
+normalized_source_cache_sha256: `894cb77d728d70c3c804522c1b27730ff56d819b55718ae6c6033d677e1feaf0`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
@@ -70,6 +70,8 @@ installed_schema_pattern_smokes: `2/2`
 
 installed_target_research_identity_smokes: `12/12; common_and_non_allowlisted_obfuscated_forms_fail_closed; diagnostics_no_echo`
 
+installed_current_cycle_obfuscated_smokes: `5/5; compact_role_tail_and_hostname_forms_fail_closed; technical_allowlist_controls_pass; diagnostics_no_echo`
+
 installed_market_learning_disclosure_smokes: `3/3; localized; raw_enum_not_visible`
 
 installed_market_coverage_band_smokes: `3/3; localized; raw_band_enum_not_visible; progress_aria_bound`
@@ -78,7 +80,7 @@ installed_decision_trace_layout_smokes: `2/2; desktop_two_columns; mobile_one_co
 
 installed_mobile_market_matrix_label_smokes: `source_contract=2/2; short_V1_to_VN_data_labels; full_headers_and_key_preserved`
 
-deferred_privacy_boundary: `arbitrary_non_allowlisted_compact_names_need_contextual_role_classifier`
+deferred_privacy_boundary: `unknown_compact_names_without_dictionary_or_role_context_need_follow_up; no length-only heuristic`
 
 fresh_agent_smoke: `not_run_in_current_process`
 
