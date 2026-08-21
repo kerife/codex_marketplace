@@ -626,6 +626,55 @@ class TargetVacancyResearchTests(unittest.TestCase):
                 )
                 self.assertNotIn(host.casefold(), "\n".join(errors).casefold())
 
+    def test_residual_compact_aliases_and_role_tail_urls_are_rejected_without_echo(self) -> None:
+        cases = (
+            ("title compact alias", "title", "samanthabrown"),
+            ("title dotted alias", "title", "samantha.brown"),
+            ("title underscored alias", "title", "samantha_brown"),
+            ("title compact alias with role tail", "title", "patrickmiller engineer"),
+            ("title dotted alias with role tail", "title", "patrick.miller engineer"),
+            ("title underscored alias with role tail", "title", "patrick_miller engineer"),
+            ("location dotted alias", "location", "victoria.grant"),
+            ("fingerprint compact alias with role tail", "duplicate_fingerprint", "thomasanderson-engineer"),
+            ("URL host compact alias with role tail", "source_url", "https://samanthabrown.dev/platform-engineer"),
+            ("URL path compact alias with role tail", "source_url", "https://www.rfc-editor.org/rfc/patrickmiller-engineer"),
+            ("URL host dotted alias with role tail", "source_url", "https://victoria.grant.dev/platform-engineer"),
+            ("URL path underscored alias with role tail", "source_url", "https://www.rfc-editor.org/rfc/thomasanderson_engineer"),
+        )
+        for label, field, marker in cases:
+            with self.subTest(case=label, marker=marker):
+                value = self.complete()
+                value["vacancies"][0][field] = marker
+                errors = self.assert_invalid(
+                    value, "research contains forbidden private or raw content"
+                )
+                self.assertNotIn(marker, "\n".join(errors).casefold())
+
+    def test_residual_technical_and_organization_controls_remain_valid(self) -> None:
+        for field, marker in (
+            ("title", "Jane Street"),
+            ("title", "John Deere"),
+            ("title", "Jane Street Platform Engineer"),
+            ("title", "John Deere Platform Engineer"),
+            ("title", "Maria DB Platform Engineer"),
+            ("title", "MariaDB Platform Engineer"),
+            ("title", "Machine Learning Engineer"),
+            ("title", "Cloud Native Engineer"),
+            ("title", "mariadb engineer"),
+            ("title", "machinelearning engineer"),
+            ("title", "cloudnative engineer"),
+            ("title", "googlecloud engineer"),
+            ("title", "terraformmodule engineer"),
+            ("source_url", "https://janestreet.com/platform-engineer"),
+            ("source_url", "https://johndeere.com/platform-engineer"),
+            ("duplicate_fingerprint", "cloud-native"),
+            ("duplicate_fingerprint", "terraform-module"),
+        ):
+            with self.subTest(field=field, marker=marker):
+                value = self.complete()
+                value["vacancies"][0][field] = marker
+                self.assertEqual([], self.validator.validate_research(value))
+
     def test_obfuscated_controls_remain_valid(self) -> None:
         for field, value in (
             ("title", "Google Cloud Platform Engineer"),

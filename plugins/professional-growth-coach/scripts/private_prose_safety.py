@@ -42,6 +42,7 @@ _COMMON_GIVEN_NAMES = frozenset(
         "margaret", "maria", "marco", "mary", "michael", "mike", "miguel", "natalie", "nina", "rachel", "robert", "sarah", "sofia", "sophia", "tony", "zhang",
     }
 )
+_COMMON_SURNAME_TOKENS = frozenset({"anderson", "brown", "grant", "miller"})
 _SAFE_PUBLIC_RESEARCH_PHRASES = frozenset(
     {
         "jane street",
@@ -52,6 +53,7 @@ _SAFE_PUBLIC_RESEARCH_PHRASES = frozenset(
         "mariadb engineer",
     }
 )
+_SAFE_PUBLIC_RESEARCH_ORGANIZATIONS = frozenset({"jane street", "john deere", "maria db", "mariadb"})
 _ORGANIZATION_AND_LOCATION_TERMS = frozenset(
     {
         "aerospace", "angeles", "canada", "city", "cloud", "corp", "corporation",
@@ -205,6 +207,12 @@ def contains_obfuscated_candidate_identity(value: object) -> bool:
                 return True
             if prefix in stopwords or prefix in _SAFE_COMPACT_ROLE_TERMS:
                 continue
+            if any(
+                len(part) > len(surname) + 2 and part.endswith(surname)
+                for part in parts
+                for surname in _COMMON_SURNAME_TOKENS
+            ):
+                return True
             if len(parts) >= 2 and all(part not in stopwords and len(part) >= 4 for part in parts):
                 return True
     for match in re.finditer(r"\b([^\W\d_]{2,})[._/+\\-]+([^\W\d_]{2,})\b", inspection_text, re.UNICODE):
@@ -213,6 +221,8 @@ def contains_obfuscated_candidate_identity(value: object) -> bool:
             first in _COMMON_GIVEN_NAMES
             and second not in stopwords
             or second in _COMMON_GIVEN_NAMES
+            and first not in stopwords
+            or second in _COMMON_SURNAME_TOKENS
             and first not in stopwords
             or obfuscation_hint
             and len(first) >= 4
@@ -240,11 +250,17 @@ def contains_obfuscated_candidate_identity(value: object) -> bool:
         return True
     for match in _OBFUSCATED_NAME_PAIR.finditer(leet):
         first, second = match.groups()
-        if first in _COMMON_GIVEN_NAMES and second not in stopwords:
+        if (
+            first in _COMMON_GIVEN_NAMES and second not in stopwords
+            or second in _COMMON_SURNAME_TOKENS and first not in stopwords
+        ):
             return True
     for match in _LOWERCASE_NAME_PAIR.finditer(leet):
         first, second = match.groups()
-        if first in _COMMON_GIVEN_NAMES and second not in stopwords:
+        if (
+            first in _COMMON_GIVEN_NAMES and second not in stopwords
+            or second in _COMMON_SURNAME_TOKENS and first not in stopwords
+        ):
             return True
     for token in re.findall(r"\b[^\W\d_]{6,}\b", inspection_text, re.UNICODE):
         if token in stopwords:
@@ -253,6 +269,11 @@ def contains_obfuscated_candidate_identity(value: object) -> bool:
             if token.startswith(given_name) and len(token) > len(given_name) + 2:
                 remainder = token[len(given_name):]
                 if remainder not in stopwords:
+                    return True
+        for surname in _COMMON_SURNAME_TOKENS:
+            if token.endswith(surname) and len(token) > len(surname) + 2:
+                prefix = token[: -len(surname)]
+                if prefix not in stopwords:
                     return True
     return False
 
@@ -355,7 +376,7 @@ def target_research_contains_candidate_identity(value: object) -> bool:
     def unsafe(scalar: object, *, vacancy_title: bool = False) -> bool:
         if isinstance(scalar, str):
             normalized = " ".join(unicodedata.normalize("NFKC", scalar).casefold().split())
-            if normalized in _SAFE_PUBLIC_RESEARCH_PHRASES:
+            if normalized in _SAFE_PUBLIC_RESEARCH_PHRASES or _safe_public_research_context(normalized):
                 return False
         return (
             contains_candidate_identity(scalar, vacancy_title=vacancy_title)
@@ -366,6 +387,41 @@ def target_research_contains_candidate_identity(value: object) -> bool:
     return any(unsafe(scalar) for scalar in strict_scalars) or any(
         unsafe(title, vacancy_title=True) for title in vacancy_titles
     )
+
+
+def _safe_public_research_context(value: str) -> bool:
+    """Allow known organization names with an explicitly technical suffix."""
+    candidates = [value]
+    if "://" in value:
+        try:
+            parsed = urlsplit(value)
+        except ValueError:
+            parsed = None
+        if parsed is not None and parsed.hostname:
+            host = parsed.hostname.casefold().removeprefix("www.")
+            path_tokens = re.sub(r"[^a-z0-9]+", " ", parsed.path.casefold()).split()
+            for organization in _SAFE_PUBLIC_RESEARCH_ORGANIZATIONS:
+                if host.startswith(f"{organization.replace(' ', '')}.") and path_tokens and all(
+                    token in _ROLE_PRODUCT_TERMS for token in path_tokens
+                ):
+                    return True
+            candidates.append(f"{host} {parsed.path}")
+    for candidate in candidates:
+        compact = re.sub(r"[^a-z0-9]+", " ", candidate.casefold()).strip()
+        for organization in _SAFE_PUBLIC_RESEARCH_ORGANIZATIONS:
+            organization_compact = organization.replace(" ", "")
+            if compact == organization:
+                return True
+            if compact.startswith(f"{organization} "):
+                suffix = compact[len(organization):].strip()
+            elif compact.startswith(f"{organization_compact} "):
+                suffix = compact[len(organization_compact):].strip()
+            else:
+                continue
+            suffix_tokens = suffix.split()
+            if suffix_tokens and all(token in _ROLE_PRODUCT_TERMS for token in suffix_tokens):
+                return True
+    return False
 
 
 def contains_unicode_controls(value: object) -> bool:
