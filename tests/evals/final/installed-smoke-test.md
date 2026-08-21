@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-21T16:00:00Z`
+release_timestamp: `2026-08-21T17:00:00Z`
 
-installed_access_timestamp: `2026-08-21T16:00:00Z`
+installed_access_timestamp: `2026-08-21T17:00:00Z`
 
-source_commit: `851cd5453b2e9468f92016c67ce54b0ba1987218`
+source_commit: `7ed01015a3ef55bdb476da5497e6b6893fa5b3cd`
 
-source_tree: `16b9f26cdf7c8dccf78d1c67a95e3ebe6136350e`
+source_tree: `bb2cb7d97337f6fccc3da14b55506e10e731129d`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260821160000`
+installed_cache_version: `0.2.0+codex.20260821170000`
 
 installed_enabled: `true`
 
@@ -34,7 +34,7 @@ source_file_count: `124`
 
 installed_file_count: `124`
 
-normalized_source_cache_sha256: `440639d0cd739b58549e4f2afe6b6c11b28be551305399539914560d9535fb6f`
+normalized_source_cache_sha256: `1e1ad2b4988d40c2619c6453994817714146b500cbecc4fe9d22c77d2939d95b`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
@@ -81,6 +81,8 @@ installed_market_coverage_band_smokes: `3/3; localized; raw_band_enum_not_visibl
 installed_decision_trace_layout_smokes: `2/2; desktop_two_columns; mobile_one_column; css_theme_parity`
 
 installed_mobile_market_matrix_label_smokes: `source_contract=2/2; short_V1_to_VN_data_labels; full_headers_and_key_preserved`
+
+installed_current_cycle_print_smokes: `2/2; market_summary_card_atomic; market_vacancy_key_atomic; matrix_remains_paginable`
 
 deferred_privacy_boundary: `unknown_compact_names_without_dictionary_or_role_context_need_follow_up; no length-only heuristic; organization role-suffix URLs remain bounded allowlist`
 
