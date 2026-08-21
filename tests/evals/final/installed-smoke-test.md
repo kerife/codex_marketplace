@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-21T18:00:00Z`
+release_timestamp: `2026-08-21T18:10:00Z`
 
-installed_access_timestamp: `2026-08-21T18:00:00Z`
+installed_access_timestamp: `2026-08-21T18:10:00Z`
 
-source_commit: `1f152ed2b934cc4f018e7ba73c0a12a8fe3d8f14`
+source_commit: `036e67ca47d945af63c3bee90ccb8bdc2baa2ce3`
 
-source_tree: `b5af28805bce04bed942147703aa658d2fdd4348`
+source_tree: `e90a927734f449007e5e0aa39bcfac5b725d534f`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260821180000`
+installed_cache_version: `0.2.0+codex.20260821181000`
 
 installed_enabled: `true`
 
@@ -34,7 +34,7 @@ source_file_count: `124`
 
 installed_file_count: `124`
 
-normalized_source_cache_sha256: `683407980bdd83b7e97f667c44f23752acfb12607353af3ae47107a9ea7c66c9`
+normalized_source_cache_sha256: `40af9e3822ba6c88db998f6500c326d160c5721881d9003cbadb76d368adcc42`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
@@ -76,7 +76,7 @@ installed_current_cycle_contrast_smokes: `3/3; muted_text_contrast; light_line_t
 
 installed_market_learning_disclosure_smokes: `3/3; localized; raw_enum_not_visible`
 
-installed_current_cycle_unavailable_market_smokes: `2/2; localized_safe_next_step; no_external_controls`
+installed_current_cycle_unavailable_market_smokes: `2/2; localized_safe_next_step_before_learning; no_external_controls`
 
 installed_market_coverage_band_smokes: `3/3; localized; raw_band_enum_not_visible; progress_aria_bound`
 
