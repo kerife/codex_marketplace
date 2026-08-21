@@ -320,20 +320,69 @@ class CareerMarketLearningDossierV2Tests(unittest.TestCase):
         market = MARKET_V2_BUILDER.build_market_dossier_v2(research, dossier)
         self.assertEqual([], MARKET_V2_VALIDATOR.validate_market_dossier_v2(market, research, dossier))
         terraform = next(row for row in market["matrix_rows"] if row["signal"] == "terraform")
-        self.assertEqual(["C-002"], terraform["claim_ids"])
-        self.assertEqual(["E-004"], terraform["evidence_ids"])
-        mutations = {
-            "claim": ("claim_ids", ["C-001"]),
-            "evidence": ("evidence_ids", ["E-001"]),
-            "requirement": ("requirement_ids", ["V-001-R-01"]),
-            "vacancy": ("vacancy_ids", ["V-001"]),
+        self.assertEqual(
+            {
+                "signal": "terraform",
+                "support_state": "candidate_reported_match",
+                "claim_ids": ["C-002"],
+                "evidence_ids": ["E-004"],
+                "requirement_ids": ["V-003-R-01"],
+                "vacancy_ids": ["V-003"],
+            },
+            {field: terraform[field] for field in ("signal", "support_state", "claim_ids", "evidence_ids", "requirement_ids", "vacancy_ids")},
+        )
+
+    def test_market_v2_rejects_all_binding_array_mutations_from_a_multi_id_source(self):
+        research, dossier = self.complete_sources()
+        research["vacancies"][0]["requirements"][0]["signal"] = "terraform"
+        dossier["requested_technology_terms"][0]["claim_ids"] = ["C-001", "C-002"]
+        market = MARKET_V2_BUILDER.build_market_dossier_v2(research, dossier)
+        terraform = next(row for row in market["matrix_rows"] if row["signal"] == "terraform")
+        self.assertEqual(
+            {
+                "claim_ids": ["C-001", "C-002"],
+                "evidence_ids": ["E-001", "E-002", "E-004"],
+                "requirement_ids": ["V-001-R-01", "V-003-R-01"],
+                "vacancy_ids": ["V-001", "V-003"],
+            },
+            {field: terraform[field] for field in ("claim_ids", "evidence_ids", "requirement_ids", "vacancy_ids")},
+        )
+        substitutions = {
+            "claim_ids": "C-003",
+            "evidence_ids": "E-003",
+            "requirement_ids": "V-002-R-01",
+            "vacancy_ids": "V-002",
         }
-        for name, (field, replacement) in mutations.items():
-            with self.subTest(name=name):
-                altered = copy.deepcopy(market)
-                next(row for row in altered["matrix_rows"] if row["signal"] == "terraform")[field] = replacement
-                errors = MARKET_V2_VALIDATOR.validate_market_dossier_v2(altered, research, dossier)
-                self.assertEqual(["market dossier does not match validated sources"], errors)
+        for field, replacement in substitutions.items():
+            originals = terraform[field]
+            mutations = {
+                "duplicate": originals + [originals[0]],
+                "reorder": list(reversed(originals)),
+                "delete": originals[:-1],
+                "substitute": [replacement, *originals[1:]],
+            }
+            for name, altered_ids in mutations.items():
+                with self.subTest(field=field, mutation=name):
+                    altered = copy.deepcopy(market)
+                    next(row for row in altered["matrix_rows"] if row["signal"] == "terraform")[field] = altered_ids
+                    errors = MARKET_V2_VALIDATOR.validate_market_dossier_v2(altered, research, dossier)
+                    self.assertEqual(["market dossier does not match validated sources"], errors)
+
+    def test_market_v2_public_boundaries_do_not_echo_copy_failures(self):
+        research, dossier = self.complete_sources()
+        market = MARKET_V2_BUILDER.build_market_dossier_v2(research, dossier)
+        sentinel = "copy-failure-sentinel"
+
+        class CopyBomb(dict[str, object]):
+            def __deepcopy__(self, memo: dict[int, object]):
+                raise RuntimeError(sentinel)
+
+        with self.assertRaisesRegex(ValueError, r"^market dossier v2 is invalid$") as raised:
+            MARKET_V2_BUILDER.build_market_dossier_v2(CopyBomb(research), dossier)
+        self.assertNotIn(sentinel, str(raised.exception))
+        errors = MARKET_V2_VALIDATOR.validate_market_dossier_v2(CopyBomb(market), research, dossier)
+        self.assertEqual(["market dossier does not match validated sources"], errors)
+        self.assertNotIn(sentinel, "\n".join(errors))
 
     def test_market_v2_complete_scores_order_and_snapshot_are_deterministic(self):
         research, dossier = self.complete_sources()
@@ -394,6 +443,11 @@ class CareerMarketLearningDossierV2Tests(unittest.TestCase):
     def test_market_v2_unavailable_has_no_candidate_support(self):
         research, dossier = self.source_pair("unavailable-es.json", "scenario-a-es.json")
         market = MARKET_V2_BUILDER.build_market_dossier_v2(research, dossier)
+        expected_alignment = ALIGNMENT_V2.derive_candidate_market_alignment_v2(research, dossier)
+        self.assertEqual(
+            ALIGNMENT_V2.snapshot_for_alignment_v2(expected_alignment),
+            market["source_alignment_snapshot"],
+        )
         self.assertEqual([], market["vacancies"])
         self.assertEqual([], market["matrix_rows"])
         self.assertEqual([], market["recurrence_rows"])

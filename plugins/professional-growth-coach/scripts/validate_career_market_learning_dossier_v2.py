@@ -45,5 +45,5 @@ def validate_market_dossier_v2(
         if not isinstance(value_copy, Mapping) or _canonical_json(value_copy) != _canonical_json(expected):
             return ["market dossier does not match validated sources"]
         return []
-    except (AttributeError, KeyError, RecursionError, TypeError, ValueError):
+    except Exception:
         return ["market dossier does not match validated sources"]

@@ -188,10 +188,13 @@ def snapshot_for_market_dossier_v2(value: Mapping[str, object]) -> str:
 
 def build_market_dossier_v2(research: object, executive_dossier: object) -> dict[str, object]:
     """Derive the market dossier only from validated research and dossier sources."""
-    research_copy, dossier_copy = _validated_source_copies(research, executive_dossier)
-    alignment = _alignment.derive_candidate_market_alignment_v2(research_copy, dossier_copy)
-    result = _project_market_v2(research_copy, dossier_copy, alignment)
-    validator = _sibling("validate_career_market_learning_dossier_v2.py")
-    if validator.validate_market_dossier_v2(result, research_copy, dossier_copy):
-        raise ValueError("market dossier v2 is invalid")
-    return result
+    try:
+        research_copy, dossier_copy = _validated_source_copies(research, executive_dossier)
+        alignment = _alignment.derive_candidate_market_alignment_v2(research_copy, dossier_copy)
+        result = _project_market_v2(research_copy, dossier_copy, alignment)
+        validator = _sibling("validate_career_market_learning_dossier_v2.py")
+        if validator.validate_market_dossier_v2(result, research_copy, dossier_copy):
+            raise ValueError("market dossier v2 is invalid")
+        return result
+    except Exception:
+        raise ValueError("market dossier v2 is invalid") from None
