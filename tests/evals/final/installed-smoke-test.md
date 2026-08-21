@@ -16,17 +16,17 @@ plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-21T06:27:16-06:00`
+release_timestamp: `2026-08-21T06:38:46-06:00`
 
-installed_access_timestamp: `2026-08-21T12:27:16Z`
+installed_access_timestamp: `2026-08-21T12:38:46Z`
 
-source_commit: `84d102c7a014eeb782288868dbfc896355a86bcf`
+source_commit: `d4505089baaf565fb9f3702580bc659b8af80c48`
 
-source_tree: `4faa2407bcd160c1904a9e1f02c5f0d380ff8a26`
+source_tree: `3e5b51404b088bc3e3e57f5afb1110ce0b828403`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260821122553`
+installed_cache_version: `0.2.0+codex.20260821123756`
 
 installed_enabled: `true`
 
@@ -34,7 +34,7 @@ source_file_count: `124`
 
 installed_file_count: `124`
 
-normalized_source_cache_sha256: `b7f8f1d053fad092cbf4b11cbeb69b390b34c34fb29b908aec61116a9012ee42`
+normalized_source_cache_sha256: `ac332afbf454aa45f8095bbd6038f525f3891dc8687b211e8ba14c2c293a6561`
 
 active_config: `canonical_public_and_legacy_local_dual_identity`
 
@@ -65,6 +65,8 @@ installed_schema_pattern_smokes: `2/2`
 installed_target_research_identity_smokes: `3/3; embedded_name_fields_fail_closed; diagnostics_no_echo`
 
 installed_market_learning_disclosure_smokes: `3/3; localized; raw_enum_not_visible`
+
+installed_market_coverage_band_smokes: `3/3; localized; raw_band_enum_not_visible; progress_aria_bound`
 
 fresh_agent_smoke: `not_run_in_current_process`
 
