@@ -651,7 +651,7 @@ def _render_learning_decision(
           <p><span class="label">{labels['learning_option']}</span>{html.escape(option_type, quote=True)}</p>
           <p><span class="label">{labels['learning_owner']}</span>{html.escape(str(row['provider_or_owner']), quote=True)}</p>
           <p><span class="label">{labels['learning_evidence']}</span>{html.escape(_learning_signal_labels(market_dossier, row.get('source_gap_ids'), locale), quote=True)}</p>
-          <div class="learning-decision-proof" aria-labelledby="learning-decision-proof-title-{rank}">
+          <div class="learning-decision-proof" role="group" aria-labelledby="learning-decision-proof-title-{rank}">
             <h4 id="learning-decision-proof-title-{rank}">{labels['learning_proof_title']}</h4>
             <p><span class="label">{labels['learning_basis']}</span>{html.escape(str(row['decision_basis']), quote=True)}</p>
             <p><span class="label">{labels['learning_cost_time']}</span>{html.escape(str(row['cost_time_band']), quote=True)}</p>
