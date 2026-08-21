@@ -240,3 +240,74 @@
   .decide-now-market { border-top-width: 5px; }
   .decide-now-authorization { border-left-width: 5px; }
 }
+
+.learning-decision,
+.learning-decision-grid,
+.learning-decision-card { min-width: 0; }
+.learning-decision { margin-top: 1rem; }
+.learning-decision-intro,
+.learning-decision-boundary,
+.learning-decision-sample { max-width: 72ch; }
+.learning-decision-sample { color: var(--muted); }
+.learning-decision-grid { align-items: stretch; }
+.learning-decision-card {
+  border-top: 4px solid var(--coral);
+  overflow-wrap: anywhere;
+}
+.learning-decision-card p { margin-block: .7rem 0; }
+.learning-decision-header {
+  display: flex;
+  align-items: flex-start;
+  gap: .7rem;
+}
+.learning-decision-header h3 { margin: 0; }
+.learning-decision-rank {
+  display: inline-grid;
+  flex: 0 0 auto;
+  min-width: 1.6rem;
+  min-height: 1.6rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--coral);
+  color: var(--paper);
+  font-weight: 800;
+}
+.learning-decision-role { color: var(--muted); }
+.learning-decision-boundary {
+  margin-top: 1rem;
+  color: var(--muted);
+  font-size: .875rem;
+}
+
+@media screen and (prefers-color-scheme: dark) {
+  .learning-decision-card { border-color: var(--forest); background: var(--surface); color: var(--ink); }
+  .learning-decision-rank { background: var(--coral); color: var(--paper); }
+}
+
+@media (max-width: 640px) {
+  .learning-decision,
+  .learning-decision-grid,
+  .learning-decision-card { min-width: 0; }
+  .learning-decision-header { align-items: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learning-decision-card { animation: none !important; transition: none !important; transform: none !important; }
+}
+
+@media print {
+  .learning-decision-card { break-inside: avoid; page-break-inside: avoid; }
+  .learning-decision-boundary { font-size: 9.5pt; }
+}
+
+@media (forced-colors: active) {
+  .learning-decision-card { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .learning-decision-rank { background: Highlight; color: HighlightText; }
+  .learning-decision-sample,
+  .learning-decision-role,
+  .learning-decision-boundary { color: CanvasText; }
+}
+
+@media (prefers-contrast: more) {
+  .learning-decision-card { border-width: 2px; }
+}

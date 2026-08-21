@@ -40,6 +40,7 @@ def _sibling_with_local_imports(name: str) -> Any:
 
 VALIDATOR = _sibling("validate_executive_career_dossier_v2.py")
 MARKET_VALIDATOR = _sibling_with_local_imports("validate_career_market_learning_dossier.py")
+LEARNING_VALIDATOR = _sibling_with_local_imports("validate_career_learning_decision.py")
 RESEARCH_VALIDATOR = _sibling("validate_target_vacancy_research.py")
 COMPAT = _sibling("executive_career_dossier_v2_compat.py")
 BASE = _sibling("render_executive_career_dossier.py")
@@ -192,6 +193,22 @@ COPY = {
         "matrix_signal": "Señal", "matrix_profile": "Evidencia del perfil", "vacancy_key": "Clave de vacantes",
         "recurrence_title": "Señales recurrentes en la muestra", "recurrence_boundary": "La recurrencia describe sólo esta muestra validada; no representa demanda del mercado.",
         "gap_route": "Ruta para cerrar brechas", "gap_steps": ("Confirmar la brecha contra evidencia validada.", "Reunir una prueba práctica y acotada.", "Documentar el alcance sin inferir resultados.", "Revalidar si la nueva evidencia cambia la matriz."),
+        "learning_title": "Qué estudiar —y qué no comprar aún—",
+        "learning_intro": "Como coach, convierto las señales repetidas en decisiones de aprendizaje; primero revisamos la prueba y después decidimos si vale la pena pagar por conocimiento.",
+        "learning_sample": "Muestra de vacantes revisada",
+        "learning_target_role": "Rol objetivo",
+        "learning_gap": "Brecha que estamos cerrando",
+        "learning_option": "Opción",
+        "learning_owner": "Proveedor o dueño",
+        "learning_evidence": "Señal recurrente",
+        "learning_alternative": "Alternativa de menor costo",
+        "learning_risk": "Riesgo de sobreinvertir",
+        "learning_decision": "Decisión del coach",
+        "learning_gate": "Siguiente revisión",
+        "learning_boundary": "Esto es una hipótesis acotada de aprendizaje; no predice entrevista, oferta, salario ni retorno de inversión.",
+        "learning_option_types": {"course": "Curso", "certification": "Certificación", "portfolio_project": "Proyecto de portafolio", "lab": "Laboratorio", "role_search": "Búsqueda de rol", "no_learning_yet": "Todavía no estudiar"},
+        "learning_decisions": {"do_now": "Hazlo ahora", "defer": "Déjalo en pausa", "omit": "Omítelo por ahora", "research_first": "Investiga antes"},
+        "learning_gap_types": {"knowledge": "Conocimiento", "proof": "Prueba", "experience": "Experiencia", "terminology": "Terminología", "low_return": "Bajo retorno"},
     },
     "en": {
         "decide_title": "Decide now",
@@ -227,6 +244,22 @@ COPY = {
         "matrix_signal": "Signal", "matrix_profile": "Profile evidence", "vacancy_key": "Vacancy key",
         "recurrence_title": "Recurring signals in the sample", "recurrence_boundary": "Recurrence describes only this validated sample; it does not represent market demand.",
         "gap_route": "Gap-closure route", "gap_steps": ("Confirm the gap against validated evidence.", "Gather one bounded practical proof.", "Document its scope without inferring outcomes.", "Revalidate whether the new evidence changes the matrix."),
+        "learning_title": "What to study—and what not to buy yet",
+        "learning_intro": "As your coach, I turn repeated signals into learning decisions; first we review the proof and then decide whether paying for knowledge is worth it.",
+        "learning_sample": "Vacancy sample reviewed",
+        "learning_target_role": "Target role",
+        "learning_gap": "Gap we are closing",
+        "learning_option": "Option",
+        "learning_owner": "Provider or owner",
+        "learning_evidence": "Recurring signal",
+        "learning_alternative": "Lower-cost alternative",
+        "learning_risk": "Overinvestment risk",
+        "learning_decision": "Coach decision",
+        "learning_gate": "Next review",
+        "learning_boundary": "This is a bounded learning hypothesis; it predicts neither an interview, offer, salary, nor return on investment.",
+        "learning_option_types": {"course": "Course", "certification": "Certification", "portfolio_project": "Portfolio project", "lab": "Lab", "role_search": "Role search", "no_learning_yet": "No learning yet"},
+        "learning_decisions": {"do_now": "Do now", "defer": "Defer", "omit": "Omit for now", "research_first": "Research first"},
+        "learning_gap_types": {"knowledge": "Knowledge", "proof": "Proof", "experience": "Experience", "terminology": "Terminology", "low_return": "Low return"},
     },
 }
 
@@ -286,6 +319,93 @@ def _validated_market_group(
     return BASE._mapping(frozen_market)
 
 
+def _validated_learning_group(
+    dossier: Mapping[str, object],
+    market_dossier: Mapping[str, object] | None,
+    market_research: Mapping[str, object] | None,
+    learning_decision: Mapping[str, object] | None,
+) -> Mapping[str, object] | None:
+    """Return only a source-bound evaluated bundle; invalid input fails closed."""
+    if learning_decision is None or market_dossier is None or market_research is None:
+        return None
+    try:
+        candidate = copy.deepcopy(learning_decision)
+        errors = LEARNING_VALIDATOR.validate_learning_bundle(
+            candidate,
+            _plain(market_dossier),
+            _plain(dossier),
+            _plain(market_research),
+        )
+        if errors or not isinstance(candidate, Mapping) or candidate.get("state") != "evaluated":
+            return None
+        decisions = candidate.get("decisions")
+        vacancies = _plain(market_dossier).get("vacancies")
+        if not isinstance(decisions, list) or not 3 <= len(decisions) <= 5:
+            return None
+        if not isinstance(vacancies, list) or not vacancies:
+            return None
+        frozen = BASE._freeze(candidate)
+        return BASE._mapping(frozen)
+    except (AttributeError, KeyError, RecursionError, TypeError, ValueError):
+        return None
+
+
+def _learning_signal_labels(
+    market_dossier: Mapping[str, object], evidence_ids: object, locale: str
+) -> str:
+    if not isinstance(evidence_ids, (list, tuple)):
+        return COPY[locale]["learning_evidence"]
+    signals: list[str] = []
+    for row in BASE._rows(market_dossier.get("matrix_rows")):
+        row_evidence = row.get("evidence_ids")
+        if isinstance(row_evidence, (list, tuple)) and any(item in evidence_ids for item in row_evidence):
+            signal = _signal_label(row.get("signal", ""))
+            if signal and signal not in signals:
+                signals.append(signal)
+    return ", ".join(signals) if signals else COPY[locale]["learning_evidence"]
+
+
+def _render_learning_decision(
+    market_dossier: Mapping[str, object],
+    learning_decision: Mapping[str, object] | None,
+    locale: str,
+) -> str:
+    if learning_decision is None:
+        return ""
+    labels = COPY[locale]
+    decisions = BASE._rows(learning_decision.get("decisions"))
+    vacancies = BASE._rows(market_dossier.get("vacancies"))
+    cards: list[str] = []
+    for row in decisions:
+        rank = int(row["decision_rank"])
+        heading_id = f"learning-decision-card-title-{rank}"
+        option_type = labels["learning_option_types"].get(str(row["option_type"]), str(row["option_type"]))
+        decision_label = labels["learning_decisions"].get(str(row["decision"]), str(row["decision"]))
+        gap_label = labels["learning_gap_types"].get(str(row["gap_type"]), str(row["gap_type"]))
+        cards.append(
+            f'''<article class="card span-4 learning-decision-card" aria-labelledby="{heading_id}">
+          <div class="learning-decision-header"><span class="learning-decision-rank" aria-hidden="true">{rank}</span><h3 id="{heading_id}">{html.escape(str(row['option_name']), quote=True)}</h3></div>
+          <p class="learning-decision-role"><span class="label">{labels['learning_target_role']}</span>{html.escape(str(row['target_role']), quote=True)}</p>
+          <p><span class="label">{labels['learning_gap']}</span>{html.escape(gap_label, quote=True)}</p>
+          <p><span class="label">{labels['learning_option']}</span>{html.escape(option_type, quote=True)}</p>
+          <p><span class="label">{labels['learning_owner']}</span>{html.escape(str(row['provider_or_owner']), quote=True)}</p>
+          <p><span class="label">{labels['learning_evidence']}</span>{html.escape(_learning_signal_labels(market_dossier, row.get('source_gap_ids'), locale), quote=True)}</p>
+          <p><span class="label">{labels['learning_alternative']}</span>{html.escape(str(row['portfolio_or_no_learning_alternative']), quote=True)}</p>
+          <p><span class="label">{labels['learning_risk']}</span>{html.escape(str(row['overbuying_risk']), quote=True)}</p>
+          <p><span class="label">{labels['learning_decision']}</span>{html.escape(decision_label, quote=True)}</p>
+          <p><span class="label">{labels['learning_gate']}</span>{html.escape(str(row['next_action_gate']), quote=True)}</p>
+        </article>'''
+        )
+    sample_count = len(vacancies)
+    return f'''<section class="section-block learning-decision" aria-labelledby="learning-decision-title">
+      <h2 id="learning-decision-title">{labels['learning_title']}</h2>
+      <p class="learning-decision-intro">{labels['learning_intro']}</p>
+      <p class="learning-decision-sample"><strong>{labels['learning_sample']}:</strong> N={sample_count}</p>
+      <div class="dossier-grid learning-decision-grid">{"".join(cards)}</div>
+      <p class="learning-decision-boundary">{labels['learning_boundary']}</p>
+    </section>'''
+
+
 def _matrix_state(state: str, locale: str) -> str:
     symbol, spanish, english = MATRIX_STATE_COPY[state]
     label = spanish if locale == "es" else english
@@ -327,7 +447,10 @@ def _render_section_coverage(dossier: Mapping[str, object], locale: str) -> str:
 
 
 def _render_decide_now(
-    dossier: Mapping[str, object], locale: str, market_dossier: Mapping[str, object]
+    dossier: Mapping[str, object],
+    locale: str,
+    market_dossier: Mapping[str, object],
+    learning_decision: Mapping[str, object] | None = None,
 ) -> str:
     labels = COPY[locale]
     coverage_rows = BASE._rows(dossier["section_coverage"])
@@ -390,6 +513,8 @@ def _render_decide_now(
             f'{SECTION_LABELS[locale][str(pending)]}</a></li>'
         )
     navigation_items += f'<li><a href="#{market_title_id}">{labels["decide_market"]}</a></li>'
+    if learning_decision is not None:
+        navigation_items += f'<li><a href="#learning-decision-title">{labels["learning_title"]}</a></li>'
     return f'''<section class="section-block decide-now" aria-labelledby="decide-now-title" aria-describedby="{described_by}">
       <h2 id="decide-now-title">{labels['decide_title']}</h2>
       <p id="decide-now-summary" class="decide-now-summary">{labels['decide_priorities']} · {labels['decide_coverage']} · {labels['decide_market']}</p>
@@ -462,7 +587,9 @@ def _render_market_evidence_unavailable(locale: str) -> str:
 
 
 def _render_market_context(
-    market_dossier: Mapping[str, object] | None, locale: str
+    market_dossier: Mapping[str, object] | None,
+    locale: str,
+    learning_decision: Mapping[str, object] | None = None,
 ) -> str:
     labels = COPY[locale]
     if market_dossier is None:
@@ -564,6 +691,7 @@ def _render_market_context(
           <span id="{fraction_id}" class="recurrence-fraction">{html.escape(str(row['display_fraction']), quote=True)}</span>
         </div>''')
     gap_steps = "".join(f"<li>{step}</li>" for step in labels["gap_steps"])
+    learning_markup = _render_learning_decision(market_dossier, learning_decision, locale)
 
     return f'''<section class="section-block market-summary" aria-labelledby="market-context-title">
         <div class="market-summary-card">
@@ -593,6 +721,7 @@ def _render_market_context(
           <p>{labels['recurrence_boundary']}</p>
           <div class="recurrence-list">{"".join(recurrence_items)}</div>
         </section>
+        {learning_markup}
         <section class="gap-closure-route" aria-labelledby="gap-closure-route-title">
           <h2 id="gap-closure-route-title">{labels['gap_route']}</h2>
           <ol>{gap_steps}</ol>
@@ -600,10 +729,13 @@ def _render_market_context(
       </section>'''
 
 def _render_market_surface(
-    dossier: Mapping[str, object], locale: str, market_dossier: Mapping[str, object] | None
+    dossier: Mapping[str, object],
+    locale: str,
+    market_dossier: Mapping[str, object] | None,
+    learning_decision: Mapping[str, object] | None = None,
 ) -> str:
     if market_dossier is not None:
-        return _render_market_context(market_dossier, locale)
+        return _render_market_context(market_dossier, locale, learning_decision)
     if BASE._mapping(dossier["market_context"])["state"] == "not_researched":
         return _render_market_evidence_unavailable(locale)
     labels = COPY[locale]
@@ -616,12 +748,15 @@ def _render_market_surface(
 
 
 def _render_main(
-    dossier: Mapping[str, object], locale: str, market_dossier: Mapping[str, object] | None
+    dossier: Mapping[str, object],
+    locale: str,
+    market_dossier: Mapping[str, object] | None,
+    learning_decision: Mapping[str, object] | None = None,
 ) -> str:
     projected = COMPAT.project_v2_to_v1(BASE._mapping(_plain(dossier)))
     opening = BASE._render_verdict(projected, locale) + BASE._render_recruiter_scan(projected, locale)
     bridge_holds = BASE._render_holds(projected, locale) + BASE._render_screen_bridge(projected, locale)
-    decide_now = _render_decide_now(dossier, locale, market_dossier) if market_dossier is not None else ""
+    decide_now = _render_decide_now(dossier, locale, market_dossier, learning_decision) if market_dossier is not None else ""
     return f'''<main id="main-content" class="shell" tabindex="-1">
       <div class="dossier-grid">{opening}</div>
       {decide_now}{_render_section_coverage(dossier, locale)}
@@ -629,7 +764,7 @@ def _render_main(
       <div class="dossier-grid section-block">{BASE._render_analytics(projected, locale)}</div>
       {BASE._render_dimensions(projected, locale)}
       {BASE._render_visual_review(projected, locale)}
-      {_render_market_surface(dossier, locale, market_dossier)}
+      {_render_market_surface(dossier, locale, market_dossier, learning_decision)}
       {BASE._render_copy_blocks(projected, locale)}
       <div class="dossier-grid section-block">{bridge_holds}</div>
       {BASE._render_questions(projected, locale)}
@@ -671,10 +806,14 @@ def render_dossier_html(
     *,
     market_research: Mapping[str, object] | None = None,
     market_alignment: Mapping[str, object] | None = None,
+    learning_decision: Mapping[str, object] | None = None,
 ) -> str:
     frozen = _validate_and_freeze(dossier)
     frozen_market = _validated_market_group(
         frozen, market_dossier, market_research, market_alignment
+    )
+    frozen_learning = _validated_learning_group(
+        frozen, frozen_market, market_research, learning_decision
     )
     locale = str(frozen["locale"])
     template = BASE.ASSET_LOADER.read_private_asset(ASSET_ROOT.parent, TEMPLATE_PATH)
@@ -693,7 +832,7 @@ def render_dossier_html(
         "{{TITLE}}": BASE.COPY[locale]["title"],
         "{{INLINE_CSS}}": base_css + extension_css + market_css,
         "{{HEADER}}": BASE._render_header(locale),
-        "{{MAIN}}": _render_main(frozen, locale, frozen_market),
+        "{{MAIN}}": _render_main(frozen, locale, frozen_market, frozen_learning),
         "{{INLINE_SCRIPT}}": BASE.INLINE_SCRIPT,
     }
     return BASE.STATIC_TEMPLATE_TOKEN.sub(lambda match: substitutions[match.group(0)], template)
@@ -706,6 +845,7 @@ def write_dossier_html(
     market_dossier_path: Path | None = None,
     market_research_path: Path | None = None,
     market_alignment_path: Path | None = None,
+    learning_decision_path: Path | None = None,
     force: bool = False,
 ) -> RenderReceipt:
     dossier = VALIDATOR.load_dossier(Path(dossier_path))
@@ -720,6 +860,9 @@ def write_dossier_html(
     market_dossier = None
     market_research = None
     market_alignment = None
+    learning_decision = None
+    if learning_decision_path is not None and not all(path is not None for path in market_paths):
+        raise DossierValidationError(["learning decision requires the validated market composition group"])
     if all(path is not None for path in market_paths):
         try:
             market_dossier = VALIDATOR.load_dossier(Path(market_dossier_path))
@@ -727,6 +870,11 @@ def write_dossier_html(
             market_alignment = VALIDATOR.load_dossier(Path(market_alignment_path))
         except (VALIDATOR.DossierLoadError, RESEARCH_VALIDATOR.ResearchLoadError) as error:
             raise MarketInputLoadError("cannot load market composition input") from error
+        if learning_decision_path is not None:
+            try:
+                learning_decision = LEARNING_VALIDATOR.load_learning_bundle(Path(learning_decision_path))
+            except LEARNING_VALIDATOR.LearningBundleLoadError as error:
+                raise MarketInputLoadError("cannot load learning decision input") from error
     try:
         expanded_output = Path(output_path).expanduser()
     except RuntimeError as error:
@@ -737,6 +885,7 @@ def write_dossier_html(
         market_dossier,
         market_research=market_research,
         market_alignment=market_alignment,
+        learning_decision=learning_decision,
     )
     summary = build_chat_summary(dossier)
     BASE._atomic_private_write(output, rendered.encode("utf-8"), force=force)
@@ -750,6 +899,7 @@ def _cli(argv: list[str] | None = None) -> int:
     parser.add_argument("--market-dossier", type=Path)
     parser.add_argument("--market-research", type=Path)
     parser.add_argument("--market-alignment", type=Path)
+    parser.add_argument("--learning-decision", type=Path)
     parser.add_argument("--force", action="store_true")
     arguments = parser.parse_args(argv)
     try:
@@ -759,6 +909,7 @@ def _cli(argv: list[str] | None = None) -> int:
             market_dossier_path=arguments.market_dossier,
             market_research_path=arguments.market_research,
             market_alignment_path=arguments.market_alignment,
+            learning_decision_path=arguments.learning_decision,
             force=arguments.force,
         )
     except OSError:

@@ -225,6 +225,141 @@ def market_case(
     return dossier, market, research, market_alignment(research, dossier)
 
 
+def learning_case(
+    research_name: str, dossier_name: str, count: int = 3, decision_count: int = 3
+) -> tuple[dict[str, object], dict[str, object], dict[str, object], dict[str, object], dict[str, object]]:
+    """Build a small validated learning bundle for renderer contract tests."""
+    if count == 0:
+        dossier, market, research, alignment = market_case(research_name, dossier_name)
+    elif count < 5:
+        dossier, market, research, alignment = build_limited_market_case(count)
+    else:
+        dossier, market, research, alignment = market_case(research_name, dossier_name)
+    scripts = str(SCRIPTS)
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    from build_career_learning_decision import build_learning_bundle
+
+    vacancy_ids = [row["vacancy_id"] for row in market["vacancies"]]
+    evidence_id = next(
+        (
+            evidence_id
+            for row in market["matrix_rows"]
+            for evidence_id in row["evidence_ids"]
+        ),
+        "E-001",
+    )
+    provider_source = {
+        "provider": "HashiCorp",
+        "option": "Terraform Associate",
+        "source_title": "HashiCorp Certified: Terraform Associate",
+        "source_date": market["as_of_date"],
+        "source_state": "active",
+        "url": "https://developer.hashicorp.com/certifications/infrastructure-automation",
+        "geography": "unknown: official page does not establish Mexico eligibility",
+        "availability": "active: official provider page is available",
+        "current_cost": "unknown: official page does not state the current fee",
+        "currency": "unknown: no verified currency",
+        "tax": "unknown: tax treatment is not stated",
+        "duration": "provider duration unknown: official page does not state exam duration",
+        "prerequisite": "unknown: official page does not state prerequisites",
+        "renewal": "unknown: official page does not state renewal",
+        "maintenance": "unknown: official page does not state maintenance",
+        "unknowns": "Mexico eligibility and preparation time are not stated",
+    }
+    rows = [
+        {
+            "decision_rank": 1,
+            "target_role": "Senior SRE / Platform Engineer",
+            "gap_type": "proof",
+            "option_type": "portfolio_project",
+            "option_name": "Terraform and observability proof artifact",
+            "provider_or_owner": "candidate-owned proof project",
+            "source_gap_ids": [evidence_id],
+            "vacancy_ids": vacancy_ids[: min(2, len(vacancy_ids))],
+            "market_evidence_state": "current dated vacancy evidence",
+            "cost_time_band": "unknown: candidate effort requires separate confirmation",
+            "expected_signal_boundary": "bounded hypothesis: creates inspectable evidence without promising a hiring outcome",
+            "portfolio_or_no_learning_alternative": "Complete one bounded proof artifact before buying another credential.",
+            "overbuying_risk": "Avoid certificate collecting before one higher-signal artifact is complete.",
+            "decision": "do_now",
+            "decision_basis": "Repeated vacancy evidence supports a candidate-owned proof artifact before a purchase.",
+            "next_action_gate": "No external action; exact authorization is required before publication, sharing, or messaging.",
+            "outcome_boundary": "not_an_interview_offer_salary_or_roi_prediction",
+            "draft_only": True,
+            "no_external_action": True,
+            "provider_source": None,
+        },
+        {
+            "decision_rank": 2,
+            "target_role": "Senior SRE / Platform Engineer",
+            "gap_type": "knowledge",
+            "option_type": "course",
+            "option_name": "Terraform Associate study path",
+            "provider_or_owner": "HashiCorp",
+            "source_gap_ids": [evidence_id],
+            "vacancy_ids": vacancy_ids[: min(2, len(vacancy_ids))],
+            "market_evidence_state": "current dated vacancy evidence",
+            "cost_time_band": "unknown: current cost and candidate effort require separate confirmation",
+            "expected_signal_boundary": "bounded hypothesis: may corroborate knowledge without promising a hiring outcome",
+            "portfolio_or_no_learning_alternative": "Build a bounded Terraform proof artifact before enrolling.",
+            "overbuying_risk": "Avoid paying before a cheaper proof comparison is reviewed.",
+            "decision": "research_first",
+            "decision_basis": "Repeated vacancy evidence supports research, but official provider cost and eligibility remain unknown.",
+            "next_action_gate": "No external action; purchase or enrollment requires exact authorization after source review.",
+            "outcome_boundary": "not_an_interview_offer_salary_or_roi_prediction",
+            "draft_only": True,
+            "no_external_action": True,
+            "provider_source": provider_source,
+        },
+        {
+            "decision_rank": 3,
+            "target_role": "Senior SRE / Platform Engineer",
+            "gap_type": "low_return",
+            "option_type": "no_learning_yet",
+            "option_name": "Finish the current proof artifact first",
+            "provider_or_owner": "none",
+            "source_gap_ids": [evidence_id],
+            "vacancy_ids": vacancy_ids[: min(2, len(vacancy_ids))],
+            "market_evidence_state": "current dated vacancy evidence",
+            "cost_time_band": "unknown: candidate effort requires separate confirmation",
+            "expected_signal_boundary": "bounded hypothesis: protects time for higher-signal proof without promising a hiring outcome",
+            "portfolio_or_no_learning_alternative": "Use the existing proof artifact as the lower-cost alternative.",
+            "overbuying_risk": "Avoid starting a course before the evidence gap is reviewed again.",
+            "decision": "do_now",
+            "decision_basis": "Candidate-owned evidence is a higher-priority next move than generic learning.",
+            "next_action_gate": "No external action; exact authorization is required before publication, sharing, or messaging.",
+            "outcome_boundary": "not_an_interview_offer_salary_or_roi_prediction",
+            "draft_only": True,
+            "no_external_action": True,
+            "provider_source": None,
+        },
+    ]
+    rows.extend(
+        [
+            {
+                **copy.deepcopy(rows[0]),
+                "decision_rank": 4,
+                "option_type": "lab",
+                "option_name": "Observability incident-response lab",
+                "decision": "research_first",
+            },
+            {
+                **copy.deepcopy(rows[0]),
+                "decision_rank": 5,
+                "option_type": "role_search",
+                "option_name": "Search for a role that values existing proof",
+                "decision": "defer",
+            },
+        ]
+    )
+    rows = rows[:decision_count]
+    if not vacancy_ids:
+        rows = []
+    bundle = build_learning_bundle(research, market, dossier, rows)
+    return dossier, market, research, alignment, bundle
+
+
 def build_limited_market_case(
     count: int,
 ) -> tuple[dict[str, object], dict[str, object], dict[str, object], dict[str, object]]:
@@ -1125,6 +1260,148 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             with self.subTest(contract=contract):
                 self.assertIn(contract, css)
         self.assertNotIn("min-width: 7rem", css)
+
+    def test_learning_panel_is_omitted_without_bundle_and_for_zero_market(self) -> None:
+        dossier, market, research, alignment = market_case(
+            "unavailable-es.json", "scenario-a-es.json"
+        )
+        legacy = self.renderer.render_dossier_html(dossier)
+        self.assertNotIn('class="learning-decision"', legacy)
+        unavailable = learning_case(
+            "unavailable-es.json", "scenario-a-es.json", count=0
+        )
+        rendered = self.renderer.render_dossier_html(
+            unavailable[0],
+            unavailable[1],
+            market_research=unavailable[2],
+            market_alignment=unavailable[3],
+            learning_decision=unavailable[4],
+        )
+        self.assertNotIn('class="learning-decision"', rendered)
+        self.assertNotIn("learning-decision-title", rendered)
+
+    def test_learning_panel_renders_three_to_five_conversational_rows_without_private_or_external_content(self) -> None:
+        for count in (3, 5):
+            with self.subTest(count=count):
+                case = learning_case(
+                    "complete-five-es.json", "scenario-a-es.json", count=count, decision_count=count
+                )
+                rendered = self.renderer.render_dossier_html(
+                    case[0],
+                    case[1],
+                    market_research=case[2],
+                    market_alignment=case[3],
+                    learning_decision=case[4],
+                )
+                self.assertIn('class="section-block learning-decision"', rendered)
+                expected_learning_title = (
+                    "Qué estudiar —y qué no comprar aún—"
+                    if case[0]["locale"] == "es"
+                    else "What to study—and what not to buy yet"
+                )
+                self.assertIn(expected_learning_title, visible_text(rendered))
+                panel = re.search(
+                    r'<section class="section-block learning-decision".*?</section>',
+                    rendered,
+                    re.DOTALL,
+                )
+                self.assertIsNotNone(panel)
+                panel_text = visible_text(panel.group(0))
+                expected_signal = self.renderer._signal_label(case[1]["matrix_rows"][0]["signal"])
+                self.assertIn(expected_signal, panel_text)
+                expected_target_label = "Target role" if case[0]["locale"] != "es" else "Rol objetivo"
+                self.assertIn(expected_target_label, panel_text)
+                self.assertEqual(
+                    count,
+                    len(re.findall(r'class="[^"]*\blearning-decision-card\b[^"]*"', panel.group(0))),
+                )
+                self.assertTrue(
+                    "bounded learning hypothesis" in panel_text or "hipótesis acotada" in panel_text
+                )
+                self.assertNotRegex(panel.group(0), r"<(?:button|input|select|textarea|form)\b")
+                self.assertNotRegex(panel.group(0), r'<a href="https?://')
+                for forbidden in (
+                    *(
+                        value
+                        for vacancy in case[2]["vacancies"]
+                        for value in (vacancy["vacancy_id"], vacancy["employer_id"], vacancy["source_url"])
+                    ),
+                    *(
+                        evidence_id
+                        for row in case[4]["decisions"]
+                        for evidence_id in row["source_gap_ids"]
+                    ),
+                    case[4]["source_market_snapshot"],
+                    case[4]["source_dossier_snapshot"],
+                    case[4]["source_research_snapshot"],
+                ):
+                    self.assertNotIn(forbidden, panel.group(0))
+                self.assertLess(
+                    rendered.index('class="section-block learning-decision"'),
+                    rendered.index('class="gap-closure-route"'),
+                )
+
+    def test_learning_panel_has_one_decide_now_internal_anchor_and_fails_closed_invalid_bundle(self) -> None:
+        case = learning_case("complete-five-es.json", "scenario-a-es.json", count=3)
+        rendered = self.renderer.render_dossier_html(
+            case[0],
+            case[1],
+            market_research=case[2],
+            market_alignment=case[3],
+            learning_decision=case[4],
+        )
+        references, _described_by, decide_region = decide_now_region(rendered)
+        self.assertIn("learning-decision-title", references)
+        self.assertEqual(1, decide_region.count('href="#learning-decision-title"'))
+        invalid = copy.deepcopy(case[4])
+        invalid["decisions"][0]["option_name"] = "file:///Users/private/profile.json"
+        rendered_invalid = self.renderer.render_dossier_html(
+            case[0],
+            case[1],
+            market_research=case[2],
+            market_alignment=case[3],
+            learning_decision=invalid,
+        )
+        self.assertNotIn('class="learning-decision"', rendered_invalid)
+        self.assertNotIn("file:///Users/private/profile.json", rendered_invalid)
+
+    def test_learning_panel_uses_dynamic_one_to_five_sample_counts(self) -> None:
+        for count in range(1, 6):
+            with self.subTest(count=count):
+                case = learning_case(
+                    "complete-five-es.json", "scenario-a-es.json", count=count
+                )
+                rendered = self.renderer.render_dossier_html(
+                    case[0],
+                    case[1],
+                    market_research=case[2],
+                    market_alignment=case[3],
+                    learning_decision=case[4],
+                )
+                panel = re.search(
+                    r'<section class="section-block learning-decision".*?</section>',
+                    rendered,
+                    re.DOTALL,
+                )
+                self.assertIsNotNone(panel)
+                self.assertIn(f"N={count}", visible_text(panel.group(0)))
+
+    def test_learning_decision_styles_cover_responsive_print_dark_forced_colors_and_motion(self) -> None:
+        css = (REPO_ROOT / "plugins" / "professional-growth-coach" / "assets" / "career-market-learning-dossier-v1.css").read_text(encoding="utf-8")
+        for contract in (
+            ".learning-decision-card",
+            "@media (max-width: 640px)",
+            "@media screen and (prefers-color-scheme: dark)",
+            "@media print",
+            "@media (forced-colors: active)",
+            "@media (prefers-reduced-motion: reduce)",
+            "background: Canvas",
+            "color: CanvasText",
+            "background: Highlight",
+            "color: HighlightText",
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, css)
 
     def test_limited_market_composition_uses_dynamic_n_without_padding(self) -> None:
         for count in (1, 2, 3, 4):
