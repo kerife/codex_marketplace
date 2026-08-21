@@ -1042,12 +1042,13 @@ def _render_market_context(
         )
 
     recurrence_items: list[str] = []
+    recurrence_boundary_id = "market-recurrence-boundary"
     for index, row in enumerate(BASE._rows(market_dossier["recurrence_rows"]), start=1):
         heading_id = f"recurrence-signal-{index}"
         fraction_id = f"recurrence-fraction-{index}"
         recurrence_items.append(f'''<div class="recurrence-row" aria-labelledby="{heading_id}">
           <strong id="{heading_id}" class="recurrence-signal">{_signal_label(row['signal'])}</strong>
-          <progress class="recurrence-progress" value="{row['occurrences']}" max="{row['sample_size']}" aria-labelledby="{heading_id} {fraction_id}"></progress>
+          <progress class="recurrence-progress" value="{row['occurrences']}" max="{row['sample_size']}" aria-labelledby="{heading_id} {fraction_id}" aria-describedby="{recurrence_boundary_id}"></progress>
           <span id="{fraction_id}" class="recurrence-fraction">{html.escape(str(row['display_fraction']), quote=True)}</span>
         </div>''')
     gap_steps = "".join(f"<li>{step}</li>" for step in labels["gap_steps"])
@@ -1079,7 +1080,7 @@ def _render_market_context(
         </section>
         <section class="market-recurrence" aria-labelledby="market-recurrence-title">
           <h2 id="market-recurrence-title">{labels['recurrence_title']}</h2>
-          <p>{labels['recurrence_boundary']}</p>
+          <p id="{recurrence_boundary_id}">{labels['recurrence_boundary']}</p>
           <div class="recurrence-list">{"".join(recurrence_items)}</div>
         </section>
         {learning_markup}

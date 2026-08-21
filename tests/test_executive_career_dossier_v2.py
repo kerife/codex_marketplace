@@ -1470,8 +1470,10 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             self.assertRegex(
                 body,
                 rf'<progress class="recurrence-progress" value="{row["occurrences"]}" '
-                rf'max="{row["sample_size"]}" aria-labelledby="{heading_id} {fraction_id}">',
+                rf'max="{row["sample_size"]}" aria-labelledby="{heading_id} {fraction_id}" '
+                rf'aria-describedby="market-recurrence-boundary">',
             )
+        self.assertEqual(1, rendered.count('<p id="market-recurrence-boundary">'))
         self.assertNotIn("market demand", visible_text(rendered).casefold())
 
         route = re.findall(
@@ -1522,6 +1524,33 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         for value in forbidden_values:
             with self.subTest(forbidden=value):
                 self.assertNotIn(value, rendered)
+
+    def test_recurrence_boundary_is_described_in_es_and_en_progress(self) -> None:
+        for research_name, dossier_name in (
+            ("complete-five-es.json", "scenario-a-es.json"),
+            ("limited-four-en.json", "scenario-c-en.json"),
+        ):
+            with self.subTest(locale=research_name):
+                dossier, market, research, alignment = market_case(
+                    research_name, dossier_name
+                )
+                rendered = self.renderer.render_dossier_html(
+                    dossier,
+                    market,
+                    market_research=research,
+                    market_alignment=alignment,
+                )
+                self.assertEqual(
+                    1, rendered.count('<p id="market-recurrence-boundary">')
+                )
+                recurrence_progresses = re.findall(
+                    r'<progress class="recurrence-progress"[^>]*aria-describedby="([^"]+)"',
+                    rendered,
+                )
+                self.assertEqual(len(market["recurrence_rows"]), len(recurrence_progresses))
+                self.assertTrue(
+                    all(boundary == "market-recurrence-boundary" for boundary in recurrence_progresses)
+                )
 
     def test_market_score_boundary_is_named_in_es_and_en_progress(self) -> None:
         for research_name, dossier_name in (
