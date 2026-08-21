@@ -189,6 +189,7 @@ COPY = {
         "market_limited_reason": "La búsqueda acotada terminó antes de reunir cinco vacantes.",
         "market_unavailable_reason": "La búsqueda acotada no produjo vacantes verificables para esta muestra.",
         "market_limitation": "Limitación de la muestra", "market_boundary": "La alineación es direccional y se basa sólo en evidencia documentada; no predice ajuste ni contratación.",
+        "market_learning_state": "Evaluación de aprendizaje: no evaluada en este incremento de mercado; no se recomienda curso ni certificación.",
         "vacancy_alignment": "Alineación de evidencia por vacante", "score_boundary": "Puntuación direccional de evidencia documentada",
         "matrix_title": "Qué pide cada vacante y qué evidencia existe", "matrix_caption": "Matriz de evidencia de la muestra",
         "matrix_signal": "Señal", "matrix_profile": "Evidencia del perfil", "vacancy_key": "Clave de vacantes",
@@ -244,6 +245,7 @@ COPY = {
         "market_limited_reason": "The bounded search ended before five vacancies were gathered.",
         "market_unavailable_reason": "The bounded search produced no verifiable vacancies for this sample.",
         "market_limitation": "Sample limitation", "market_boundary": "Alignment is directional and based only on documented evidence; it predicts neither fit nor hiring.",
+        "market_learning_state": "Learning evaluation: not evaluated in this market increment; no course or certification recommendation is made.",
         "vacancy_alignment": "Evidence alignment by vacancy", "score_boundary": "Directional documented-evidence score",
         "matrix_title": "What each vacancy requests and what evidence exists", "matrix_caption": "Sample evidence matrix",
         "matrix_signal": "Signal", "matrix_profile": "Profile evidence", "vacancy_key": "Vacancy key",
@@ -939,6 +941,7 @@ def _render_market_context(
         <div class="card market-unavailable-card span-12">
           <h2 id="market-context-title">{labels['market_title']}</h2>
           <p><strong>{labels['market_limitation']}:</strong> {labels['market_unavailable_reason']}</p>
+          <p class="market-learning-state">{labels['market_learning_state']}</p>
         </div>
       </div>
     </section>'''
@@ -1029,6 +1032,7 @@ def _render_market_context(
           <h2 id="market-context-title">{labels['market_context']}</h2>
           <p class="market-summary-heading">{summary_heading}</p>
           <p>{labels['market_boundary']}</p>
+          <p class="market-learning-state">{labels['market_learning_state']}</p>
           {limitation_markup}
         </div>
         <section class="market-vacancy-section" aria-labelledby="vacancy-alignment-title">

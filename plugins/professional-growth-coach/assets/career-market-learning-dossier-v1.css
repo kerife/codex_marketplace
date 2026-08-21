@@ -18,6 +18,7 @@
 .market-summary-card { border-top: 4px solid var(--gold); }
 .market-summary-heading { font-family: var(--serif); font-size: 1.35rem; font-weight: 700; }
 .market-limitation { padding-left: 1rem; border-left: 4px solid var(--gold); }
+.market-learning-state { margin: .75rem 0 0; padding: .65rem .85rem; border-left: 4px solid var(--gold); color: var(--muted); }
 .market-vacancy-section,
 .market-matrix-section,
 .market-recurrence,
@@ -106,6 +107,7 @@
   .market-recurrence,
   .gap-closure-route { border-color: var(--line); background: var(--surface); color: var(--ink); }
   .market-limitation { border-left-color: var(--gold); background: var(--paper); }
+  .market-learning-state { border-left-color: var(--gold); }
   .market-matrix th,
   .vacancy-key-label,
   .vacancy-alignment-score { color: var(--forest); }
@@ -178,6 +180,7 @@
   .recurrence-row,
   .gap-closure-route { background: Canvas; color: CanvasText; border-color: CanvasText; }
   .market-limitation,
+  .market-learning-state,
   .gap-closure-route { border-left-color: Highlight; }
   .matrix-state-symbol,
   .market-matrix th,
@@ -200,6 +203,7 @@
   .market-matrix-group,
   .market-recurrence,
   .gap-closure-route { border-width: 2px; }
+  .market-learning-state { border-left-width: 5px; }
   .matrix-state-symbol { text-decoration: underline; text-decoration-thickness: .12em; }
 }
 

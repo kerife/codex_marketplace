@@ -1834,6 +1834,26 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, rendered)
 
+    def test_market_learning_state_is_disclosed_without_changing_legacy_placeholder(self) -> None:
+        cases = (
+            ("complete-five-es.json", "scenario-a-es.json", "Evaluación de aprendizaje: no evaluada en este incremento de mercado; no se recomienda curso ni certificación."),
+            ("limited-four-en.json", "scenario-c-en.json", "Learning evaluation: not evaluated in this market increment; no course or certification recommendation is made."),
+            ("unavailable-es.json", "scenario-a-es.json", "Evaluación de aprendizaje: no evaluada en este incremento de mercado; no se recomienda curso ni certificación."),
+        )
+        for market_name, dossier_name, copy in cases:
+            with self.subTest(market=market_name):
+                dossier, market, research, alignment = market_case(market_name, dossier_name)
+                rendered = self.renderer.render_dossier_html(
+                    dossier, market, market_research=research, market_alignment=alignment
+                )
+                self.assertEqual(1, rendered.count('class="market-learning-state"'))
+                self.assertEqual(1, rendered.count(copy))
+                self.assertNotIn("learning_state", rendered)
+                self.assertNotIn("learning_decisions", rendered)
+        dossier, *_ = market_case("complete-five-es.json", "scenario-a-es.json")
+        legacy = self.renderer.render_dossier_html(dossier)
+        self.assertNotIn("market-learning-state", legacy)
+
     def test_market_inputs_are_all_or_none_and_trusted_composition_rejects_source_mutation(self) -> None:
         dossier, market, research, alignment = market_case(
             "complete-five-es.json", "scenario-a-es.json"
