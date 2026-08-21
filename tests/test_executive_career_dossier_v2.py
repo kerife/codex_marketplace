@@ -28,8 +28,8 @@ V2_FIXTURE_ROOT = FIXTURE_ROOT.with_name("executive-career-dossier-v2")
 RESEARCH_FIXTURE_ROOT = FIXTURE_ROOT.with_name("target-vacancy-research")
 MARKET_FIXTURE_ROOT = FIXTURE_ROOT.with_name("career-market-learning-dossier")
 NO_MARKET_RENDER_SNAPSHOTS = {
-    "scenario-a-es.json": (48675, "87ad9699fa114cf3b25b487a62bd93ccff5ef80ff7965ecd1624b47bcb196d7a"),
-    "scenario-c-en.json": (46730, "7ac97a6c4572af3ee04e7445aee6ea1ed4eebdbf10470a5ec99239ed7bb3ac21"),
+    "scenario-a-es.json": (48801, "19d85f8a4061ca5eb44746801a2f0094a9109d9d5764e80d515d84bafdfd79d6"),
+    "scenario-c-en.json": (46856, "7f4513fc555d60a6042981168437aea3b1dc470027fd700d1604588e291ece7c"),
 }
 COPY_MARKET_PLACEHOLDER_ES = (
     "Este dossier no incluye evidencia de mercado. Continúa con la evidencia del perfil ya revisada."
@@ -95,6 +95,24 @@ CANONICAL_PROFILE_SECTIONS = (
     "certifications", "education", "recommendations", "activity",
     "analytics", "job_preferences",
 )
+
+
+def _contrast_ratio(foreground: str, background: str) -> float:
+    def relative_luminance(value: str) -> float:
+        channels = [int(value[index : index + 2], 16) / 255 for index in (1, 3, 5)]
+        linear = [
+            channel / 12.92
+            if channel <= 0.04045
+            else ((channel + 0.055) / 1.055) ** 2.4
+            for channel in channels
+        ]
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+    foreground_luminance = relative_luminance(foreground)
+    background_luminance = relative_luminance(background)
+    lighter = max(foreground_luminance, background_luminance)
+    darker = min(foreground_luminance, background_luminance)
+    return (lighter + 0.05) / (darker + 0.05)
 
 
 def unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -1099,6 +1117,77 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 self.assertEqual(set(), set(audit.references) - set(audit.ids))
                 self.assertEqual(3, rendered.count('class="decision-trace"'))
                 self.assertEqual(1, visible_text(rendered).count(pending_question))
+
+    def test_light_secondary_text_token_is_contrasting_and_visible_selectors_do_not_use_divider_muted(self) -> None:
+        base_css = (
+            REPO_ROOT / "plugins" / "professional-growth-coach" / "assets" / "executive-career-dossier-v1.css"
+        ).read_text(encoding="utf-8")
+        market_css = (
+            REPO_ROOT / "plugins" / "professional-growth-coach" / "assets" / "career-market-learning-dossier-v1.css"
+        ).read_text(encoding="utf-8")
+        extension_css = (
+            REPO_ROOT / "plugins" / "professional-growth-coach" / "assets" / "executive-career-dossier-v2.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("--muted-text: #53605a", base_css)
+        dark_css = base_css[base_css.index("@media screen and (prefers-color-scheme: dark)") :]
+        self.assertIn("--muted-text: #b8c4d8", dark_css)
+        self.assertGreaterEqual(_contrast_ratio("#53605a", "#ffffff"), 4.5)
+        self.assertGreaterEqual(_contrast_ratio("#53605a", "#f6f4ee"), 4.5)
+
+        visible_text_selectors = (
+            ".market-learning-state",
+            ".decide-now-summary",
+            ".decide-now-target",
+            ".learning-decision-sample",
+            ".learning-decision-role",
+            ".learning-decision-boundary",
+            ".decision-trace-boundary",
+        )
+        for selector in visible_text_selectors:
+            with self.subTest(selector=selector):
+                self.assertRegex(
+                    market_css,
+                    rf"{re.escape(selector)}\s*\{{[^}}]*color:\s*var\(--muted-text\)",
+                )
+
+        self.assertRegex(
+            extension_css,
+            r"\.coach-template-boundary\s*\{[^}]*color:\s*var\(--muted-text\)",
+        )
+        forced_market = re.search(
+            r"@media \(forced-colors: active\)\s*\{(.*?)\n\}", market_css, re.DOTALL
+        )
+        self.assertIsNotNone(forced_market)
+        self.assertIn(".market-learning-state", forced_market.group(1))
+        self.assertIn(".decision-trace-boundary", forced_market.group(1))
+        for selector in (
+            ".learning-decision-sample",
+            ".learning-decision-role",
+            ".learning-decision-boundary",
+        ):
+            self.assertRegex(
+                market_css,
+                rf"{re.escape(selector)}[^{{]*\{{[^}}]*color:\s*CanvasText",
+            )
+        forced_v2 = re.search(
+            r"@media \(forced-colors: active\)\s*\{(.*?)\n\}", extension_css, re.DOTALL
+        )
+        self.assertIsNotNone(forced_v2)
+        self.assertIn(".coach-template-boundary", forced_v2.group(1))
+
+    def test_light_theme_declares_line_token_for_v2_extension(self) -> None:
+        base_css = (
+            REPO_ROOT / "plugins" / "professional-growth-coach" / "assets" / "executive-career-dossier-v1.css"
+        ).read_text(encoding="utf-8")
+        light_css = base_css.split(
+            "@media screen and (prefers-color-scheme: dark)", 1
+        )[0]
+        self.assertIn("--line: #b8c7c0", light_css)
+        extension_css = (
+            REPO_ROOT / "plugins" / "professional-growth-coach" / "assets" / "executive-career-dossier-v2.css"
+        ).read_text(encoding="utf-8")
+        self.assertIn("border-bottom: 1px solid var(--line)", extension_css)
 
     def test_coach_templates_expose_localized_private_blank_and_boundary(self) -> None:
         for locale, expected in (

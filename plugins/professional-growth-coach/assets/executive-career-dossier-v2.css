@@ -13,7 +13,7 @@
 .coach-template-list { margin: .5rem 0 0; padding-left: 1.25rem; }
 .coach-template-field { display: block; font-weight: 700; }
 .coach-template-blank { display: block; min-height: 1.5rem; border-bottom: 1px solid var(--line); }
-.coach-template-boundary { margin: .75rem 0 0; color: var(--muted); font-size: .875rem; }
+.coach-template-boundary { margin: .75rem 0 0; color: var(--muted-text); font-size: .875rem; }
 .market-evidence-available-card { border-top: 4px solid var(--forest); }
 
 @media screen and (prefers-color-scheme: dark) {
@@ -36,6 +36,7 @@
 
 @media (forced-colors: active) {
   .section-coverage-row article, .coach-priority-card, .coach-template, .market-unavailable-card, .market-evidence-available-card { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .coach-template-boundary { color: CanvasText; }
   .section-coverage-request, .coach-template { border-left-color: Highlight; }
   .coach-priority-card { border-top-color: Highlight; }
   main:focus-visible { outline-color: Highlight; }

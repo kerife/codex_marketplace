@@ -22,6 +22,8 @@ The plugin uses five offline CSS surfaces. There is no global web framework or r
   --forest: #173e30;
   --ink: #1a1a1a;
   --muted: #e2ddd6;
+  --muted-text: #53605a;
+  --line: #b8c7c0;
   --progress-track: #7f9186;
   --coral: #d96c52;
   --gold: #be9338;
@@ -446,6 +448,7 @@ details summary {
     --surface: #182235;
     --ink: #f3f6ff;
     --muted: #b8c4d8;
+    --muted-text: #b8c4d8;
     --line: #5f718e;
     --forest: #8fc9b0;
     --forest-soft: #223b35;
@@ -1263,7 +1266,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 .coach-template-list { margin: .5rem 0 0; padding-left: 1.25rem; }
 .coach-template-field { display: block; font-weight: 700; }
 .coach-template-blank { display: block; min-height: 1.5rem; border-bottom: 1px solid var(--line); }
-.coach-template-boundary { margin: .75rem 0 0; color: var(--muted); font-size: .875rem; }
+.coach-template-boundary { margin: .75rem 0 0; color: var(--muted-text); font-size: .875rem; }
 .market-evidence-available-card { border-top: 4px solid var(--forest); }
 
 @media screen and (prefers-color-scheme: dark) {
@@ -1286,6 +1289,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 
 @media (forced-colors: active) {
   .section-coverage-row article, .coach-priority-card, .coach-template, .market-unavailable-card, .market-evidence-available-card { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .coach-template-boundary { color: CanvasText; }
   .section-coverage-request, .coach-template { border-left-color: Highlight; }
   .coach-priority-card { border-top-color: Highlight; }
   main:focus-visible { outline-color: Highlight; }
@@ -1321,7 +1325,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 .market-summary-card { border-top: 4px solid var(--gold); }
 .market-summary-heading { font-family: var(--serif); font-size: 1.35rem; font-weight: 700; }
 .market-limitation { padding-left: 1rem; border-left: 4px solid var(--gold); }
-.market-learning-state { margin: .75rem 0 0; padding: .65rem .85rem; border-left: 4px solid var(--gold); color: var(--muted); }
+.market-learning-state { margin: .75rem 0 0; padding: .65rem .85rem; border-left: 4px solid var(--gold); color: var(--muted-text); }
 .market-vacancy-section,
 .market-matrix-section,
 .market-recurrence,
@@ -1501,6 +1505,10 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   .vacancy-alignment-progress::-moz-progress-bar,
   .recurrence-progress::-moz-progress-bar { background: Highlight; }
   .vacancy-qualitative-band { color: CanvasText; }
+  .market-learning-state,
+  .decide-now-summary,
+  .decide-now-target,
+  .decision-trace-boundary { color: CanvasText; }
 }
 
 @media (prefers-contrast: more) {
@@ -1516,11 +1524,11 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 .decide-now, .decide-now-grid, .decide-now-card { min-width: 0; }
 .decide-now-card { padding: 1rem; border: 1px solid var(--forest-soft); background: var(--surface); overflow-wrap: anywhere; }
 .decide-now-card h3, .decide-now-card h4 { margin-top: 0; }
-.decide-now-summary { margin-top: -.5rem; color: var(--muted); }
+.decide-now-summary { margin-top: -.5rem; color: var(--muted-text); }
 .decide-now-navigation ul, .decide-now-list, .decide-now-recurrence { margin: .5rem 0 0; padding-left: 1.25rem; }
 .decide-now-navigation a { color: inherit; text-decoration-thickness: .12em; text-underline-offset: .15em; }
 .decide-now-rank { display: inline-grid; min-width: 1.5rem; place-items: center; margin-right: .25rem; border-radius: 999px; background: var(--coral); color: var(--paper); font-weight: 700; }
-.decide-now-target { color: var(--muted); }
+.decide-now-target { color: var(--muted-text); }
 .decide-now-facts { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem 1rem; }
 .decide-now-facts dd { margin: 0; font-weight: 700; }
 .decide-now-authorization { border-left: 4px solid var(--gold); }
@@ -1558,7 +1566,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 .learning-decision-intro,
 .learning-decision-boundary,
 .learning-decision-sample { max-width: 72ch; }
-.learning-decision-sample { color: var(--muted); }
+.learning-decision-sample { color: var(--muted-text); }
 .learning-decision-grid { align-items: stretch; }
 .learning-decision-card {
   border-top: 4px solid var(--coral);
@@ -1589,10 +1597,10 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   color: var(--paper);
   font-weight: 800;
 }
-.learning-decision-role { color: var(--muted); }
+.learning-decision-role { color: var(--muted-text); }
 .learning-decision-boundary {
   margin-top: 1rem;
-  color: var(--muted);
+  color: var(--muted-text);
   font-size: .875rem;
 }
 
@@ -1632,7 +1640,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 .decision-trace .coach-template { margin-top: .55rem; padding: .75rem; background: var(--surface); }
 .decision-trace .coach-template h5 { margin: 0; font-size: 1rem; }
 .decision-trace .coach-template-list { margin-top: .55rem; }
-.decision-trace-boundary { margin: 1rem 0 0; color: var(--muted); font-size: .875rem; }
+.decision-trace-boundary { margin: 1rem 0 0; color: var(--muted-text); font-size: .875rem; }
 
 @media screen and (prefers-color-scheme: dark) {
   .decision-trace { border-color: var(--forest); background: var(--surface); color: var(--ink); }
