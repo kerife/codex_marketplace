@@ -958,8 +958,8 @@ def _render_market_context(
         <div class="card market-unavailable-card span-12">
           <h2 id="market-context-title">{labels['market_title']}</h2>
           <p><strong>{labels['market_limitation']}:</strong> {labels['market_unavailable_reason']}</p>
-          <p class="market-learning-state">{labels['market_learning_state']}</p>
           <p class="market-next-safe-action">{labels['market_next_safe_action']}</p>
+          <p class="market-learning-state">{labels['market_learning_state']}</p>
         </div>
       </div>
     </section>'''
