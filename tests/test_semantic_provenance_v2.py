@@ -33,6 +33,8 @@ def load_sibling(name: str):
 
 
 ALIGNMENT_V2 = load_sibling("derive_candidate_market_alignment_v2.py")
+MARKET_V2_BUILDER = load_sibling("build_career_market_learning_dossier_v2.py")
+MARKET_V2_VALIDATOR = load_sibling("validate_career_market_learning_dossier_v2.py")
 RESEARCH = load_sibling("validate_target_vacancy_research.py")
 DOSSIER_SNAPSHOT = load_sibling("dossier_snapshot.py")
 
@@ -298,6 +300,104 @@ class CandidateMarketAlignmentV2Tests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, r"^alignment is invalid$"):
             ALIGNMENT_V2.snapshot_for_alignment_v2(reordered)
+
+
+class CareerMarketLearningDossierV2Tests(unittest.TestCase):
+    def complete_sources(self) -> tuple[dict[str, object], dict[str, object]]:
+        return (
+            load_json(RESEARCH_FIXTURES / "complete-five-es.json"),
+            load_json(DOSSIER_FIXTURES / "scenario-a-es.json"),
+        )
+
+    def source_pair(self, research_name: str, dossier_name: str) -> tuple[dict[str, object], dict[str, object]]:
+        return (
+            load_json(RESEARCH_FIXTURES / research_name),
+            load_json(DOSSIER_FIXTURES / dossier_name),
+        )
+
+    def test_market_v2_recomputes_alignment_and_rejects_reference_tampering(self):
+        research, dossier = self.complete_sources()
+        market = MARKET_V2_BUILDER.build_market_dossier_v2(research, dossier)
+        self.assertEqual([], MARKET_V2_VALIDATOR.validate_market_dossier_v2(market, research, dossier))
+        terraform = next(row for row in market["matrix_rows"] if row["signal"] == "terraform")
+        self.assertEqual(["C-002"], terraform["claim_ids"])
+        self.assertEqual(["E-004"], terraform["evidence_ids"])
+        mutations = {
+            "claim": ("claim_ids", ["C-001"]),
+            "evidence": ("evidence_ids", ["E-001"]),
+            "requirement": ("requirement_ids", ["V-001-R-01"]),
+            "vacancy": ("vacancy_ids", ["V-001"]),
+        }
+        for name, (field, replacement) in mutations.items():
+            with self.subTest(name=name):
+                altered = copy.deepcopy(market)
+                next(row for row in altered["matrix_rows"] if row["signal"] == "terraform")[field] = replacement
+                errors = MARKET_V2_VALIDATOR.validate_market_dossier_v2(altered, research, dossier)
+                self.assertEqual(["market dossier does not match validated sources"], errors)
+
+    def test_market_v2_complete_scores_order_and_snapshot_are_deterministic(self):
+        research, dossier = self.complete_sources()
+        market = MARKET_V2_BUILDER.build_market_dossier_v2(research, dossier)
+
+        self.assertEqual("career-market-learning-dossier-v2", market["schema_version"])
+        self.assertRegex(market["source_alignment_snapshot"], r"^snap-alignment-sha256-[0-9a-f]{64}$")
+        self.assertEqual(
+            [
+                ("V-003", 4, 4, 4, 100, 100),
+                ("V-001", 0, 4, 0, 0, 0),
+                ("V-002", 0, 4, 0, 0, 0),
+                ("V-004", 0, 2, 0, 0, 0),
+                ("V-005", 0, 0, 0, 0, 0),
+            ],
+            [
+                tuple(card[field] for field in ("vacancy_id", "earned_points", "maximum_points", "known_points", "alignment_percent", "evidence_coverage_percent"))
+                for card in market["vacancies"]
+            ],
+        )
+        self.assertEqual(
+            sorted(market["matrix_rows"], key=lambda row: row["signal"]),
+            market["matrix_rows"],
+        )
+        self.assertEqual(
+            MARKET_V2_BUILDER.snapshot_for_market_dossier_v2(market),
+            MARKET_V2_BUILDER.snapshot_for_market_dossier_v2(copy.deepcopy(market)),
+        )
+
+    def test_market_v2_rejects_ordering_and_shape_tampering(self):
+        research, dossier = self.complete_sources()
+        market = MARKET_V2_BUILDER.build_market_dossier_v2(research, dossier)
+        mutations: list[dict[str, object]] = []
+        reordered = copy.deepcopy(market); reordered["matrix_rows"].reverse(); mutations.append(reordered)
+        deleted = copy.deepcopy(market); deleted["matrix_rows"].pop(); mutations.append(deleted)
+        duplicated = copy.deepcopy(market); duplicated["matrix_rows"].append(copy.deepcopy(duplicated["matrix_rows"][0])); mutations.append(duplicated)
+        synthetic_alignment = copy.deepcopy(market); synthetic_alignment["alignment"] = ALIGNMENT_V2.derive_candidate_market_alignment_v2(research, dossier); mutations.append(synthetic_alignment)
+        for altered in mutations:
+            with self.subTest(altered=altered["matrix_rows"][:1]):
+                self.assertEqual(
+                    ["market dossier does not match validated sources"],
+                    MARKET_V2_VALIDATOR.validate_market_dossier_v2(altered, research, dossier),
+                )
+
+    def test_market_v2_rejects_stale_and_crossed_sources(self):
+        research, dossier = self.complete_sources()
+        market = MARKET_V2_BUILDER.build_market_dossier_v2(research, dossier)
+        stale = copy.deepcopy(research)
+        stale["vacancies"][0]["title"] = "Stale public vacancy title"
+        _, other_dossier = self.source_pair("complete-five-es.json", "scenario-c-en.json")
+        for sources in ((stale, dossier), (research, other_dossier)):
+            with self.subTest(locale=sources[1]["locale"]):
+                self.assertEqual(
+                    ["market dossier does not match validated sources"],
+                    MARKET_V2_VALIDATOR.validate_market_dossier_v2(market, *sources),
+                )
+
+    def test_market_v2_unavailable_has_no_candidate_support(self):
+        research, dossier = self.source_pair("unavailable-es.json", "scenario-a-es.json")
+        market = MARKET_V2_BUILDER.build_market_dossier_v2(research, dossier)
+        self.assertEqual([], market["vacancies"])
+        self.assertEqual([], market["matrix_rows"])
+        self.assertEqual([], market["recurrence_rows"])
+        self.assertEqual([], MARKET_V2_VALIDATOR.validate_market_dossier_v2(market, research, dossier))
 
 
 if __name__ == "__main__":

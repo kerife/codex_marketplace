@@ -1,0 +1,323 @@
+{
+  "as_of_date": "2026-08-13",
+  "learning_decisions": [],
+  "learning_state": "not_evaluated",
+  "locale": "en",
+  "matrix_rows": [
+    {
+      "cells": [
+        {
+          "required": false,
+          "requirements": [],
+          "vacancy_id": "V-001"
+        },
+        {
+          "required": true,
+          "requirements": [
+            {
+              "importance": "must_have",
+              "requirement_id": "V-002-R-01",
+              "source_paraphrase": "Synthetic test requirement."
+            }
+          ],
+          "vacancy_id": "V-002"
+        },
+        {
+          "required": false,
+          "requirements": [],
+          "vacancy_id": "V-003"
+        },
+        {
+          "required": false,
+          "requirements": [],
+          "vacancy_id": "V-004"
+        }
+      ],
+      "claim_ids": [],
+      "evidence_ids": [],
+      "requirement_ids": [
+        "V-002-R-01"
+      ],
+      "signal": "kubernetes",
+      "support_state": "unknown",
+      "vacancy_ids": [
+        "V-002"
+      ]
+    },
+    {
+      "cells": [
+        {
+          "required": false,
+          "requirements": [],
+          "vacancy_id": "V-001"
+        },
+        {
+          "required": false,
+          "requirements": [],
+          "vacancy_id": "V-002"
+        },
+        {
+          "required": false,
+          "requirements": [],
+          "vacancy_id": "V-003"
+        },
+        {
+          "required": true,
+          "requirements": [
+            {
+              "importance": "preferred",
+              "requirement_id": "V-004-R-01",
+              "source_paraphrase": "Synthetic test requirement."
+            }
+          ],
+          "vacancy_id": "V-004"
+        }
+      ],
+      "claim_ids": [],
+      "evidence_ids": [],
+      "requirement_ids": [
+        "V-004-R-01"
+      ],
+      "signal": "observability",
+      "support_state": "unknown",
+      "vacancy_ids": [
+        "V-004"
+      ]
+    },
+    {
+      "cells": [
+        {
+          "required": true,
+          "requirements": [
+            {
+              "importance": "must_have",
+              "requirement_id": "V-001-R-01",
+              "source_paraphrase": "Synthetic test requirement."
+            }
+          ],
+          "vacancy_id": "V-001"
+        },
+        {
+          "required": false,
+          "requirements": [],
+          "vacancy_id": "V-002"
+        },
+        {
+          "required": false,
+          "requirements": [],
+          "vacancy_id": "V-003"
+        },
+        {
+          "required": false,
+          "requirements": [],
+          "vacancy_id": "V-004"
+        }
+      ],
+      "claim_ids": [],
+      "evidence_ids": [],
+      "requirement_ids": [
+        "V-001-R-01"
+      ],
+      "signal": "python",
+      "support_state": "unknown",
+      "vacancy_ids": [
+        "V-001"
+      ]
+    },
+    {
+      "cells": [
+        {
+          "required": false,
+          "requirements": [],
+          "vacancy_id": "V-001"
+        },
+        {
+          "required": false,
+          "requirements": [],
+          "vacancy_id": "V-002"
+        },
+        {
+          "required": true,
+          "requirements": [
+            {
+              "importance": "must_have",
+              "requirement_id": "V-003-R-01",
+              "source_paraphrase": "Synthetic test requirement."
+            }
+          ],
+          "vacancy_id": "V-003"
+        },
+        {
+          "required": false,
+          "requirements": [],
+          "vacancy_id": "V-004"
+        }
+      ],
+      "claim_ids": [],
+      "evidence_ids": [],
+      "requirement_ids": [
+        "V-003-R-01"
+      ],
+      "signal": "terraform",
+      "support_state": "unknown",
+      "vacancy_ids": [
+        "V-003"
+      ]
+    }
+  ],
+  "methodology_boundaries": [
+    "directional_documented_evidence_not_hiring_fit",
+    "no_keyword_or_prose_match_inference",
+    "no_sample_wide_score",
+    "unknown_preserved_separately_from_explicit_gap"
+  ],
+  "no_external_action": true,
+  "privacy_boundary": "public_vacancy_metadata_and_identity_free_evidence_references_only",
+  "recurrence_rows": [
+    {
+      "display_fraction": "1/4",
+      "evidence_ids": [],
+      "occurrences": 1,
+      "sample_size": 4,
+      "signal": "kubernetes",
+      "support_state": "unknown"
+    },
+    {
+      "display_fraction": "1/4",
+      "evidence_ids": [],
+      "occurrences": 1,
+      "sample_size": 4,
+      "signal": "observability",
+      "support_state": "unknown"
+    },
+    {
+      "display_fraction": "1/4",
+      "evidence_ids": [],
+      "occurrences": 1,
+      "sample_size": 4,
+      "signal": "python",
+      "support_state": "unknown"
+    },
+    {
+      "display_fraction": "1/4",
+      "evidence_ids": [],
+      "occurrences": 1,
+      "sample_size": 4,
+      "signal": "terraform",
+      "support_state": "unknown"
+    }
+  ],
+  "schema_version": "career-market-learning-dossier-v2",
+  "search_summary": {
+    "as_of_date": "2026-08-13",
+    "bounded_queries_run": 12,
+    "limit_reason": "bounded_search_exhausted",
+    "limitation": "Synthetic test limit.",
+    "locale": "en",
+    "maximum_vacancies": 5,
+    "state": "limited_market_evidence",
+    "vacancy_count": 4
+  },
+  "source_alignment_snapshot": "snap-alignment-sha256-fe18d6ff92a1d4d1bceb39610cc5d2f642854d010753a5830d54f3a7f71a3c51",
+  "source_executive_dossier_snapshot": "snap-dossier-sha256-5cd38a61084ab773e81104748ffdd6bbdf54df8ddc1b640988490bfa8e2f44bb",
+  "source_research_snapshot": "snap-market-sha256-c9502f56899aa606eadd274f11cf9d99a0afadf9aa6049afd99a32e4a221e7d1",
+  "state": "limited_market_evidence",
+  "vacancies": [
+    {
+      "access_date": "2026-08-13",
+      "alignment_percent": 0,
+      "arrangement": "remote",
+      "earned_points": 0,
+      "employer": "Fixture Employer A",
+      "employer_id": "EMP-001",
+      "evidence_coverage_percent": 0,
+      "freshness_status": "unknown",
+      "geographic_compatibility": "explicit_mexico",
+      "interpretation": "directional_documented_evidence_not_hiring_fit",
+      "known_points": 0,
+      "location": "Mexico",
+      "maximum_points": 4,
+      "official_referrer_url": null,
+      "publication_date": null,
+      "qualitative_band": "insufficient_evidence",
+      "role_family": "site_reliability_engineering",
+      "source_kind": "official_employer",
+      "source_state": "active",
+      "source_url": "https://www.rfc-editor.org/rfc/rfc2606#fixture-v-001",
+      "title": "Fixture Reliability Role A",
+      "vacancy_id": "V-001"
+    },
+    {
+      "access_date": "2026-08-13",
+      "alignment_percent": 0,
+      "arrangement": "hybrid",
+      "earned_points": 0,
+      "employer": "Fixture Employer B",
+      "employer_id": "EMP-002",
+      "evidence_coverage_percent": 0,
+      "freshness_status": "unknown",
+      "geographic_compatibility": "explicit_mexico",
+      "interpretation": "directional_documented_evidence_not_hiring_fit",
+      "known_points": 0,
+      "location": "Mexico",
+      "maximum_points": 4,
+      "official_referrer_url": null,
+      "publication_date": null,
+      "qualitative_band": "insufficient_evidence",
+      "role_family": "platform_engineering",
+      "source_kind": "official_employer",
+      "source_state": "active",
+      "source_url": "https://www.rfc-editor.org/rfc/rfc5737#fixture-v-002",
+      "title": "Fixture Platform Role B",
+      "vacancy_id": "V-002"
+    },
+    {
+      "access_date": "2026-08-13",
+      "alignment_percent": 0,
+      "arrangement": "flexible",
+      "earned_points": 0,
+      "employer": "Fixture Employer C",
+      "employer_id": "EMP-003",
+      "evidence_coverage_percent": 0,
+      "freshness_status": "unknown",
+      "geographic_compatibility": "explicit_mexico",
+      "interpretation": "directional_documented_evidence_not_hiring_fit",
+      "known_points": 0,
+      "location": "Mexico",
+      "maximum_points": 4,
+      "official_referrer_url": null,
+      "publication_date": null,
+      "qualitative_band": "insufficient_evidence",
+      "role_family": "devops_engineering",
+      "source_kind": "official_employer",
+      "source_state": "active",
+      "source_url": "https://www.rfc-editor.org/rfc/rfc6761#fixture-v-003",
+      "title": "Fixture DevOps Role C",
+      "vacancy_id": "V-003"
+    },
+    {
+      "access_date": "2026-08-13",
+      "alignment_percent": 0,
+      "arrangement": "remote",
+      "earned_points": 0,
+      "employer": "Fixture Employer D",
+      "employer_id": "EMP-004",
+      "evidence_coverage_percent": 0,
+      "freshness_status": "unknown",
+      "geographic_compatibility": "stated_remote_unknown_eligibility",
+      "interpretation": "directional_documented_evidence_not_hiring_fit",
+      "known_points": 0,
+      "location": "Remote",
+      "maximum_points": 2,
+      "official_referrer_url": null,
+      "publication_date": null,
+      "qualitative_band": "insufficient_evidence",
+      "role_family": "site_reliability_engineering",
+      "source_kind": "official_employer",
+      "source_state": "active",
+      "source_url": "https://www.rfc-editor.org/rfc/rfc3849#fixture-v-004",
+      "title": "Fixture Reliability Role D",
+      "vacancy_id": "V-004"
+    }
+  ]
+}

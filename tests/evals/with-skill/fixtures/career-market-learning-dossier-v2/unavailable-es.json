@@ -1,0 +1,32 @@
+{
+  "as_of_date": "2026-08-13",
+  "learning_decisions": [],
+  "learning_state": "not_evaluated",
+  "locale": "es",
+  "matrix_rows": [],
+  "methodology_boundaries": [
+    "directional_documented_evidence_not_hiring_fit",
+    "no_keyword_or_prose_match_inference",
+    "no_sample_wide_score",
+    "unknown_preserved_separately_from_explicit_gap"
+  ],
+  "no_external_action": true,
+  "privacy_boundary": "public_vacancy_metadata_and_identity_free_evidence_references_only",
+  "recurrence_rows": [],
+  "schema_version": "career-market-learning-dossier-v2",
+  "search_summary": {
+    "as_of_date": "2026-08-13",
+    "bounded_queries_run": 12,
+    "limit_reason": "market_evidence_unavailable",
+    "limitation": "Synthetic test unavailability.",
+    "locale": "es",
+    "maximum_vacancies": 5,
+    "state": "market_evidence_unavailable",
+    "vacancy_count": 0
+  },
+  "source_alignment_snapshot": "snap-alignment-sha256-b3890577582fbd214dec63eb8bbc71ca69660aecb8210a450ff4b4a1208055ac",
+  "source_executive_dossier_snapshot": "snap-dossier-sha256-1cc5d236dc6a805748612a7765895e94adb4c3250d325239a4a398797fdc18a1",
+  "source_research_snapshot": "snap-market-sha256-c7b20fd2df65c1ff2861b1db899e661142ea641bd5c270889883fdedac5f22ce",
+  "state": "market_evidence_unavailable",
+  "vacancies": []
+}

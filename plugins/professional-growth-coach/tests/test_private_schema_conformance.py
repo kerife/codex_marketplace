@@ -23,6 +23,7 @@ REPOSITORY_CONTEXT = (
 REPOSITORY_ONLY_TESTS = {
     "test_career_learning_decision_schema_accepts_evaluated_and_unavailable_states",
     "test_career_market_dossier_schemas_accept_closed_synthetic_states",
+    "test_career_market_dossier_v2_schema_accepts_recomputed_fixtures",
     "test_candidate_market_alignment_v2_schema_accepts_derived_fixture",
     "test_dependency_free_checker_rejects_nested_quantifier_patterns",
     "test_dossier_handoff_rejects_unlabelled_person_name_source_fact",
@@ -51,6 +52,8 @@ from validate_private_recruiter_reply_triage import validate_triage
 from validate_recruiter_practice_session import validate_session
 from validate_target_vacancy_research import validate_research
 from derive_candidate_market_alignment_v2 import derive_candidate_market_alignment_v2
+from build_career_market_learning_dossier_v2 import build_market_dossier_v2
+from validate_career_market_learning_dossier_v2 import validate_market_dossier_v2
 
 
 def _load_v2_dossier_helper():
@@ -156,6 +159,26 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         with_extra_field = copy.deepcopy(alignment)
         with_extra_field["signal_bindings"][0]["unexpected"] = True
         self.assertTrue(validate_schema_instance(with_extra_field, schema))
+
+    def test_career_market_dossier_v2_schema_accepts_recomputed_fixtures(self):
+        fixture_root = ROOT.parent.parent / "tests/evals/with-skill/fixtures"
+        dossier_schema = self._schema("career-market-learning-dossier-v2.schema.json")
+        cases = (
+            ("complete-five-es.json", "scenario-a-es.json"),
+            ("limited-four-en.json", "scenario-c-en.json"),
+            ("unavailable-es.json", "scenario-a-es.json"),
+        )
+        for research_name, dossier_name in cases:
+            with self.subTest(research=research_name):
+                research = json.loads((fixture_root / "target-vacancy-research" / research_name).read_text(encoding="utf-8"))
+                dossier = json.loads((fixture_root / "executive-career-dossier-v2" / dossier_name).read_text(encoding="utf-8"))
+                fixture = json.loads((fixture_root / "career-market-learning-dossier-v2" / research_name).read_text(encoding="utf-8"))
+                self.assertEqual([], validate_schema_instance(fixture, dossier_schema))
+                self.assertEqual(fixture, build_market_dossier_v2(research, dossier))
+                self.assertEqual([], validate_market_dossier_v2(fixture, research, dossier))
+        extra = copy.deepcopy(build_market_dossier_v2(research, dossier))
+        extra["unexpected"] = True
+        self.assertTrue(validate_schema_instance(extra, dossier_schema))
 
     def test_career_learning_decision_schema_accepts_evaluated_and_unavailable_states(self):
         helper = _load_learning_contract_helper()
