@@ -55,7 +55,12 @@ _EMAIL = re.compile(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}")
 _PHONE = re.compile(r"(?:^|\s)\+?\d[\d .()_-]{6,}\d(?:$|\s)")
 _HTML = re.compile(r"<\s*/?\s*(?:script|style|html|body|div|span|iframe|[a-z][a-z0-9-]*)\b", re.I)
 _LOCAL_PATH = re.compile(
-    r"(?:^|[\s?&#=])(?:~[\\/]|/(?:Users|private|var|tmp|home|root)(?:[\\/]|$)|[A-Za-z]:[\\/])",
+    r"(?:^|[\s?&#=;\"'])(?:"
+    r"~[\\/]|"
+    r"/{1,2}(?:Users|private|var|tmp|home|root)(?:[\\/]|$)|"
+    r"[A-Za-z]:[\\/](?:Users(?:[\\/]|$))?|"
+    r"\\\\[^\\/\s]+[\\/][^\\/\s]+"
+    r")",
     re.I,
 )
 _ROOT_FIELDS = frozenset(
@@ -172,13 +177,23 @@ def _closed(value: object, fields: frozenset[str], errors: list[str], diagnostic
 def _valid_text(value: object, *, provider: bool = False, strict_name: bool = False) -> bool:
     if not isinstance(value, str) or not 0 < len(value) <= _MAX_TEXT:
         return False
-    if contains_unicode_controls(value) or _EMAIL.search(value) or _PHONE.search(value) or _HTML.search(value):
+    inspection = _decoded_url_component(value)
+    if inspection is None or len(inspection) > _MAX_TEXT:
         return False
-    if contains_candidate_identity(value) or contains_unmarked_candidate_identity(value):
+    if (
+        contains_unicode_controls(value)
+        or contains_unicode_controls(inspection)
+        or _LOCAL_PATH.search(inspection)
+        or _EMAIL.search(inspection)
+        or _PHONE.search(inspection)
+        or _HTML.search(inspection)
+    ):
+        return False
+    if contains_candidate_identity(inspection) or contains_unmarked_candidate_identity(inspection):
         return False
     return provider or not (
-        contains_obfuscated_candidate_identity(value)
-        or (strict_name and contains_candidate_like_name(value))
+        contains_obfuscated_candidate_identity(inspection)
+        or (strict_name and contains_candidate_like_name(inspection))
     )
 
 

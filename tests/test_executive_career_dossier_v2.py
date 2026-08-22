@@ -1068,9 +1068,9 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
 
     @staticmethod
     def expected_v2_mutation_errors(mutation: str) -> tuple[str, ...]:
-        if mutation in {"provider_url", "provider_control"}:
+        if mutation in {"provider_url", "provider_control", "provider_local_path"}:
             return ("provider research is invalid",)
-        if mutation in {"learning_internal_id", "provider_local_path"}:
+        if mutation == "learning_internal_id":
             return ("learning decision does not match validated sources",)
         return ("market dossier does not match validated sources",)
 
@@ -1318,7 +1318,9 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     path.write_text(json.dumps(value), encoding="utf-8")
                     paths[name] = path
                 expected_errors = self.expected_v2_mutation_errors(mutation)
-                provider_load_failure = mutation in {"provider_url", "provider_control"}
+                provider_load_failure = mutation in {
+                    "provider_url", "provider_control", "provider_local_path"
+                }
                 expected_writer_type = (
                     self.renderer.MarketInputLoadError
                     if provider_load_failure

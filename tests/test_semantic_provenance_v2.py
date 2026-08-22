@@ -544,6 +544,30 @@ class CareerLearningProviderResearchTests(unittest.TestCase):
                 altered["options"][0]["url"] = url
                 self.assert_invalid_without_echo(altered, sentinel)
 
+    def test_provider_research_rejects_local_paths_in_every_free_text_field_without_echo(self):
+        provider = self.provider_fixture("complete-es.json")
+        sentinel = "provider-path-sentinel"
+        fields = (
+            "provider", "option", "source_title", "geography", "current_cost", "currency",
+            "tax", "duration", "prerequisite", "renewal", "maintenance", "unknowns",
+        )
+        path_values = (
+            f"/Users/{sentinel}/private.json",
+            f"C:\\Users\\{sentinel}\\private.json",
+            f"\\\\server\\share\\{sentinel}\\private.json",
+            f"%2FUsers%2F{sentinel}%2Fprivate.json",
+            f"&#47;Users&#47;{sentinel}&#47;private.json",
+            f"/Users/{sentinel}{chr(0x202e)}/private.json",
+        )
+        for field in fields:
+            for value in path_values:
+                with self.subTest(field=field, value=value[:12]):
+                    altered = copy.deepcopy(provider)
+                    altered["options"][0][field] = value
+                    errors = PROVIDER_VALIDATOR.validate_provider_research(altered)
+                    self.assertIn("provider research has unsafe public metadata", errors)
+                    self.assertNotIn(sentinel, "\n".join(errors))
+
     def test_provider_research_rejects_closed_structure_and_semantic_mutations(self):
         provider = self.provider_fixture("complete-es.json")
         sentinel = "provider-malicious-sentinel"
@@ -783,6 +807,21 @@ class CareerLearningDecisionV2Tests(unittest.TestCase):
         self.assertEqual(
             [], LEARNING_V2_VALIDATOR.validate_learning_bundle_v2(result, *sources)
         )
+
+    def test_learning_builder_rejects_local_path_provider_before_projection(self):
+        sources = list(self.complete_v2_sources())
+        sentinel = "/Users/provider-path-sentinel/private.json"
+        sources[3]["options"][0]["unknowns"] = sentinel
+        self.assertEqual(
+            ["provider research has unsafe public metadata"],
+            PROVIDER_VALIDATOR.validate_provider_research(sources[3]),
+        )
+        with self.assertRaisesRegex(ValueError, r"^learning decision v2 is invalid$") as raised:
+            LEARNING_V2_BUILDER.build_learning_bundle_v2(
+                *sources,
+                [self.request("research_provider_option", provider_id="LP-001")],
+            )
+        self.assertNotIn(sentinel, str(raised.exception))
 
     def test_multi_signal_routes_preserve_per_signal_vacancy_attribution_and_exact_unions(self):
         research, _market, dossier, provider = self.complete_v2_sources()
