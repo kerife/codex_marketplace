@@ -260,6 +260,18 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
         self.assertEqual("vacancy-first-installed-smoke-v1", receipt["matrix_version"])
         self.assertEqual(39, receipt["accepted"])
         self.assertEqual(9, receipt["rejected"])
+        self.assertEqual(39, len(receipt["accepted_cases"]))
+        self.assertEqual(9, len(receipt["rejected_cases"]))
+        self.assertEqual(39, len(set(receipt["accepted_cases"])))
+        self.assertEqual(9, len(set(receipt["rejected_cases"])))
+        self.assertIn(
+            "response_mapping.public_v1_resolves_private_v003",
+            receipt["accepted_cases"],
+        )
+        self.assertIn(
+            "provider_displacement.lp002_rejects_prior_lp001_chain",
+            receipt["rejected_cases"],
+        )
         self.assertEqual(
             (
                 "response_mapping",
@@ -317,6 +329,8 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
             "matrix_version": "vacancy-first-installed-smoke-v1",
             "accepted": 39,
             "rejected": 9,
+            "accepted_cases": ("accepted-group.accepted-case",),
+            "rejected_cases": ("rejected-group.rejected-case",),
             "accepted_groups": ("accepted-group",),
             "rejected_groups": ("rejected-group",),
         }
@@ -326,6 +340,12 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
         self.assertEqual(39, receipt["accepted"])
         self.assertEqual(9, receipt["rejected"])
         self.assertEqual("vacancy-first-installed-smoke-v1", receipt["matrix_version"])
+        self.assertEqual(
+            ("accepted-group.accepted-case",), receipt["accepted_cases"]
+        )
+        self.assertEqual(
+            ("rejected-group.rejected-case",), receipt["rejected_cases"]
+        )
         self.assertEqual(("accepted-group",), receipt["accepted_groups"])
         self.assertEqual(("rejected-group",), receipt["rejected_groups"])
         self.assertEqual(17, receipt["file_count"])

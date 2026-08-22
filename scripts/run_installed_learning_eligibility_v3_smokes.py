@@ -678,6 +678,47 @@ def installed_historical_render_snapshots(
     }
 
 
+def _semantic_matrix_receipt(
+    accepted_matrix: tuple[tuple[str, str, bool], ...],
+    rejected_matrix: tuple[tuple[str, str, bool], ...],
+) -> dict[str, object]:
+    def collect(
+        matrix: tuple[tuple[str, str, bool], ...],
+        expected_groups: tuple[str, ...],
+        expected_count: int,
+    ) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        case_ids: list[str] = []
+        groups: list[str] = []
+        for group, case, passed in matrix:
+            if passed is not True:
+                raise InstalledSmokeError
+            case_id = f"{group}.{case}"
+            if case_id in case_ids:
+                raise InstalledSmokeError
+            case_ids.append(case_id)
+            if group not in groups:
+                groups.append(group)
+        if len(case_ids) != expected_count or tuple(groups) != expected_groups:
+            raise InstalledSmokeError
+        return tuple(case_ids), tuple(groups)
+
+    accepted_cases, accepted_groups = collect(
+        accepted_matrix, ACCEPTED_GROUPS, 39
+    )
+    rejected_cases, rejected_groups = collect(
+        rejected_matrix, REJECTED_GROUPS, 9
+    )
+    return {
+        "matrix_version": "vacancy-first-installed-smoke-v1",
+        "accepted": len(accepted_cases),
+        "rejected": len(rejected_cases),
+        "accepted_cases": accepted_cases,
+        "rejected_cases": rejected_cases,
+        "accepted_groups": accepted_groups,
+        "rejected_groups": rejected_groups,
+    }
+
+
 def run_installed_semantic_matrix(
     plugin_root: Path, modules: Mapping[str, ModuleType]
 ) -> dict[str, object]:
@@ -687,46 +728,117 @@ def run_installed_semantic_matrix(
         source_document = load_installed_smoke_sources(plugin_root)
         sources = source_document["sources"]
         built: dict[tuple[str, str], dict[str, object]] = {}
+        action_matrix_results: dict[str, bool] = {}
         for name, state, basis, action, learning_count in CASE_RULES:
             case = _build_case(name, "es", sources, modules)
             built[(name, "es")] = case
             eligibility = case["eligibility"]
             decisions = case["learning"]["decisions"]
-            if (
-                eligibility["state"] != state
-                or eligibility["decision_basis_code"] != basis
-                or eligibility["recommended_next_action"] != action
-                or len(decisions) != learning_count
-                or int(action in LEARNING_ACTIONS) != learning_count
-            ):
+            action_matrix_results[name] = (
+                eligibility["state"] == state
+                and eligibility["decision_basis_code"] == basis
+                and eligibility["recommended_next_action"] == action
+                and len(decisions) == learning_count
+                and int(action in LEARNING_ACTIONS) == learning_count
+            )
+            if not action_matrix_results[name]:
                 raise InstalledSmokeError
         eligibility_copy = modules["build_career_next_action_eligibility_v1"].COPY
         learning_copy = modules["project_career_learning_decision_v3"].COPY
         required_actions = {row[3] for row in CASE_RULES}
+        localized_copy_results: dict[str, tuple[bool, bool]] = {}
         for locale in ("es", "en"):
             locale_copy = eligibility_copy.get(locale)
             projected_copy = learning_copy.get(locale)
-            if not (
+            action_copy_valid = (
                 isinstance(locale_copy, Mapping)
                 and isinstance(locale_copy.get("states"), Mapping)
                 and isinstance(locale_copy.get("actions"), Mapping)
                 and required_actions <= set(locale_copy["actions"])
-                and isinstance(projected_copy, Mapping)
-                and LEARNING_ACTIONS <= set(projected_copy["decision_bases"])
                 and all(
                     isinstance(value, str) and value.strip()
                     for value in locale_copy["states"].values()
                 )
+            )
+            learning_copy_valid = (
+                isinstance(projected_copy, Mapping)
+                and LEARNING_ACTIONS <= set(projected_copy["decision_bases"])
                 and all(
                     isinstance(value, str) and value.strip()
                     for value in projected_copy["decision_bases"].values()
                 )
-            ):
+            )
+            localized_copy_results[locale] = (
+                action_copy_valid,
+                learning_copy_valid,
+            )
+            if not action_copy_valid or not learning_copy_valid:
                 raise InstalledSmokeError
         if (
             eligibility_copy["es"]["actions"] == eligibility_copy["en"]["actions"]
             or learning_copy["es"]["decision_bases"]
             == learning_copy["en"]["decision_bases"]
+        ):
+            raise InstalledSmokeError
+
+        public_v1_sources = copy.deepcopy(sources)
+        public_v1_sources["research"]["vacancies"] = sorted(
+            public_v1_sources["research"]["vacancies"],
+            key=lambda vacancy: vacancy.get("vacancy_id") != "V-003",
+        )
+        public_v1 = _source_group(
+            public_v1_sources, modules, "es", recurrent=False
+        )
+        public_v1_payload = {
+            "selected_vacancy_ordinal": "V1",
+            "selected_signal": "terraform",
+            "relation": "proof_gap",
+            "selected_provider_ordinal": None,
+        }
+        public_v1_response = modules[
+            "build_candidate_gap_response_v1"
+        ].build_candidate_gap_response_v1(
+            public_v1["research"],
+            public_v1["market"],
+            public_v1_payload,
+            public_v1["provider"],
+        )
+        public_v1_assessment = modules[
+            "build_candidate_gap_assessment_v1"
+        ].build_candidate_gap_assessment_v1(
+            public_v1["research"],
+            public_v1["dossier"],
+            public_v1["market"],
+            public_v1_response,
+            public_v1["provider"],
+        )
+        public_v1_valid = (
+            modules[
+                "validate_candidate_gap_response_v1"
+            ].validate_candidate_gap_response_v1(
+                public_v1_response,
+                public_v1["research"],
+                public_v1["market"],
+                public_v1["provider"],
+            )
+            == []
+            and modules[
+                "validate_candidate_gap_assessment_v1"
+            ].validate_candidate_gap_assessment_v1(
+                public_v1_assessment,
+                public_v1["research"],
+                public_v1["dossier"],
+                public_v1["market"],
+                public_v1_response,
+                public_v1["provider"],
+            )
+            == []
+        )
+        if not (
+            public_v1_valid
+            and public_v1_response["selected_vacancy_ordinal"] == "V1"
+            and public_v1_assessment["selected_vacancy_id"] == "V-003"
+            and "V-003" not in json.dumps(public_v1_response, sort_keys=True)
         ):
             raise InstalledSmokeError
 
@@ -829,23 +941,78 @@ def run_installed_semantic_matrix(
             "Synthetic test requirement.",
             "proof_gap_recurrent",
         )
-        if any(value in rendered for value in private_values):
+        private_disclosure_rejected = not any(
+            value in rendered for value in private_values
+        )
+        if not private_disclosure_rejected:
             raise InstalledSmokeError
 
-        displaced = copy.deepcopy(selected["provider"])
-        displaced["options"][0]["option"] = "Displaced option"
-        if modules[
+        lp002_group = _source_group(
+            sources, modules, "es", provider_mode="present"
+        )
+        lp002_group["provider"]["options"][0]["option"] = "A learning option"
+        lp002_group["provider"]["options"][1]["option"] = "B learning option"
+        lp002_group["provider"]["options"][1]["covered_signals"] = ["terraform"]
+        lp002_payload = _selection_payload(
+            lp002_group["market"], "knowledge_gap", "L2"
+        )
+        lp002_response = modules[
+            "build_candidate_gap_response_v1"
+        ].build_candidate_gap_response_v1(
+            lp002_group["research"],
+            lp002_group["market"],
+            lp002_payload,
+            lp002_group["provider"],
+        )
+        lp002_assessment = modules[
+            "build_candidate_gap_assessment_v1"
+        ].build_candidate_gap_assessment_v1(
+            lp002_group["research"],
+            lp002_group["dossier"],
+            lp002_group["market"],
+            lp002_response,
+            lp002_group["provider"],
+        )
+        lp002_eligibility = modules[
+            "build_career_next_action_eligibility_v1"
+        ].build_career_next_action_eligibility_v1(
+            lp002_group["research"],
+            lp002_group["dossier"],
+            lp002_group["market"],
+            lp002_response,
+            lp002_assessment,
+            lp002_group["provider"],
+        )
+        lp002_learning = modules[
+            "build_career_learning_decision_v3"
+        ].build_career_learning_decision_v3(
+            lp002_group["research"],
+            lp002_group["dossier"],
+            lp002_group["market"],
+            lp002_response,
+            lp002_assessment,
+            lp002_eligibility,
+            lp002_group["provider"],
+        )
+        lp002_valid = (
+            lp002_response["selected_provider_ordinal"] == "L2"
+            and lp002_assessment["selected_provider_option_id"] == "LP-002"
+            and lp002_eligibility["selected_provider_option_id"] == "LP-002"
+            and lp002_learning["decisions"][0]["provider_option_id"] == "LP-002"
+        )
+        provider_displacement_rejected = modules[
             "validate_career_learning_decision_v3"
         ].validate_career_learning_decision_v3(
             selected["learning"],
-            selected["research"],
-            selected["dossier"],
-            selected["market"],
-            selected["response"],
-            selected["assessment"],
-            selected["eligibility"],
-            displaced,
-        ) != ["career learning decision v3 does not match validated sources"]:
+            lp002_group["research"],
+            lp002_group["dossier"],
+            lp002_group["market"],
+            lp002_response,
+            lp002_assessment,
+            lp002_eligibility,
+            lp002_group["provider"],
+        ) == ["career learning decision v3 does not match validated sources"]
+        if not lp002_valid or not provider_displacement_rejected:
             raise InstalledSmokeError
 
         forged = copy.deepcopy(proof["eligibility"])
@@ -856,8 +1023,9 @@ def run_installed_semantic_matrix(
             ),
             "career learning decision v3 is invalid",
         )
+        forged_sources_rejected = True
         crossed = built[("insufficient_recurrence", "es")]
-        if modules[
+        crossed_sources_rejected = modules[
             "validate_career_learning_decision_v3"
         ].validate_career_learning_decision_v3(
             proof["learning"],
@@ -867,7 +1035,8 @@ def run_installed_semantic_matrix(
             proof["response"],
             proof["assessment"],
             proof["eligibility"],
-        ) != ["career learning decision v3 does not match validated sources"]:
+        ) == ["career learning decision v3 does not match validated sources"]
+        if not crossed_sources_rejected:
             raise InstalledSmokeError
 
         mutable = _OnePassMapping(copy.deepcopy(proof["eligibility"]))
@@ -876,7 +1045,8 @@ def run_installed_semantic_matrix(
         ].build_career_learning_decision_v3(
             proof["research"], proof["dossier"], proof["market"], proof["response"], proof["assessment"], mutable
         )
-        if not mutable.exhausted or mutable_result != proof["learning"]:
+        mutable_sources_rejected = mutable.exhausted and mutable_result == proof["learning"]
+        if not mutable_sources_rejected:
             raise InstalledSmokeError
         _expect_generic_rejection(
             lambda: modules["build_career_learning_decision_v3"].build_career_learning_decision_v3(
@@ -884,16 +1054,18 @@ def run_installed_semantic_matrix(
             ),
             "career learning decision v3 is invalid",
         )
+        oversized_sources_rejected = True
         _expect_generic_rejection(
             lambda: modules["build_career_learning_decision_v3"].build_career_learning_decision_v3(
                 proof["research"], proof["dossier"], proof["market"], proof["response"], proof["assessment"], _RaisingMapping()
             ),
             "career learning decision v3 is invalid",
         )
+        exceptional_sources_rejected = True
 
-        if installed_historical_render_snapshots(sources, modules) != (
-            HISTORICAL_RENDER_SNAPSHOTS
-        ):
+        historical_snapshots = installed_historical_render_snapshots(sources, modules)
+        historical_bytes_valid = historical_snapshots == HISTORICAL_RENDER_SNAPSHOTS
+        if not historical_bytes_valid:
             raise InstalledSmokeError
 
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -919,7 +1091,8 @@ def run_installed_semantic_matrix(
                 pass
             else:
                 raise InstalledSmokeError
-            if writer_output.exists():
+            writer_output_rejected = not writer_output.exists()
+            if not writer_output_rejected:
                 raise InstalledSmokeError
             cli_output = root / "cli.html"
             result = subprocess.run(
@@ -946,16 +1119,94 @@ def run_installed_semantic_matrix(
                 timeout=60,
                 env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
             )
-            if result.returncode != 2 or cli_output.exists() or "Traceback" in result.stderr:
+            cli_output_rejected = (
+                result.returncode == 2
+                and not cli_output.exists()
+                and "Traceback" not in result.stderr
+            )
+            if not cli_output_rejected:
                 raise InstalledSmokeError
 
-        return {
-            "matrix_version": "vacancy-first-installed-smoke-v1",
-            "accepted": 39,
-            "rejected": 9,
-            "accepted_groups": ACCEPTED_GROUPS,
-            "rejected_groups": REJECTED_GROUPS,
+        nonlearning_results = {
+            name: (
+                built[(name, "es")]["eligibility"]["recommended_next_action"]
+                == action,
+                built[(name, "es")]["learning"]["decisions"] == [],
+            )
+            for name, action in expected_nonlearning.items()
         }
+        exact_unions_valid = (
+            row["requirement_ids"] == ["V-001-R-01", "V-003-R-01"]
+            and row["vacancy_ids"] == ["V-001", "V-003"]
+            and row["claim_ids"] == ["C-002"]
+            and row["source_evidence_ids"] == ["E-004"]
+        )
+        exact_snapshots_valid = all(
+            isinstance(proof["learning"].get(field), str)
+            and "sha256-" in proof["learning"][field]
+            for field in (
+                "source_research_snapshot",
+                "source_dossier_snapshot",
+                "source_alignment_snapshot",
+                "source_market_snapshot",
+                "source_gap_response_snapshot",
+                "source_gap_assessment_snapshot",
+                "source_next_action_eligibility_snapshot",
+            )
+        )
+        dom_aria_valid = (
+            rendered.count('class="card span-12 weekly-decision"') == 1
+            and rendered.count('class="weekly-decision-action"') == 1
+            and 'aria-labelledby="weekly-decision-title weekly-decision-vacancy"'
+            in rendered
+            and 'aria-describedby="weekly-decision-evidence weekly-decision-boundary"'
+            in rendered
+        )
+        accepted_matrix = (
+            ("response_mapping", "public_v1_is_persisted", public_v1_response["selected_vacancy_ordinal"] == "V1"),
+            ("response_mapping", "public_v1_resolves_private_v003", public_v1_assessment["selected_vacancy_id"] == "V-003"),
+            ("response_mapping", "private_v003_is_not_persisted_publicly", "V-003" not in json.dumps(public_v1_response, sort_keys=True)),
+            ("response_mapping", "response_and_assessment_validate", public_v1_valid),
+            ("recurrence_routes", "one_of_five_is_exact", insufficient["eligibility"]["recurrence"] == "1/5"),
+            ("recurrence_routes", "one_of_five_routes_private_packet", insufficient["eligibility"]["recommended_next_action"] == "prepare_private_vacancy_packet"),
+            ("recurrence_routes", "one_of_five_has_zero_learning", insufficient["learning"]["decisions"] == []),
+            ("recurrence_routes", "two_of_five_is_exact", proof["eligibility"]["recurrence"] == "2/5"),
+            ("recurrence_routes", "two_of_five_proof_has_one_learning", len(proof["learning"]["decisions"]) == 1),
+            ("nonlearning_routes", "supported_action", nonlearning_results["supported"][0]),
+            ("nonlearning_routes", "supported_zero_learning", nonlearning_results["supported"][1]),
+            ("nonlearning_routes", "unknown_action", nonlearning_results["gap_unknown"][0]),
+            ("nonlearning_routes", "unknown_zero_learning", nonlearning_results["gap_unknown"][1]),
+            ("nonlearning_routes", "experience_action", nonlearning_results["experience"][0]),
+            ("nonlearning_routes", "experience_zero_learning", nonlearning_results["experience"][1]),
+            ("provider_lifecycle", "provider_absent", absent["eligibility"]["state"] == "provider_evidence_required"),
+            ("provider_lifecycle", "provider_empty", empty_eligibility["state"] == "provider_evidence_required"),
+            ("provider_lifecycle", "provider_choice", choice["eligibility"]["state"] == "provider_selection_required"),
+            ("provider_lifecycle", "l1_selects_lp001", selected["eligibility"]["selected_provider_option_id"] == "LP-001"),
+            ("provider_lifecycle", "l2_is_public_selection", lp002_response["selected_provider_ordinal"] == "L2"),
+            ("provider_lifecycle", "l2_resolves_lp002_chain", lp002_valid),
+            *(
+                ("action_matrix_es", name, action_matrix_results[name])
+                for name, *_ in CASE_RULES
+            ),
+            ("action_matrix_en", "all_actions_have_copy", localized_copy_results["en"][0] and eligibility_copy["es"]["actions"] != eligibility_copy["en"]["actions"]),
+            ("action_matrix_en", "all_learning_bases_have_copy", localized_copy_results["en"][1] and learning_copy["es"]["decision_bases"] != learning_copy["en"]["decision_bases"]),
+            ("exact_unions_snapshots", "exact_provenance_unions", exact_unions_valid),
+            ("exact_unions_snapshots", "all_source_snapshots", exact_snapshots_valid),
+            ("dom_aria", "single_named_weekly_card", dom_aria_valid),
+            ("historical_bytes", "v1_v2_no_market_pinned", historical_bytes_valid),
+        )
+        rejected_matrix = (
+            ("provider_displacement", "lp002_rejects_prior_lp001_chain", provider_displacement_rejected),
+            ("private_disclosure", "private_values_absent", private_disclosure_rejected),
+            ("forged_sources", "forged_action_rejected", forged_sources_rejected),
+            ("crossed_sources", "crossed_group_rejected", crossed_sources_rejected),
+            ("mutable_sources", "one_pass_input_is_not_reread", mutable_sources_rejected),
+            ("oversized_sources", "oversized_group_rejected", oversized_sources_rejected),
+            ("exceptional_sources", "exceptional_mapping_rejected", exceptional_sources_rejected),
+            ("writer_output", "invalid_group_leaves_no_output", writer_output_rejected),
+            ("cli_output", "invalid_group_leaves_no_output", cli_output_rejected),
+        )
+        return _semantic_matrix_receipt(accepted_matrix, rejected_matrix)
     except (InstalledSmokeError, OSError, RuntimeError, TypeError, ValueError, subprocess.TimeoutExpired):
         raise InstalledSmokeError("installed semantic smoke matrix failed") from None
 
@@ -979,6 +1230,8 @@ def compose_installed_smoke_receipt(
         "matrix_version": semantic["matrix_version"],
         "accepted": semantic["accepted"],
         "rejected": semantic["rejected"],
+        "accepted_cases": semantic["accepted_cases"],
+        "rejected_cases": semantic["rejected_cases"],
         "accepted_groups": semantic["accepted_groups"],
         "rejected_groups": semantic["rejected_groups"],
         "file_count": parity["file_count"],

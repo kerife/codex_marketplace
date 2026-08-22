@@ -199,7 +199,16 @@ def parse_vacancy_first_attestation(text: str) -> dict[str, str]:
     return parsed
 
 
-def validate_vacancy_first_attestation(text: str, *, expected_version: str) -> list[str]:
+def validate_vacancy_first_attestation(
+    text: str,
+    *,
+    expected_source_commit: str,
+    expected_plugin_tree: str,
+    expected_version: str,
+    expected_file_count: int,
+    expected_source_aggregate_sha256: str,
+    expected_cache_aggregate_sha256: str,
+) -> list[str]:
     try:
         parsed = parse_vacancy_first_attestation(text)
     except AssertionError:
@@ -225,25 +234,33 @@ def validate_vacancy_first_attestation(text: str, *, expected_version: str) -> l
         parsed["attestation_state"] == "vacancy_first_installed_green"
         and parsed["plugin_identity"] == "professional-growth-coach@codex-marketplace-public"
         and re.fullmatch(r"[0-9a-f]{40}", parsed["source_commit"]) is not None
+        and parsed["source_commit"] == expected_source_commit
         and re.fullmatch(r"[0-9a-f]{40}", parsed["source_tree"]) is not None
+        and parsed["source_tree"] == expected_plugin_tree
         and re.fullmatch(r"0\.2\.0\+codex\.\d{14}", parsed["installed_cache_version"])
         is not None
         and parsed["installed_cache_version"] == expected_version
         and parsed["installed_cache_family"] == "codex-marketplace-public/professional-growth-coach"
         and parsed["installed_cache_resolution"]
         == "exact_enabled_reported_version_not_alias_or_glob"
-        and source_count == cache_count and source_count > 0
+        and source_count == cache_count == expected_file_count
+        and expected_file_count > 0
         and parsed["sorted_relative_inventory_equal"] == "true"
         and parsed["per_file_sha256_equal"] == "true"
         and re.fullmatch(r"[0-9a-f]{64}", parsed["source_aggregate_sha256"])
         is not None
-        and parsed["source_aggregate_sha256"] == parsed["cache_aggregate_sha256"]
+        and re.fullmatch(r"[0-9a-f]{64}", parsed["cache_aggregate_sha256"])
+        is not None
+        and parsed["source_aggregate_sha256"]
+        == expected_source_aggregate_sha256
+        and parsed["cache_aggregate_sha256"]
+        == expected_cache_aggregate_sha256
         and all(parsed[field] == "0" for field in zero_fields)
         and parsed["source_verification_matrix"] == "passed"
         and parsed["installed_package_static_scope"]
         == "passed_repository_conformance_not_bundled"
-        and accepted_count == accepted_total and accepted_count > 0
-        and rejected_count == rejected_total and rejected_count > 0
+        and accepted_count == accepted_total == 39
+        and rejected_count == rejected_total == 9
         and parsed["installed_import_boundary"] == "exact_cache_root_only"
         and parsed["installed_output_atomicity"] == "passed_generic_no_echo"
         and parsed["visual_browser_assistive_technology_QA"] == "not_run_not_claimed"
@@ -257,22 +274,28 @@ def validate_vacancy_first_attestation(text: str, *, expected_version: str) -> l
 class FullPluginIntegrationTests(unittest.TestCase):
     def test_vacancy_first_attestation_parser_requires_complete_fresh_task_7_evidence(self) -> None:
         version = "0.2.0+codex.20260822000000"
+        source_commit = "a" * 40
+        plugin_tree = "b" * 40
+        source_aggregate = "c" * 64
+        cache_aggregate = "c" * 64
+        file_count = 147
         values = {
             "attestation_state": "vacancy_first_installed_green",
             "plugin_identity": "professional-growth-coach@codex-marketplace-public",
-            "source_commit": "a" * 40, "source_tree": "b" * 40,
+            "source_commit": source_commit, "source_tree": plugin_tree,
             "installed_cache_family": "codex-marketplace-public/professional-growth-coach",
             "installed_cache_version": version,
             "installed_cache_resolution": "exact_enabled_reported_version_not_alias_or_glob",
-            "source_file_count": "147", "installed_file_count": "147",
+            "source_file_count": str(file_count), "installed_file_count": str(file_count),
             "sorted_relative_inventory_equal": "true", "per_file_sha256_equal": "true",
-            "source_aggregate_sha256": "c" * 64, "cache_aggregate_sha256": "c" * 64,
+            "source_aggregate_sha256": source_aggregate,
+            "cache_aggregate_sha256": cache_aggregate,
             "source_bytecode_count": "0", "installed_bytecode_count": "0",
             "source_pycache_directory_count": "0", "installed_pycache_directory_count": "0",
             "source_verification_matrix": "passed",
             "installed_package_static_scope": "passed_repository_conformance_not_bundled",
-            "installed_semantic_accepted_smokes": "24/24",
-            "installed_semantic_rejected_smokes": "31/31",
+            "installed_semantic_accepted_smokes": "39/39",
+            "installed_semantic_rejected_smokes": "9/9",
             "installed_import_boundary": "exact_cache_root_only",
             "installed_output_atomicity": "passed_generic_no_echo",
             "visual_browser_assistive_technology_QA": "not_run_not_claimed",
@@ -283,26 +306,49 @@ class FullPluginIntegrationTests(unittest.TestCase):
         def render(fields: dict[str, str]) -> str:
             return "\n".join(f"{key}: `{value}`" for key, value in fields.items())
 
+        expected = {
+            "expected_source_commit": source_commit,
+            "expected_plugin_tree": plugin_tree,
+            "expected_version": version,
+            "expected_file_count": file_count,
+            "expected_source_aggregate_sha256": source_aggregate,
+            "expected_cache_aggregate_sha256": cache_aggregate,
+        }
+
         valid = render(values)
-        self.assertEqual([], validate_vacancy_first_attestation(valid, expected_version=version))
+        self.assertEqual([], validate_vacancy_first_attestation(valid, **expected))
         cases = {
             "missing": {key: value for key, value in values.items() if key != "source_tree"},
+            "stale-source-commit": {**values, "source_commit": "d" * 40},
+            "stale-plugin-tree": {**values, "source_tree": "e" * 40},
             "stale-version": {**values, "installed_cache_version": "0.2.0+codex.20260821000000"},
             "count-mismatch": {**values, "installed_file_count": "146"},
             "digest-mismatch": {**values, "cache_aggregate_sha256": "d" * 64},
-            "zero-smokes": {**values, "installed_semantic_accepted_smokes": "0/0"},
+            "wrong-equal-aggregates": {
+                **values,
+                "source_aggregate_sha256": "d" * 64,
+                "cache_aggregate_sha256": "d" * 64,
+            },
+            "accepted-not-39-of-39": {
+                **values,
+                "installed_semantic_accepted_smokes": "38/38",
+            },
+            "rejected-not-9-of-9": {
+                **values,
+                "installed_semantic_rejected_smokes": "8/8",
+            },
             "claimed-visual": {**values, "visual_browser_assistive_technology_QA": "passed"},
         }
         for label, fields in cases.items():
             with self.subTest(case=label):
                 self.assertEqual(
                     ["release attestation contract is invalid"],
-                    validate_vacancy_first_attestation(render(fields), expected_version=version),
+                    validate_vacancy_first_attestation(render(fields), **expected),
                 )
         duplicate = valid + f"\nsource_tree: `{'e' * 40}`"
         self.assertEqual(
             ["release attestation contract is invalid"],
-            validate_vacancy_first_attestation(duplicate, expected_version=version),
+            validate_vacancy_first_attestation(duplicate, **expected),
         )
 
     def test_release_attestation_rejects_missing_or_empty_roots(self) -> None:
