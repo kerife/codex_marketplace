@@ -56,6 +56,28 @@ MARKET_DOSSIER_V2_FIXTURE_PATHS = (
         "career-market-learning-dossier-v2/limited-four-en.json"
     ),
 )
+CAREER_NEXT_ACTION_ELIGIBILITY_CONDITIONS = (
+    "unavailable",
+    "selection_required",
+    "insufficient_recurrence",
+    "gap_unknown",
+    "supported",
+    "provider_choice",
+    "provider_evidence",
+    "experience",
+    "proof",
+    "practice",
+    "terminology",
+    "knowledge",
+)
+CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_PATHS = tuple(
+    Path(
+        "tests/evals/with-skill/fixtures/career-next-action-eligibility-v1/"
+        f"{condition}-{locale}/sources.json"
+    )
+    for condition in CAREER_NEXT_ACTION_ELIGIBILITY_CONDITIONS
+    for locale in ("es", "en")
+)
 RECRUITER_PRACTICE_FIXTURE_PATH = (
     REPO_ROOT
     / "tests"
@@ -1164,6 +1186,102 @@ class RepositoryPrivacyTests(unittest.TestCase):
             with self.subTest(path=str(relative_path)):
                 text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
                 self.assertEqual({}, scanner.scan_text(relative_path, text))
+
+    def test_canonical_eligibility_source_goldens_pass_repository_privacy_scan(
+        self,
+    ) -> None:
+        scanner = load_scanner()
+
+        self.assertEqual(24, len(CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_PATHS))
+        for relative_path in CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_PATHS:
+            with self.subTest(path=str(relative_path)):
+                text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertEqual({}, scanner.scan_text(relative_path, text))
+
+    def test_eligibility_source_projection_is_limited_to_registered_paths(self) -> None:
+        scanner = load_scanner()
+        registered = CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_PATHS[-1]
+        text = (REPO_ROOT / registered).read_text(encoding="utf-8")
+        unregistered = Path(
+            "tests/evals/with-skill/fixtures/"
+            "career-next-action-eligibility-v1-copy/knowledge-en/sources.json"
+        )
+
+        violations = scanner.scan_text(unregistered, text)
+
+        self.assertGreater(
+            violations["SINGLING_OUT_STRUCTURED_COMBINATION"], 0
+        )
+
+    def test_eligibility_source_projection_does_not_hide_nested_private_values(
+        self,
+    ) -> None:
+        scanner = load_scanner()
+        relative_path = CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_PATHS[-1]
+        payload = json.loads((REPO_ROOT / relative_path).read_text(encoding="utf-8"))
+        mutations = (
+            (
+                "candidate name",
+                lambda value: value["research"]["search_scope"].__setitem__(
+                    "candidate_name", "Private Person"
+                ),
+                "NAME_FIELD",
+            ),
+            (
+                "analytics value",
+                lambda value: value["executive_dossier"]["analytics"].__setitem__(
+                    "profile_views", 314
+                ),
+                "PRIVATE_ANALYTICS_VALUE",
+            ),
+        )
+
+        for label, mutate, rule_id in mutations:
+            with self.subTest(injection=label):
+                mutated = copy.deepcopy(payload)
+                mutate(mutated)
+                violations = scanner.scan_text(
+                    relative_path, json.dumps(mutated, ensure_ascii=False)
+                )
+                self.assertGreater(violations[rule_id], 0)
+
+    def test_eligibility_source_projection_fails_closed_for_dependency_tampering(
+        self,
+    ) -> None:
+        scanner = load_scanner()
+        relative_path = CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_PATHS[-1]
+        payload = json.loads((REPO_ROOT / relative_path).read_text(encoding="utf-8"))
+        mutations = (
+            (
+                "snapshot",
+                lambda value: value["market_dossier"].__setitem__(
+                    "source_research_snapshot", "snap-market-sha256-" + "0" * 64
+                ),
+            ),
+            (
+                "response",
+                lambda value: value["gap_response"].__setitem__(
+                    "relation", "practice_gap"
+                ),
+            ),
+            (
+                "assessment",
+                lambda value: value["gap_assessment"]["assessments"][0].__setitem__(
+                    "relation", "practice_gap"
+                ),
+            ),
+        )
+
+        for label, mutate in mutations:
+            with self.subTest(tampering=label):
+                mutated = copy.deepcopy(payload)
+                mutate(mutated)
+                violations = scanner.scan_text(
+                    relative_path, json.dumps(mutated, ensure_ascii=False)
+                )
+                self.assertGreater(
+                    violations["SINGLING_OUT_STRUCTURED_COMBINATION"], 0
+                )
 
     def test_semantic_v2_renderer_projects_no_internal_or_source_provenance(self) -> None:
         runtime = load_market_runtime()

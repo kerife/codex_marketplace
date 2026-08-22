@@ -119,6 +119,38 @@ MARKET_DOSSIER_V2_PRIVACY_BOUNDARY = (
 MARKET_SCRIPTS_ROOT = (
     Path(__file__).resolve().parents[1] / "plugins/professional-growth-coach/scripts"
 )
+CAREER_NEXT_ACTION_ELIGIBILITY_CONDITIONS = (
+    "unavailable",
+    "selection_required",
+    "insufficient_recurrence",
+    "gap_unknown",
+    "supported",
+    "provider_choice",
+    "provider_evidence",
+    "experience",
+    "proof",
+    "practice",
+    "terminology",
+    "knowledge",
+)
+CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_PATHS = frozenset(
+    Path(
+        "tests/evals/with-skill/fixtures/career-next-action-eligibility-v1/"
+        f"{condition}-{locale}/sources.json"
+    )
+    for condition in CAREER_NEXT_ACTION_ELIGIBILITY_CONDITIONS
+    for locale in ("es", "en")
+)
+CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_FIELDS = frozenset(
+    {
+        "research",
+        "executive_dossier",
+        "market_dossier",
+        "gap_response",
+        "gap_assessment",
+        "provider_research",
+    }
+)
 MARKET_DOSSIER_V2_SYNTHETIC_SOURCES = {
     Path(
         "tests/evals/with-skill/fixtures/"
@@ -620,6 +652,85 @@ def _has_known_synthetic_market_provenance(value: object) -> bool:
     return True
 
 
+@lru_cache(maxsize=1)
+def _load_career_next_action_eligibility_builder() -> object | None:
+    path = MARKET_SCRIPTS_ROOT / "build_career_next_action_eligibility_v1.py"
+    specification = importlib.util.spec_from_file_location(
+        "job_search_coach_eligibility_privacy", path
+    )
+    if specification is None or specification.loader is None:
+        return None
+    module = importlib.util.module_from_spec(specification)
+    sys.modules[specification.name] = module
+    previous_path = list(sys.path)
+    sys.path.insert(0, str(MARKET_SCRIPTS_ROOT))
+    try:
+        specification.loader.exec_module(module)
+    except Exception:
+        return None
+    finally:
+        sys.path[:] = previous_path
+    project = getattr(module, "_project_eligibility_from_frozen", None)
+    return project if callable(project) else None
+
+
+def _has_known_synthetic_eligibility_provenance(value: object) -> bool:
+    if not isinstance(value, dict):
+        return False
+    research = value.get("research")
+    if _has_known_synthetic_market_provenance(research):
+        return True
+    if not isinstance(research, dict):
+        return False
+    search_limit = research.get("search_limit")
+    return (
+        research.get("state") == "market_evidence_unavailable"
+        and research.get("employers") == []
+        and research.get("vacancies") == []
+        and isinstance(search_limit, dict)
+        and search_limit.get("limitation") == "Synthetic test unavailability."
+    )
+
+
+def _safe_career_next_action_eligibility_sources_scan_value(
+    path: Path, text: str, value: object
+) -> dict[str, object] | None:
+    if (
+        path not in CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_PATHS
+        or not isinstance(value, dict)
+        or set(value) != CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_FIELDS
+        or len(text.encode("utf-8")) > 256 * 1024
+        or not _json_depth_is_bounded(value, 12)
+        or not _has_known_synthetic_eligibility_provenance(value)
+    ):
+        return None
+    before = copy.deepcopy(value)
+    project = _load_career_next_action_eligibility_builder()
+    if project is None:
+        return None
+    try:
+        projected = project(value)
+        expected_path = Path(__file__).resolve().parents[1] / path.with_name(
+            "eligibility.json"
+        )
+        expected_text = expected_path.read_text(encoding="utf-8")
+        expected = json.loads(
+            expected_text,
+            object_pairs_hook=_unique_json_object,
+        )
+    except Exception:
+        return None
+    if (
+        value != before
+        or not isinstance(projected, dict)
+        or projected != expected
+        or len(expected_text.encode("utf-8")) > 64 * 1024
+        or not _json_depth_is_bounded(expected, 8)
+    ):
+        return None
+    return projected
+
+
 def _is_exact_synthetic_market_v2_fixture(
     path: Path, text: str, value: object
 ) -> bool:
@@ -967,6 +1078,12 @@ def scan_text(path: Path, text: str) -> Counter[str]:
             if safe_scan_value is None:
                 safe_scan_value = _safe_market_dossier_scan_value(
                     path, text, dossier_candidate
+                )
+            if safe_scan_value is None:
+                safe_scan_value = (
+                    _safe_career_next_action_eligibility_sources_scan_value(
+                        path, text, dossier_candidate
+                    )
                 )
             if safe_scan_value is None:
                 safe_scan_value = _safe_recruiter_practice_scan_value(
