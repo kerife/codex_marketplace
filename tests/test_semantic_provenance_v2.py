@@ -9,6 +9,7 @@ import sys
 import unittest
 from collections.abc import Mapping
 from pathlib import Path
+from urllib.parse import quote
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -204,6 +205,28 @@ class CandidateMarketAlignmentV2Tests(unittest.TestCase):
                     ALIGNMENT_V2.derive_candidate_market_alignment_v2(
                         malformed_research, malformed_dossier
                     )
+                self.assertNotIn(sentinel, str(raised.exception))
+
+    def test_alignment_deepcopy_runtime_errors_are_generic_total_and_unlinked(self):
+        research, dossier = self.complete_sources()
+        sentinel = "alignment-deepcopy-runtime-sentinel"
+
+        class CopyBomb(dict):
+            def __deepcopy__(self, memo):
+                raise RuntimeError(sentinel)
+
+        for name, malformed_research, malformed_dossier in (
+            ("research", CopyBomb(research), dossier),
+            ("dossier", research, CopyBomb(dossier)),
+        ):
+            with self.subTest(source=name):
+                with self.assertRaisesRegex(
+                    ValueError, r"^alignment input is invalid$"
+                ) as raised:
+                    ALIGNMENT_V2.derive_candidate_market_alignment_v2(
+                        malformed_research, malformed_dossier
+                    )
+                self.assertIsNone(raised.exception.__cause__)
                 self.assertNotIn(sentinel, str(raised.exception))
 
     def test_wide_mapping_is_rejected_without_eager_scalar_enqueuing(self):
@@ -586,6 +609,7 @@ class CareerLearningProviderResearchTests(unittest.TestCase):
             ("maintenance", "prefile://public-provider-metadata"),
             ("maintenance", "Terraformfile://public-provider-metadata"),
             ("maintenance", "See (https://developer.hashicorp.com/terraform/tutorials)"),
+            ("unknowns", "A literal 100% value remains unknown."),
             ("maintenance", "Harmless punctuation: [](),=\"/\\"),
         )
         for field, value in cases:
@@ -593,7 +617,41 @@ class CareerLearningProviderResearchTests(unittest.TestCase):
                 altered = copy.deepcopy(provider)
                 altered["options"][0][field] = value
                 self.assertEqual([], PROVIDER_VALIDATOR.validate_provider_research(altered))
+        encoded_official = copy.deepcopy(provider)
+        encoded_official["options"][0]["url"] = (
+            "https://developer.hashicorp.com/terraform/tutorials/provider%20configuration"
+        )
+        self.assertEqual(
+            [], PROVIDER_VALIDATOR.validate_provider_research(encoded_official)
+        )
         self.assertEqual([], PROVIDER_VALIDATOR.validate_provider_research(provider))
+
+    def test_provider_research_rejects_seven_round_file_uri_in_every_prose_field(self):
+        provider = self.provider_fixture("complete-es.json")
+        encoded = "file:///source"
+        for _ in range(7):
+            encoded = quote(encoded, safe="")
+        fields = (
+            "provider", "option", "source_title", "geography", "current_cost", "currency",
+            "tax", "duration", "prerequisite", "renewal", "maintenance", "unknowns",
+        )
+        for field in fields:
+            with self.subTest(field=field):
+                altered = copy.deepcopy(provider)
+                altered["options"][0][field] = encoded
+                errors = PROVIDER_VALIDATOR.validate_provider_research(altered)
+                self.assertIn("provider research has unsafe public metadata", errors)
+
+    def test_provider_decoder_is_bounded_and_fails_closed_before_fixed_point(self):
+        provider = self.provider_fixture("complete-es.json")
+        encoded = "file:///source"
+        for _ in range(20):
+            encoded = quote(encoded, safe="")
+        self.assertLessEqual(len(encoded), PROVIDER_VALIDATOR._MAX_TEXT)
+        altered = copy.deepcopy(provider)
+        altered["options"][0]["unknowns"] = encoded
+        errors = PROVIDER_VALIDATOR.validate_provider_research(altered)
+        self.assertIn("provider research has unsafe public metadata", errors)
 
     def test_provider_research_rejects_punctuation_wrapped_file_uris_in_every_free_text_field_without_echo(self):
         provider = self.provider_fixture("complete-es.json")
@@ -759,7 +817,7 @@ class CareerLearningDecisionV2Tests(unittest.TestCase):
             "term_label": "Terraform",
             "support_state": "candidate_reported_match",
             "recurrence": "1/5",
-            "vacancy_ordinals": ["V3"],
+            "vacancy_ordinals": ["V1"],
         }
 
     @staticmethod
@@ -880,7 +938,7 @@ class CareerLearningDecisionV2Tests(unittest.TestCase):
             [{
                 "signal": "terraform", "term_label": "Terraform",
                 "support_state": "candidate_reported_match", "recurrence": "1/5",
-                "vacancy_ordinals": ["V3"],
+                "vacancy_ordinals": ["V1"],
             }],
             row["signal_routes"],
         )
@@ -891,6 +949,49 @@ class CareerLearningDecisionV2Tests(unittest.TestCase):
         self.assertEqual(
             [], LEARNING_V2_VALIDATOR.validate_learning_bundle_v2(result, *sources)
         )
+
+    def test_learning_routes_resolve_every_public_ordinal_to_exact_vacancy_ids(self):
+        sources = self.complete_v2_sources()
+        result = LEARNING_V2_BUILDER.build_learning_bundle_v2(
+            *sources, [self.request("build_bounded_proof")]
+        )
+        public_ids = [row["vacancy_id"] for row in sources[1]["vacancies"]]
+        for decision in result["decisions"]:
+            resolved: list[str] = []
+            for route in decision["signal_routes"]:
+                for ordinal in route["vacancy_ordinals"]:
+                    index = int(ordinal.removeprefix("V")) - 1
+                    self.assertGreaterEqual(index, 0)
+                    self.assertLess(index, len(public_ids))
+                    resolved.append(public_ids[index])
+            self.assertEqual(decision["vacancy_ids"], sorted(set(resolved)))
+        self.assertEqual(["V-003"], result["decisions"][0]["vacancy_ids"])
+        self.assertEqual(["V1"], result["decisions"][0]["signal_routes"][0]["vacancy_ordinals"])
+
+    def test_learning_sources_require_one_normative_as_of_date(self):
+        sources = list(self.complete_v2_sources())
+        common_dates = {
+            sources[0]["as_of_date"],
+            sources[1]["as_of_date"],
+            sources[3]["as_of_date"],
+        }
+        self.assertEqual({"2026-08-13"}, common_dates)
+
+        crossed_provider = copy.deepcopy(sources[3])
+        crossed_provider["as_of_date"] = "2026-08-12"
+        for option in crossed_provider["options"]:
+            option["source_date"] = "2026-08-12"
+            option["access_date"] = "2026-08-12"
+        self.assertEqual(
+            [], PROVIDER_VALIDATOR.validate_provider_research(crossed_provider)
+        )
+        with self.assertRaisesRegex(
+            ValueError, r"^learning decision v2 is invalid$"
+        ):
+            LEARNING_V2_BUILDER.build_learning_bundle_v2(
+                sources[0], sources[1], sources[2], crossed_provider,
+                [self.request("build_bounded_proof")],
+            )
 
     def test_learning_builder_rejects_local_path_provider_before_projection(self):
         sources = list(self.complete_v2_sources())
@@ -941,6 +1042,25 @@ class CareerLearningDecisionV2Tests(unittest.TestCase):
             )
         self.assertNotIn(sentinel, str(raised.exception))
 
+    def test_learning_builder_rejects_seven_round_file_uri_provider_before_projection(self):
+        sources = list(self.complete_v2_sources())
+        encoded = "file:///source"
+        for _ in range(7):
+            encoded = quote(encoded, safe="")
+        sources[3]["options"][0]["unknowns"] = encoded
+        self.assertIn(
+            "provider research has unsafe public metadata",
+            PROVIDER_VALIDATOR.validate_provider_research(sources[3]),
+        )
+        with self.assertRaisesRegex(
+            ValueError, r"^learning decision v2 is invalid$"
+        ) as raised:
+            LEARNING_V2_BUILDER.build_learning_bundle_v2(
+                *sources,
+                [self.request("research_provider_option", provider_id="LP-001")],
+            )
+        self.assertEqual("learning decision v2 is invalid", str(raised.exception))
+
     def test_multi_signal_routes_preserve_per_signal_vacancy_attribution_and_exact_unions(self):
         research, _market, dossier, provider = self.complete_v2_sources()
         dossier["requested_technology_terms"].append({"term": "Python", "claim_ids": ["C-001"]})
@@ -964,7 +1084,7 @@ class CareerLearningDecisionV2Tests(unittest.TestCase):
         self.assertEqual(["V-001", "V-003"], row["vacancy_ids"])
         self.assertEqual(["devops_engineering", "site_reliability_engineering"], row["target_role_families"])
         self.assertEqual(
-            [("python", ["V1"]), ("terraform", ["V3"])],
+            [("python", ["V1"]), ("terraform", ["V2"])],
             [(route["signal"], route["vacancy_ordinals"]) for route in row["signal_routes"]],
         )
         reordered = copy.deepcopy(request)
@@ -1028,7 +1148,7 @@ class CareerLearningDecisionV2Tests(unittest.TestCase):
             altered["decisions"][0][field] = replacement
             mutations.append(altered)
         crossed_route = copy.deepcopy(result)
-        crossed_route["decisions"][0]["signal_routes"][0]["vacancy_ordinals"] = ["V1"]
+        crossed_route["decisions"][0]["signal_routes"][0]["vacancy_ordinals"] = ["V2"]
         mutations.append(crossed_route)
         for root_field in (
             "source_research_snapshot", "source_dossier_snapshot", "source_alignment_snapshot",

@@ -7,7 +7,7 @@
   "source_dossier_snapshot": "snap-dossier-sha256-4421cc64f2bca782e998ab2f9488be928bf4f27a0e9bb9a706e0abdde0485b03",
   "source_alignment_snapshot": "snap-alignment-sha256-5b9ae602797335597b38e6522f2fb2701709c0d977516a5d111f316b6d3eb436",
   "source_market_snapshot": "snap-market-dossier-v2-sha256-180784acf989a26f7ab33bba5ceeecf45e90382e631a574a9b1e154171b8121b",
-  "source_provider_research_snapshot": "snap-provider-sha256-5055849cdba4ae9c2cb6860cbd2878efd7da00ff83cfea38f570737f3ecd6675",
+  "source_provider_research_snapshot": "snap-provider-sha256-1a47017cdf515c2471fa476fedbfa67ca1a9eaf4ff19d8283cd604aa1bf73a31",
   "decisions": [
     {
       "decision_rank": 1,
@@ -28,7 +28,7 @@
           "support_state": "candidate_reported_match",
           "recurrence": "1/4",
           "vacancy_ordinals": [
-            "V3"
+            "V1"
           ]
         }
       ],
@@ -76,7 +76,7 @@
           "support_state": "candidate_reported_match",
           "recurrence": "1/4",
           "vacancy_ordinals": [
-            "V3"
+            "V1"
           ]
         }
       ],

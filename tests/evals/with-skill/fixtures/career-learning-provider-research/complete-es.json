@@ -1,7 +1,7 @@
 {
   "schema_version": "career-learning-provider-research-v1",
   "locale": "es",
-  "as_of_date": "2026-08-21",
+  "as_of_date": "2026-08-13",
   "state": "complete",
   "options": [
     {
@@ -10,8 +10,8 @@
       "provider": "HashiCorp",
       "option": "Terraform course",
       "source_title": "Terraform course catalog",
-      "source_date": "2026-08-20",
-      "access_date": "2026-08-21",
+      "source_date": "2026-08-12",
+      "access_date": "2026-08-13",
       "source_state": "active",
       "url": "https://developer.hashicorp.com/terraform/tutorials",
       "geography": "online",
@@ -33,8 +33,8 @@
       "provider": "Argo Project",
       "option": "Argo starter course",
       "source_title": "Argo CD documentation",
-      "source_date": "2026-08-20",
-      "access_date": "2026-08-21",
+      "source_date": "2026-08-12",
+      "access_date": "2026-08-13",
       "source_state": "active",
       "url": "https://argo-cd.readthedocs.io/en/stable/",
       "geography": "online",

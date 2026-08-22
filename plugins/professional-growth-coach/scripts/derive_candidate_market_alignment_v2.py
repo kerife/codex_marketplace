@@ -122,7 +122,7 @@ def _validated_copies(research: object, executive_dossier: object) -> tuple[dict
         dossier_copy = copy.deepcopy(executive_dossier)
         research_errors = validate_research(research_copy)
         dossier_errors = validate_dossier(dossier_copy)
-    except (RecursionError, TypeError, ValueError):
+    except Exception:
         raise ValueError("alignment input is invalid") from None
     if (
         research_errors

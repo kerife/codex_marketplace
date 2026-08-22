@@ -218,6 +218,7 @@ COPY = {
         "learning_gap": "Brecha que estamos cerrando",
         "learning_option": "Opción",
         "learning_owner": "Proveedor o dueño",
+        "learning_candidate_owner": "Candidato",
         "learning_evidence": "Señal recurrente",
         "learning_proof_title": "Prueba y costo", "learning_basis": "Base de la decisión",
         "learning_cost_time": "Costo y tiempo",
@@ -282,6 +283,7 @@ COPY = {
         "learning_gap": "Gap we are closing",
         "learning_option": "Option",
         "learning_owner": "Provider or owner",
+        "learning_candidate_owner": "Candidate",
         "learning_evidence": "Recurring signal",
         "learning_proof_title": "Proof and cost", "learning_basis": "Decision basis",
         "learning_cost_time": "Cost and time",
@@ -697,8 +699,10 @@ def _validated_market_group(
         market_copy, research_copy, alignment_copy = copy.deepcopy(
             (market_dossier, market_research, market_alignment)
         )
-    except (RecursionError, TypeError, ValueError) as error:
-        raise DossierValidationError(["market composition inputs have malformed structure"]) from error
+    except Exception:
+        raise DossierValidationError(
+            ["market composition inputs have malformed structure"]
+        ) from None
     if generation == "v1":
         errors = MARKET_VALIDATOR.validate_market_dossier(
             market_copy, research_copy, _plain(dossier), alignment_copy
@@ -776,7 +780,7 @@ def _validated_learning_group(
         return BASE._mapping(frozen)
     except DossierValidationError:
         raise
-    except (AttributeError, KeyError, RecursionError, TypeError, ValueError):
+    except Exception:
         raise DossierValidationError(["learning decision is unavailable"]) from None
 
 
@@ -898,18 +902,32 @@ def _render_learning_decision_v2(
             </div>'''
             )
         decision_label = labels["learning_decisions"][str(row["decision"])]
+        gap_label = labels["learning_gap_types"][str(row["gap_type"])]
+        option_type = labels["learning_option_types"][str(row["option_type"])]
+        owner = str(row["provider_or_owner"])
+        if owner == "candidate_owned":
+            owner = labels["learning_candidate_owner"]
         decision_basis = html.escape(str(row["decision_basis"]), quote=True)
         cards.append(
             f'''<article class="card span-4 learning-decision-card" aria-labelledby="{heading_id}" aria-describedby="learning-decision-boundary">
-          <div class="learning-decision-header"><span class="learning-decision-rank" aria-hidden="true">{rank}</span><h3 id="{heading_id}">{labels['learning_decision_number'].format(rank=rank)}</h3></div>
-          <div class="learning-decision-proof">
+          <div class="learning-decision-header"><span class="learning-decision-rank" aria-hidden="true">{rank}</span><h3 id="{heading_id}">{html.escape(str(row['option_name']), quote=True)}</h3></div>
+          <p><span class="label">{labels['learning_gap']}</span>{html.escape(gap_label, quote=True)}</p>
+          <p><span class="label">{labels['learning_option']}</span>{html.escape(option_type, quote=True)}</p>
+          <p><span class="label">{labels['learning_owner']}</span>{html.escape(owner, quote=True)}</p>
+          <div class="learning-decision-proof" role="group" aria-labelledby="learning-decision-proof-title-{rank}">
+            <h4 id="learning-decision-proof-title-{rank}">{labels['learning_proof_title']}</h4>
+            <p><span class="label">{labels['learning_basis']}</span>{decision_basis}</p>
             <div class="learning-signal-route" role="group" aria-labelledby="{route_title_id}">
               <h4 id="{route_title_id}">{labels['learning_route']}</h4>
               {''.join(route_rows)}
             </div>
+            <p><span class="label">{labels['learning_cost_time']}</span>{html.escape(str(row['cost_time_band']), quote=True)}</p>
+            <p><span class="label">{labels['learning_signal_boundary']}</span>{html.escape(str(row['expected_signal_boundary']), quote=True)}</p>
           </div>
-          <p><span class="label">{labels['learning_basis']}</span>{decision_basis}</p>
+          <p><span class="label">{labels['learning_alternative']}</span>{html.escape(str(row['portfolio_or_no_learning_alternative']), quote=True)}</p>
+          <p><span class="label">{labels['learning_risk']}</span>{html.escape(str(row['overbuying_risk']), quote=True)}</p>
           <p><span class="label">{labels['learning_decision']}</span>{decision_label}</p>
+          <p><span class="label">{labels['learning_gate']}</span>{html.escape(str(row['next_action_gate']), quote=True)}</p>
         </article>'''
         )
     sample_count = len(vacancies)

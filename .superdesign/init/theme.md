@@ -1461,6 +1461,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   .vacancy-alignment-card,
   .market-matrix-row,
   .recurrence-row,
+  .learning-signal-route-row,
   .gap-closure-route { break-inside: avoid; page-break-inside: avoid; }
   .market-summary-card { break-inside: avoid; page-break-inside: avoid; }
   .market-vacancy-key { break-inside: avoid; page-break-inside: avoid; break-after: avoid; page-break-after: avoid; }
@@ -1585,6 +1586,18 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 }
 .learning-decision-proof h4 { margin: 0; font-size: 1rem; }
 .learning-decision-proof p { margin-top: .45rem; }
+.learning-signal-route-row {
+  min-width: 0;
+  padding: .6rem 0;
+}
+.learning-signal-route-row + .learning-signal-route-row {
+  margin-top: .2rem;
+  padding-top: .8rem;
+  border-top: 1px solid var(--muted);
+}
+.learning-signal-route-row:last-child { padding-bottom: 0; }
+.learning-signal-route-row > strong { display: block; color: var(--forest); }
+.learning-signal-route-row p { margin-top: .35rem; }
 .learning-decision-header {
   display: flex;
   align-items: flex-start;
@@ -1682,6 +1695,8 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   .learning-decision-card { border-color: var(--forest); background: var(--surface); color: var(--ink); }
   .learning-decision-proof { background: var(--paper); }
   .learning-decision-rank { background: var(--coral); color: var(--paper); }
+  .learning-signal-route-row + .learning-signal-route-row { border-color: var(--line); }
+  .learning-signal-route-row > strong { color: var(--forest); }
 }
 
 @media (max-width: 640px) {
@@ -1689,6 +1704,11 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   .learning-decision-grid,
   .learning-decision-card { min-width: 0; }
   .learning-decision-header { align-items: flex-start; }
+  .learning-signal-route-row { padding: .5rem 0; }
+  .learning-signal-route-row + .learning-signal-route-row {
+    margin-top: .1rem;
+    padding-top: .65rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1702,7 +1722,10 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 
 @media (forced-colors: active) {
   .learning-decision-card,
-  .learning-decision-proof { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .learning-decision-proof,
+  .learning-signal-route-row { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .learning-signal-route-row + .learning-signal-route-row { border-color: CanvasText; }
+  .learning-signal-route-row > strong { color: CanvasText; }
   .learning-decision-rank { background: Highlight; color: HighlightText; }
   .learning-decision-sample,
   .learning-decision-role,

@@ -121,6 +121,7 @@ V2_SOURCE_MUTATION_CASES = (
     ("internal id", "learning_internal_id", "E-999"),
     ("control", "provider_control", "private\u202esource"),
     ("source prose", "research_source_prose", "Arbitrary private source prose sentinel."),
+    ("provider date mismatch", "provider_as_of_date", "2026-08-12"),
 )
 
 
@@ -1062,6 +1063,11 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             sources["market_research"]["vacancies"][0]["requirements"][0][
                 "source_paraphrase"
             ] = sentinel
+        elif mutation == "provider_as_of_date":
+            sources["provider_research"]["as_of_date"] = sentinel
+            for option in sources["provider_research"]["options"]:
+                option["source_date"] = sentinel
+                option["access_date"] = sentinel
         else:
             raise AssertionError(f"unknown source mutation: {mutation}")
         return sources
@@ -1070,7 +1076,7 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
     def expected_v2_mutation_errors(mutation: str) -> tuple[str, ...]:
         if mutation in {"provider_url", "provider_control", "provider_local_path"}:
             return ("provider research is invalid",)
-        if mutation == "learning_internal_id":
+        if mutation in {"learning_internal_id", "provider_as_of_date"}:
             return ("learning decision does not match validated sources",)
         return ("market dossier does not match validated sources",)
 
@@ -1078,12 +1084,15 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         v1 = self.v1_render_sources()
         v2 = self.v2_render_sources()
         self.assertIn("market-context", self.renderer.render_dossier_html(**v1))
-        self.assertIn("learning-signal-route", self.renderer.render_dossier_html(**v2))
+        self.assertIn(
+            'class="learning-signal-route"',
+            self.renderer.render_dossier_html(**v2),
+        )
 
         market_only_v2 = dict(v2, learning_decision=None, provider_research=None)
         market_only = self.renderer.render_dossier_html(**market_only_v2)
         self.assertIn("market-context", market_only)
-        self.assertNotIn("learning-signal-route", market_only)
+        self.assertNotIn('class="learning-signal-route"', market_only)
 
         pairs = (
             ("v1 without learning", dict(v1, learning_decision=None), True),
@@ -1150,7 +1159,67 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 self.assertNotIn(value, html_output)
         self.assertIn("Terraform", html_output)
         self.assertIn("1/5", html_output)
-        self.assertIn("V3", html_output)
+        self.assertIn("V1", html_output)
+
+    def test_learning_v2_cards_render_complete_localized_proof_and_cost_decisions(self) -> None:
+        for state, sources in (
+            ("complete", self.v2_render_sources("complete")),
+            ("limited", self.v2_render_sources("limited")),
+        ):
+            with self.subTest(state=state):
+                learning = sources["learning_decision"]
+                assert isinstance(learning, dict)
+                locale = str(learning["locale"])
+                rendered = self.renderer.render_dossier_html(**sources)
+                for decision in learning["decisions"]:
+                    rank = decision["decision_rank"]
+                    card = re.search(
+                        rf'<article class="card span-4 learning-decision-card"[^>]*aria-labelledby="learning-decision-card-title-{rank}".*?</article>',
+                        rendered,
+                        re.DOTALL,
+                    )
+                    self.assertIsNotNone(card)
+                    card_html = card.group(0)
+                    self.assertIn(
+                        f'id="learning-decision-card-title-{rank}">{html.escape(decision["option_name"], quote=True)}</h3>',
+                        card_html,
+                    )
+                    expected_owner = decision["provider_or_owner"]
+                    if expected_owner == "candidate_owned":
+                        expected_owner = "Candidato" if locale == "es" else "Candidate"
+                    for projected in (
+                        expected_owner,
+                        decision["cost_time_band"],
+                        decision["expected_signal_boundary"],
+                        decision["portfolio_or_no_learning_alternative"],
+                        decision["overbuying_risk"],
+                        decision["decision_basis"],
+                        decision["next_action_gate"],
+                    ):
+                        with self.subTest(state=state, rank=rank, projected=projected):
+                            self.assertIn(html.escape(projected, quote=True), card_html)
+                    self.assertIn(
+                        f'class="learning-decision-proof" role="group" aria-labelledby="learning-decision-proof-title-{rank}"',
+                        card_html,
+                    )
+                    self.assertIn(
+                        f'id="learning-decision-proof-title-{rank}"', card_html
+                    )
+                provider_decisions = [
+                    row for row in learning["decisions"]
+                    if row["provider_option_id"] is not None
+                ]
+                self.assertTrue(provider_decisions)
+                for decision in provider_decisions:
+                    rank = decision["decision_rank"]
+                    card = re.search(
+                        rf'aria-labelledby="learning-decision-card-title-{rank}".*?</article>',
+                        rendered,
+                        re.DOTALL,
+                    )
+                    self.assertIsNotNone(card)
+                    self.assertIn(decision["provider_or_owner"], card.group(0))
+                    self.assertIn(decision["option_name"], card.group(0))
 
     def test_learning_v2_routes_are_localized_resolved_and_complete(self) -> None:
         cases = (
@@ -1203,7 +1272,7 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 if state == "multi-signal":
                     self.assertEqual(
                         [("Python", "Evidencia directa", "V1", "1/5"),
-                         ("Terraform", "Reportado por cliente", "V3", "1/5")],
+                         ("Terraform", "Reportado por cliente", "V2", "1/5")],
                         route_parser.groups[0][1],
                     )
                 audit = DossierDOMAudit()
@@ -1275,9 +1344,9 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             **self.v2_render_sources("unavailable")
         )
         self.assertIn("market-context", unavailable)
-        self.assertNotIn("learning-signal-route", unavailable)
+        self.assertNotIn('class="learning-signal-route"', unavailable)
         legacy = self.renderer.render_dossier_html(v2["dossier"])
-        self.assertNotIn("learning-signal-route", legacy)
+        self.assertNotIn('class="learning-signal-route"', legacy)
 
         for name, (expected_size, expected_digest) in NO_MARKET_RENDER_SNAPSHOTS.items():
             with self.subTest(snapshot=name):
@@ -1289,6 +1358,40 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     expected_digest,
                     hashlib.sha256(rendered.encode("utf-8")).hexdigest(),
                 )
+
+    def test_v2_deepcopy_runtime_errors_are_generic_total_and_unlinked(self) -> None:
+        sources = self.v2_render_sources()
+        sentinel = "renderer-deepcopy-runtime-sentinel"
+
+        class CopyBomb(dict):
+            def __deepcopy__(self, memo):
+                raise RuntimeError(sentinel)
+
+        cases = (
+            (
+                "market",
+                dict(sources, market_dossier=CopyBomb(sources["market_dossier"])),
+                ("market composition inputs have malformed structure",),
+            ),
+            (
+                "learning",
+                dict(sources, learning_decision=CopyBomb(sources["learning_decision"])),
+                ("learning decision is unavailable",),
+            ),
+            (
+                "provider",
+                dict(sources, provider_research=CopyBomb(sources["provider_research"])),
+                ("learning decision is unavailable",),
+            ),
+        )
+        for name, arguments, expected_errors in cases:
+            with self.subTest(source=name):
+                with self.assertRaises(self.renderer.DossierValidationError) as raised:
+                    self.renderer.render_dossier_html(**arguments)
+                self.assertIsNone(raised.exception.__cause__)
+                self.assertEqual(expected_errors, raised.exception.errors)
+                self.assertNotIn(sentinel, str(raised.exception))
+                self.assertNotIn(sentinel, "\n".join(raised.exception.errors))
 
     def test_v2_private_source_mutations_fail_before_render_without_echo(self) -> None:
         for label, mutation, sentinel in V2_SOURCE_MUTATION_CASES:

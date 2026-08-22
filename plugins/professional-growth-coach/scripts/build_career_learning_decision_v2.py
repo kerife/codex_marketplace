@@ -121,6 +121,7 @@ def _validated_source_copies(
         or provider_errors
         or len({research_copy.get("locale"), market_copy.get("locale"), dossier_copy.get("locale"), provider_copy.get("locale")}) != 1
         or research_copy.get("as_of_date") != market_copy.get("as_of_date")
+        or provider_copy.get("as_of_date") != research_copy.get("as_of_date")
         or research_copy.get("state") != market_copy.get("state")
     ):
         raise ValueError("learning decision v2 is invalid")
@@ -170,10 +171,11 @@ def _exact_routes_and_unions(
     matrix = _indexed(market.get("matrix_rows"), "signal")
     recurrence = _indexed(market.get("recurrence_rows"), "signal")
     vacancies = _indexed(research.get("vacancies"), "vacancy_id")
+    public_vacancies = _indexed(market.get("vacancies"), "vacancy_id")
     labels = _term_labels(dossier)
     vacancy_ordinals = {
         vacancy_id: f"V{index}"
-        for index, vacancy_id in enumerate(vacancies, start=1)
+        for index, vacancy_id in enumerate(public_vacancies, start=1)
     }
     unions = {
         "claim_ids": set(),

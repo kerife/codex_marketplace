@@ -40,6 +40,29 @@ def _contrast(first: str, second: str) -> float:
 
 
 class DarkModeAccessibilityTests(unittest.TestCase):
+    def test_learning_signal_route_rows_have_scoped_spacing_and_separation_contracts(self) -> None:
+        css = (ASSETS / "career-market-learning-dossier-v1.css").read_text(encoding="utf-8")
+        self.assertRegex(
+            css,
+            r"\.learning-signal-route-row\s*\{[^}]*min-width:\s*0;[^}]*padding:\s*\.6rem 0;",
+        )
+        self.assertRegex(
+            css,
+            r"\.learning-signal-route-row \+ \.learning-signal-route-row\s*\{[^}]*margin-top:\s*\.2rem;[^}]*padding-top:\s*\.8rem;[^}]*border-top:\s*1px solid var\(--muted\);",
+        )
+        self.assertRegex(
+            css,
+            r"@media screen and \(prefers-color-scheme: dark\)\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\.learning-signal-route-row \+ \.learning-signal-route-row\s*\{[^}]*border-color:\s*var\(--line\);",
+        )
+        self.assertRegex(
+            css,
+            r"@media \(max-width: 640px\)\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\.learning-signal-route-row\s*\{[^}]*padding:\s*\.5rem 0;",
+        )
+        self.assertRegex(
+            css,
+            r"@media \(forced-colors: active\)\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\.learning-signal-route-row \+ \.learning-signal-route-row\s*\{[^}]*border-color:\s*CanvasText;",
+        )
+
     def test_market_extension_has_mobile_dark_forced_color_and_non_scroll_contracts(self) -> None:
         css = (ASSETS / "career-market-learning-dossier-v1.css").read_text(encoding="utf-8")
         compact = css[css.index("@media (max-width: 680px)"):css.index("@media print")]

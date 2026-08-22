@@ -48,6 +48,7 @@ _MAX_LIST_ITEMS = 150
 _MAX_ERRORS = 64
 _MAX_INPUT_BYTES = 256 * 1024
 _MAX_TEXT = 500
+_MAX_DECODE_ROUNDS = 16
 _SIGNAL = re.compile(r"[a-z][a-z0-9_]{1,63}\Z")
 _OPTION_ID = re.compile(r"LP-[0-9]{3}\Z")
 _DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}\Z")
@@ -68,6 +69,9 @@ _LOCAL_PATH_SEGMENT = re.compile(
 )
 _LOCAL_FILE_URI = re.compile(
     r"(?<![^\W_])file\s*:(?:[\\/]){2,}", re.I
+)
+_SUSPICIOUS_ENCODING = re.compile(
+    r"%[0-9a-f]{2}|&#(?:x[0-9a-f]+|[0-9]+);", re.I
 )
 _ROOT_FIELDS = frozenset(
     {"schema_version", "locale", "as_of_date", "state", "options", "privacy_boundary", "no_external_action"}
@@ -214,13 +218,20 @@ def _contains_local_path(value: str) -> bool:
 def _decoded_url_component(value: object) -> str | None:
     if not isinstance(value, str) or len(value) > 2048:
         return None
-    decoded = value
-    for _ in range(3):
-        next_value = html.unescape(unquote(decoded))
+    decoded = unicodedata.normalize("NFKC", value)
+    for _ in range(_MAX_DECODE_ROUNDS):
+        try:
+            next_value = unicodedata.normalize(
+                "NFKC", html.unescape(unquote(decoded, errors="replace"))
+            )
+        except Exception:
+            return None
+        if len(next_value) > 2048:
+            return None
         if next_value == decoded:
-            break
+            return None if _SUSPICIOUS_ENCODING.search(decoded) else decoded
         decoded = next_value
-    return unicodedata.normalize("NFKC", decoded)
+    return None
 
 
 def _safe_url_component(value: object) -> bool:

@@ -31,7 +31,9 @@ This repository is a Python-rendered, offline HTML/CSS plugin rather than a Java
 
 ## MarketEvidence and LearningDecision
 
-- Sources: `schemas/career-market-learning-dossier-v1.schema.json`, `schemas/career-learning-decision-v1.schema.json`, and their build/validation scripts.
-- Description: optional offline evidence and proof-to-cost decision sections composed inside v2. They are not standalone pages, routes, or network-backed widgets; unavailable market evidence produces no learning recommendation.
+- Sources: `plugins/professional-growth-coach/schemas/career-market-learning-dossier-v2.schema.json`, `plugins/professional-growth-coach/schemas/career-learning-decision-v2.schema.json`, `plugins/professional-growth-coach/scripts/build_career_market_learning_dossier_v2.py`, `plugins/professional-growth-coach/scripts/build_career_learning_decision_v2.py`, `plugins/professional-growth-coach/scripts/project_career_learning_decision_v2.py`, `plugins/professional-growth-coach/scripts/validate_career_learning_provider_research.py`, and `plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py`. The v1 schemas and builders remain supported by the same renderer compatibility boundary.
+- Description: optional offline market evidence and ranked proof-and-cost decision cards composed inside the executive dossier. The v2 builder recomputes its market/alignment joins from validated sources, requires the provider research to share the normative source date, and projects the visible learning copy rather than accepting caller-authored recommendation prose.
+- LearningSignalRoute: a compact per-signal proof route inside each LearningDecision showing only a validated public term label, localized support state, public vacancy ordinals, and recurrence. The surrounding card shows the localized option/owner, proof and cost, expected boundary, lower-cost alternative, overbuying risk, coach decision, and next-action gate.
+- Privacy boundary: no source URLs, internal IDs, snapshots, or raw source prose are rendered. These components are not standalone pages, routes, or network-backed widgets; unavailable market evidence produces no learning recommendation.
 
 The exact HTML templates and CSS implementation are included in `layouts.md` and `theme.md` below.

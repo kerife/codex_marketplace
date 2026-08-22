@@ -28,6 +28,7 @@ class PrintContinuityFooterIntegrityTests(unittest.TestCase):
             ".market-matrix-row",
             ".vacancy-alignment-card",
             ".recurrence-row",
+            ".learning-signal-route-row",
             "display: table-header-group",
             "display: table-row-group",
             "display: table-row",
@@ -50,6 +51,10 @@ class PrintContinuityFooterIntegrityTests(unittest.TestCase):
         self.assertNotRegex(
             print_css,
             r"\.market-matrix-group\s*\{[^}]*break-inside:\s*avoid;",
+        )
+        self.assertRegex(
+            print_css,
+            r"\.learning-signal-route-row,\s*\.gap-closure-route\s*\{[^}]*break-inside:\s*avoid;[^}]*page-break-inside:\s*avoid;",
         )
 
     def test_dossier_v2_rows_and_coaching_cards_remain_atomic_in_print(self) -> None:

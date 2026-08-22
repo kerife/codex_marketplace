@@ -42,7 +42,8 @@
 
 ## LearningDecision
 
-- Source: `plugins/professional-growth-coach/scripts/build_career_learning_decision.py` and `plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py`
+- Source: `plugins/professional-growth-coach/schemas/career-learning-decision-v2.schema.json`, `plugins/professional-growth-coach/scripts/build_career_learning_decision_v2.py`, `plugins/professional-growth-coach/scripts/project_career_learning_decision_v2.py`, `plugins/professional-growth-coach/scripts/validate_career_learning_provider_research.py`, and `plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py`; the v1 builder remains a supported compatibility source.
 - Category: composed v2 subcomponent
-- Description: optional ranked proof-to-cost cards with bounded signal, provider metadata, lower-cost proof alternative, and no-external-action boundary.
-- Extractable props: validated learning decision bundle and locale; unavailable or zero-market inputs render no learning panel.
+- Description: optional ranked proof-and-cost cards. Each card contains a LearningSignalRoute plus localized option/owner, cost/time, expected boundary, lower-cost alternative, overbuying risk, decision, and next-action gate.
+- Extractable props: validated and source-recomputed learning decision bundle plus locale; unavailable or zero-market inputs render no learning panel.
+- Hardcoded: render only projected public fields; never render provider URLs, source/internal IDs, snapshots, raw source prose, or an external-action control.

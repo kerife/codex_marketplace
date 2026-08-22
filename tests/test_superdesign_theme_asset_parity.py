@@ -140,8 +140,29 @@ class SuperdesignThemeAssetParityTests(unittest.TestCase):
         self.assertIn("LearningSignalRoute", routes)
         self.assertIn("CoachPriorityCard and DecisionTrace", components)
         self.assertIn("MarketEvidence and LearningDecision", components)
+        for contract in (
+            "plugins/professional-growth-coach/schemas/career-market-learning-dossier-v2.schema.json",
+            "plugins/professional-growth-coach/schemas/career-learning-decision-v2.schema.json",
+            "plugins/professional-growth-coach/scripts/build_career_learning_decision_v2.py",
+            "plugins/professional-growth-coach/scripts/project_career_learning_decision_v2.py",
+            "plugins/professional-growth-coach/scripts/validate_career_learning_provider_research.py",
+            "LearningSignalRoute",
+            "proof-and-cost",
+        ):
+            with self.subTest(document="components", contract=contract):
+                self.assertIn(contract, components)
         self.assertIn("## DecisionTrace", extractable)
         self.assertIn("## LearningDecision", extractable)
+        for contract in (
+            "career-learning-decision-v2.schema.json",
+            "build_career_learning_decision_v2.py",
+            "project_career_learning_decision_v2.py",
+            "validate_career_learning_provider_research.py",
+            "LearningSignalRoute",
+            "proof-and-cost",
+        ):
+            with self.subTest(document="extractable", contract=contract):
+                self.assertIn(contract, extractable)
 
     def test_design_system_documents_unavailable_market_safe_next_step(self):
         text = DESIGN_SYSTEM.read_text(encoding="utf-8")

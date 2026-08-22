@@ -1,7 +1,7 @@
 {
   "schema_version": "career-learning-provider-research-v1",
   "locale": "en",
-  "as_of_date": "2026-08-21",
+  "as_of_date": "2026-08-13",
   "state": "limited",
   "options": [
     {
@@ -10,8 +10,8 @@
       "provider": "HashiCorp",
       "option": "Terraform course",
       "source_title": "Terraform learning catalog",
-      "source_date": "2026-08-20",
-      "access_date": "2026-08-21",
+      "source_date": "2026-08-12",
+      "access_date": "2026-08-13",
       "source_state": "active",
       "url": "https://developer.hashicorp.com/terraform/tutorials",
       "geography": "online",
