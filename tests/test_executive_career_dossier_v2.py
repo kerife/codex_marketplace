@@ -1293,6 +1293,44 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 )
                 self.assertNotIn("weekly-decision-secondary", decide)
 
+    def test_v3_learning_navigation_exists_only_when_the_detailed_panel_exists(
+        self,
+    ) -> None:
+        zero_decision_conditions = (
+            "unavailable",
+            "selection_required",
+            "insufficient_recurrence",
+            "gap_unknown",
+            "supported",
+            "provider_choice",
+            "provider_evidence",
+            "experience",
+        )
+        eligible_conditions = ("proof", "practice", "terminology", "knowledge")
+        for locale in ("es", "en"):
+            for condition in zero_decision_conditions + eligible_conditions:
+                with self.subTest(locale=locale, condition=condition):
+                    arguments = semantic_v3_case(condition, locale)
+                    expected_count = 1 if condition in eligible_conditions else 0
+                    self.assertEqual(
+                        expected_count,
+                        len(arguments["learning_decision"]["decisions"]),
+                    )
+                    rendered = self.renderer.render_dossier_html(**arguments)
+                    decide = decide_now_region(rendered)[2]
+                    self.assertEqual(
+                        expected_count,
+                        decide.count('href="#learning-decision-title"'),
+                    )
+                    self.assertEqual(
+                        expected_count,
+                        rendered.count('id="learning-decision-title"'),
+                    )
+                    if condition == "unavailable":
+                        self.assertNotIn(
+                            self.renderer.COPY[locale]["learning_title"], decide
+                        )
+
     def test_v3_public_vacancy_ordinal_title_and_employer_are_visible_and_named(self) -> None:
         rendered = self.renderer.render_dossier_html(**semantic_v3_case("proof", "es"))
         region = weekly_decision_region(rendered)

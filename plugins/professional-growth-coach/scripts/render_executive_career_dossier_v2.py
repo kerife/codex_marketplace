@@ -1473,7 +1473,19 @@ def _render_decide_now(
         navigation_items += (
             f'<li><a href="#weekly-decision-title">{WEEKLY_COPY[locale]["title"]}</a></li>'
         )
-    if learning_decision is not None:
+    learning_decisions = (
+        learning_decision.get("decisions")
+        if learning_decision is not None
+        else None
+    )
+    has_learning_panel = learning_decision is not None and (
+        learning_decision.get("schema_version") != "career-learning-decision-v3"
+        or (
+            isinstance(learning_decisions, (list, tuple))
+            and len(learning_decisions) == 1
+        )
+    )
+    if has_learning_panel:
         navigation_items += f'<li><a href="#learning-decision-title">{labels["learning_title"]}</a></li>'
     summary = (
         f'{WEEKLY_COPY[locale]["title"]} · {labels["decide_priorities"]} · '
