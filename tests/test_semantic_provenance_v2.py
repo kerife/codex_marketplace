@@ -582,6 +582,10 @@ class CareerLearningProviderResearchTests(unittest.TestCase):
             ("source_title", "Terraform file format guide"),
             ("unknowns", "File formats remain public provider metadata"),
             ("current_cost", "file fee not indicated"),
+            ("maintenance", "profile://public-provider-metadata"),
+            ("maintenance", "prefile://public-provider-metadata"),
+            ("maintenance", "See (https://developer.hashicorp.com/terraform/tutorials)"),
+            ("maintenance", "Harmless punctuation: [](),=\"/\\"),
         )
         for field, value in cases:
             with self.subTest(field=field):
@@ -589,6 +593,36 @@ class CareerLearningProviderResearchTests(unittest.TestCase):
                 altered["options"][0][field] = value
                 self.assertEqual([], PROVIDER_VALIDATOR.validate_provider_research(altered))
         self.assertEqual([], PROVIDER_VALIDATOR.validate_provider_research(provider))
+
+    def test_provider_research_rejects_punctuation_wrapped_file_uris_in_every_free_text_field_without_echo(self):
+        provider = self.provider_fixture("complete-es.json")
+        sentinel = "provider-boundary-sentinel"
+        fields = (
+            "provider", "option", "source_title", "geography", "current_cost", "currency",
+            "tax", "duration", "prerequisite", "renewal", "maintenance", "unknowns",
+        )
+        cases = (
+            ("parenthesis UNC", f"See (file://server/share/probe/{sentinel}.json)"),
+            ("bracket UNC", f"See [file://server/share/probe/{sentinel}.json]"),
+            ("comma UNC", f"See,file://server/share/probe/{sentinel}.json"),
+            ("colon Windows drive", f"See:file:///C:/work/probe/{sentinel}.json"),
+            ("equals POSIX", f"See=file:///opt/work/probe/{sentinel}.json"),
+            ("double quote POSIX", f'See"file:///opt/work/probe/{sentinel}.json"'),
+            ("single quote Windows drive", f"See'file:///C:/work/probe/{sentinel}.json'"),
+            ("slash POSIX", f"See/file:///opt/work/probe/{sentinel}.json"),
+            ("backslash UNC", f"See\\file://server/share/probe/{sentinel}.json"),
+            ("percent encoded parenthesis", f"See%28file%3A%2F%2Fserver%2Fshare%2Fprobe%2F{sentinel}.json%29"),
+            ("HTML encoded bracket", f"See&#91;file&#58;&#47;&#47;server&#47;share&#47;probe&#47;{sentinel}.json&#93;"),
+            ("NFKC parenthesis", f"See（ｆｉｌｅ：／／server/share/probe/{sentinel}.json）"),
+        )
+        for field in fields:
+            for name, value in cases:
+                with self.subTest(field=field, name=name):
+                    altered = copy.deepcopy(provider)
+                    altered["options"][0][field] = value
+                    errors = PROVIDER_VALIDATOR.validate_provider_research(altered)
+                    self.assertIn("provider research has unsafe public metadata", errors)
+                    self.assertNotIn(sentinel, "\n".join(errors))
 
     def test_provider_research_rejects_closed_structure_and_semantic_mutations(self):
         provider = self.provider_fixture("complete-es.json")
@@ -845,11 +879,11 @@ class CareerLearningDecisionV2Tests(unittest.TestCase):
             )
         self.assertNotIn(sentinel, str(raised.exception))
 
-    def test_learning_builder_rejects_file_uri_provider_before_projection(self):
+    def test_learning_builder_rejects_punctuation_wrapped_file_uri_provider_before_projection(self):
         sources = list(self.complete_v2_sources())
         sentinel = "provider-file-uri-sentinel"
         sources[3]["options"][0]["unknowns"] = (
-            f"file:///Users/{sentinel}/private.json"
+            f"See (file://server/share/probe/{sentinel}.json)"
         )
         self.assertEqual(
             ["provider research has unsafe public metadata"],
