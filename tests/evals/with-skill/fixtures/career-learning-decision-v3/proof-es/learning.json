@@ -1,0 +1,71 @@
+{
+  "as_of_date": "2026-08-13",
+  "decisions": [
+    {
+      "claim_ids": [
+        "C-002"
+      ],
+      "cost_time_band": "No evaluado; requiere confirmación separada.",
+      "decision": "do_now",
+      "decision_basis": "Prioriza una prueba acotada antes de comprar formación; la ruta estructurada de evidencia es la base completa de esta decisión preliminar.",
+      "decision_code": "build_bounded_proof",
+      "decision_rank": 1,
+      "draft_only": true,
+      "expected_signal_boundary": "Hipótesis acotada: una señal inspectable no predice entrevista, oferta, salario ni retorno de inversión.",
+      "gap_type": "proof",
+      "next_action_gate": "Revisión y autorización exacta obligatorias antes de inscripción, compra, programación de examen, publicación, difusión o mensajería externa.",
+      "no_external_action": true,
+      "option_name": "Prueba acotada de Terraform",
+      "option_type": "portfolio_project",
+      "outcome_boundary": "not_an_interview_offer_salary_or_roi_prediction",
+      "overbuying_risk": "Evita acumular credenciales o dividir el tiempo antes de completar una prueba de mayor señal.",
+      "portfolio_or_no_learning_alternative": "Completa primero una prueba acotada y usa la evidencia existente antes de comprar formación.",
+      "provider_option_id": null,
+      "provider_or_owner": "candidate_owned",
+      "requirement_ids": [
+        "V-001-R-01",
+        "V-003-R-01"
+      ],
+      "signal_routes": [
+        {
+          "recurrence": "2/5",
+          "signal": "terraform",
+          "support_state": "candidate_reported_match",
+          "term_label": "Terraform",
+          "vacancy_ordinals": [
+            "V1",
+            "V2"
+          ]
+        }
+      ],
+      "source_evidence_ids": [
+        "E-004"
+      ],
+      "source_signals": [
+        "terraform"
+      ],
+      "target_role_families": [
+        "devops_engineering",
+        "site_reliability_engineering"
+      ],
+      "vacancy_ids": [
+        "V-001",
+        "V-003"
+      ]
+    }
+  ],
+  "locale": "es",
+  "no_external_action": true,
+  "outcome_boundary": "not_an_interview_offer_salary_or_roi_prediction",
+  "privacy_boundary": "identity_free_structured_provenance_only",
+  "schema_version": "career-learning-decision-v3",
+  "source_alignment_snapshot": "snap-alignment-sha256-cac631385f26e544adea7ce8a8aef267f8d1cfb9335792cd9278473087023f6e",
+  "source_dossier_snapshot": "snap-dossier-sha256-1cc5d236dc6a805748612a7765895e94adb4c3250d325239a4a398797fdc18a1",
+  "source_gap_assessment_snapshot": "snap-gap-assessment-v1-sha256-64711a8d18acf55449da458ff7546287a1f8f8984bdfbf7b8e93d6284d6110bc",
+  "source_gap_response_snapshot": "snap-gap-response-v1-sha256-5ddfd14cfe8e557c29a76bb458aecb8e164aca156e57ec549069e49e6b82e30f",
+  "source_market_snapshot": "snap-market-dossier-v2-sha256-170c3b21b6d2343a35011f7b4bac3f24c8d22a0bf7d3847a300bb14bf8191487",
+  "source_next_action_eligibility_snapshot": "snap-next-action-eligibility-v1-sha256-3533a865959c3ef0802cd3b6d70b9423ce1a653e0a480bdba6ad52bb5f1f2368",
+  "source_provider_research_snapshot": null,
+  "source_research_snapshot": "snap-market-sha256-8273d3c23da3158584005569e48be00cb1a380c4d6d6d15b2c4f8d8464ffb924",
+  "state": "complete"
+}

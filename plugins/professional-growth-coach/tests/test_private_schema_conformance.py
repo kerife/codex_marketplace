@@ -30,6 +30,7 @@ REPOSITORY_ONLY_TESTS = {
     "test_candidate_gap_assessment_v1_schema_accepts_closed_source_projection",
     "test_candidate_gap_response_v1_schema_accepts_closed_public_states",
     "test_career_next_action_eligibility_v1_schema_accepts_only_closed_projection",
+    "test_career_learning_decision_v3_schema_accepts_only_eligibility_projection",
     "test_dependency_free_checker_rejects_nested_quantifier_patterns",
     "test_dossier_handoff_rejects_unlabelled_person_name_source_fact",
     "test_dossier_schema_prose_mutations_match_custom_unicode_boundary",
@@ -68,6 +69,8 @@ from build_candidate_gap_assessment_v1 import build_candidate_gap_assessment_v1
 from validate_candidate_gap_assessment_v1 import validate_candidate_gap_assessment_v1
 from build_career_next_action_eligibility_v1 import build_career_next_action_eligibility_v1
 from validate_career_next_action_eligibility_v1 import validate_career_next_action_eligibility_v1
+from build_career_learning_decision_v3 import build_career_learning_decision_v3
+from validate_career_learning_decision_v3 import validate_career_learning_decision_v3
 
 
 def _load_v2_dossier_helper():
@@ -512,6 +515,62 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         extra = copy.deepcopy(proof)
         extra["state_statement"] = "not persisted"
         self.assertTrue(validate_schema_instance(extra, schema))
+
+    def test_career_learning_decision_v3_schema_accepts_only_eligibility_projection(self):
+        schema = self._schema("career-learning-decision-v3.schema.json")
+        fixture_root = (
+            ROOT.parent.parent
+            / "tests/evals/with-skill/fixtures/career-learning-decision-v3"
+        )
+        directories = {
+            "proof-es", "knowledge-en", "selection-required-es", "unavailable-es"
+        }
+        self.assertEqual(
+            directories,
+            {path.name for path in fixture_root.iterdir() if path.is_dir()},
+        )
+        for name in sorted(directories):
+            with self.subTest(directory=name):
+                sources = json.loads(
+                    (fixture_root / name / "sources.json").read_text(encoding="utf-8")
+                )
+                learning = json.loads(
+                    (fixture_root / name / "learning.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual([], validate_schema_instance(learning, schema))
+                rebuilt = build_career_learning_decision_v3(
+                    sources["research"],
+                    sources["executive_dossier"],
+                    sources["market_dossier"],
+                    sources["gap_response"],
+                    sources["gap_assessment"],
+                    sources["eligibility"],
+                    sources["provider_research"],
+                )
+                self.assertEqual(rebuilt, learning)
+                self.assertEqual(
+                    [],
+                    validate_career_learning_decision_v3(
+                        learning,
+                        sources["research"],
+                        sources["executive_dossier"],
+                        sources["market_dossier"],
+                        sources["gap_response"],
+                        sources["gap_assessment"],
+                        sources["eligibility"],
+                        sources["provider_research"],
+                    ),
+                )
+
+        proof = json.loads(
+            (fixture_root / "proof-es/learning.json").read_text(encoding="utf-8")
+        )
+        two_rows = copy.deepcopy(proof)
+        two_rows["decisions"].append(copy.deepcopy(two_rows["decisions"][0]))
+        self.assertTrue(validate_schema_instance(two_rows, schema))
+        forged = copy.deepcopy(proof)
+        forged["decisions"][0]["gap_type"] = "knowledge"
+        self.assertTrue(validate_schema_instance(forged, schema))
 
     def test_target_vacancy_research_schema_accepts_closed_synthetic_states(self):
         schema = self._schema("target-vacancy-research-v1.schema.json")

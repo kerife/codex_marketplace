@@ -236,6 +236,16 @@ CAREER_NEXT_ACTION_ELIGIBILITY_FIXTURE_PATHS = tuple(
     for locale in ("es", "en")
     for name in ("sources", "eligibility")
 )
+CAREER_LEARNING_DECISION_V3_FIXTURE_PATHS = tuple(
+    f"tests/evals/with-skill/fixtures/career-learning-decision-v3/{condition}/{name}.json"
+    for condition in (
+        "proof-es",
+        "knowledge-en",
+        "selection-required-es",
+        "unavailable-es",
+    )
+    for name in ("sources", "learning")
+)
 MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/candidate-market-alignment-v1.schema.json",
     "schemas/candidate-market-alignment-v2.schema.json",
@@ -243,6 +253,7 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/career-market-learning-dossier-v2.schema.json",
     "schemas/career-learning-decision-v1.schema.json",
     "schemas/career-learning-decision-v2.schema.json",
+    "schemas/career-learning-decision-v3.schema.json",
     "schemas/career-learning-provider-research-v1.schema.json",
     "schemas/candidate-gap-response-v1.schema.json",
     "schemas/candidate-gap-assessment-v1.schema.json",
@@ -254,11 +265,14 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "scripts/build_career_market_learning_dossier_v2.py",
     "scripts/build_career_learning_decision.py",
     "scripts/project_career_learning_decision_v2.py",
+    "scripts/project_career_learning_decision_v3.py",
     "scripts/build_career_learning_decision_v2.py",
+    "scripts/build_career_learning_decision_v3.py",
     "scripts/validate_career_market_learning_dossier.py",
     "scripts/validate_career_market_learning_dossier_v2.py",
     "scripts/validate_career_learning_decision.py",
     "scripts/validate_career_learning_decision_v2.py",
+    "scripts/validate_career_learning_decision_v3.py",
     "scripts/validate_career_learning_provider_research.py",
     "scripts/build_candidate_gap_response_v1.py",
     "scripts/validate_candidate_gap_response_v1.py",
@@ -292,6 +306,7 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "tests/evals/with-skill/fixtures/candidate-gap-assessment-v1/recurrent-knowledge-en.json",
     "tests/evals/with-skill/fixtures/candidate-gap-assessment-v1/unavailable-es.json",
     *CAREER_NEXT_ACTION_ELIGIBILITY_FIXTURE_PATHS,
+    *CAREER_LEARNING_DECISION_V3_FIXTURE_PATHS,
 )
 EXECUTIVE_DOSSIER_OFFLINE_TOKENS = (
     "http://",
@@ -804,11 +819,14 @@ def _load_market_package_modules(plugin_root: Path) -> dict[str, object]:
             "build_career_market_learning_dossier_v2",
             "build_career_learning_decision",
             "project_career_learning_decision_v2",
+            "project_career_learning_decision_v3",
             "build_career_learning_decision_v2",
+            "build_career_learning_decision_v3",
             "validate_career_market_learning_dossier",
             "validate_career_market_learning_dossier_v2",
             "validate_career_learning_decision",
             "validate_career_learning_decision_v2",
+            "validate_career_learning_decision_v3",
             "validate_career_learning_provider_research",
             "build_candidate_gap_response_v1",
             "validate_candidate_gap_response_v1",
@@ -889,6 +907,7 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         "schemas/career-market-learning-dossier-v2.schema.json": "source_alignment_snapshot",
         "schemas/career-learning-decision-v1.schema.json": "source_market_snapshot",
         "schemas/career-learning-decision-v2.schema.json": "source_provider_research_snapshot",
+        "schemas/career-learning-decision-v3.schema.json": "source_next_action_eligibility_snapshot",
         "schemas/career-learning-provider-research-v1.schema.json": "options",
         "schemas/candidate-gap-response-v1.schema.json": "source_market_snapshot",
         "schemas/candidate-gap-assessment-v1.schema.json": "source_gap_response_snapshot",
@@ -945,7 +964,14 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             "snapshot_for_learning_bundle",
         ),
         "project_career_learning_decision_v2": ("project_decision_v2",),
+        "project_career_learning_decision_v3": (
+            "project_career_learning_decision_v3",
+        ),
         "build_career_learning_decision_v2": ("build_learning_bundle_v2",),
+        "build_career_learning_decision_v3": (
+            "build_career_learning_decision_v3",
+            "_project_learning_v3_from_frozen",
+        ),
         "validate_career_market_learning_dossier": ("validate_market_dossier",),
         "validate_career_market_learning_dossier_v2": ("validate_market_dossier_v2",),
         "validate_career_learning_decision": (
@@ -955,6 +981,12 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         "validate_career_learning_decision_v2": (
             "validate_learning_bundle_v2",
             "snapshot_for_learning_bundle_v2",
+        ),
+        "validate_career_learning_decision_v3": (
+            "validate_career_learning_decision_v3",
+            "snapshot_for_learning_bundle_v3",
+            "load_learning_bundle_v3",
+            "_validate_learning_v3_from_frozen",
         ),
         "validate_career_learning_provider_research": (
             "validate_provider_research",
@@ -1000,6 +1032,8 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
     learning_validator = modules["validate_career_learning_decision"]
     learning_v2_builder = modules["build_career_learning_decision_v2"]
     learning_v2_validator = modules["validate_career_learning_decision_v2"]
+    learning_v3_builder = modules["build_career_learning_decision_v3"]
+    learning_v3_validator = modules["validate_career_learning_decision_v3"]
     market_validator = modules["validate_career_market_learning_dossier"]
     market_v2_builder = modules["build_career_market_learning_dossier_v2"]
     market_v2_validator = modules["validate_career_market_learning_dossier_v2"]
@@ -1200,6 +1234,57 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             errors.append(f"{learning_name}: learning v2 fixture does not reproduce from exact sources")
         if learning_errors:
             errors.append(f"{learning_name}: learning v2 trusted provenance validation failed")
+
+    for fixture_name in (
+        "proof-es",
+        "knowledge-en",
+        "selection-required-es",
+        "unavailable-es",
+    ):
+        try:
+            fixture_directory = (
+                fixture_root / "career-learning-decision-v3" / fixture_name
+            )
+            sources = json.loads(
+                (fixture_directory / "sources.json").read_text(encoding="utf-8")
+            )
+            expected_learning = json.loads(
+                (fixture_directory / "learning.json").read_text(encoding="utf-8")
+            )
+            built_learning = learning_v3_builder.build_career_learning_decision_v3(
+                sources["research"],
+                sources["executive_dossier"],
+                sources["market_dossier"],
+                sources["gap_response"],
+                sources["gap_assessment"],
+                sources["eligibility"],
+                sources["provider_research"],
+            )
+            learning_errors = (
+                learning_v3_validator.validate_career_learning_decision_v3(
+                    expected_learning,
+                    sources["research"],
+                    sources["executive_dossier"],
+                    sources["market_dossier"],
+                    sources["gap_response"],
+                    sources["gap_assessment"],
+                    sources["eligibility"],
+                    sources["provider_research"],
+                )
+            )
+        except Exception:
+            errors.append(
+                f"{fixture_name}: learning v3 fixture composition failed"
+            )
+            continue
+        if expected_learning != built_learning:
+            errors.append(
+                f"{fixture_name}: learning v3 fixture does not reproduce from exact sources"
+            )
+        if learning_errors:
+            errors.append(
+                f"{fixture_name}: learning v3 trusted provenance validation failed"
+            )
 
     return sorted(set(errors))
 def score_executive_dossier_pressure_sample(

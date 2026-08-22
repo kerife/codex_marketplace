@@ -633,6 +633,98 @@ class CareerLearningDecisionV2ContractTests(unittest.TestCase):
         extra["decisions"][0]["unexpected"] = True
         self.assertTrue(validate_schema_instance(extra, schema))
 
+    def test_historical_v1_and_v2_inputs_remain_readable_unchanged(self) -> None:
+        research = _load_json(RESEARCH_ROOT / "complete-five-es.json")
+        dossier = _load_json(DOSSIER_ROOT / "scenario-a-es.json")
+        market = _load_json(MARKET_ROOT / "complete-five-es.json")
+        self.assertEqual(
+            [],
+            _validator().validate_learning_bundle(
+                _bundle(count=3), market, dossier, research
+            ),
+        )
+
+        v2_builder_path = SCRIPTS / "build_career_learning_decision_v2.py"
+        v2_builder_spec = importlib.util.spec_from_file_location(
+            "career_learning_v2_compat_builder", v2_builder_path
+        )
+        if v2_builder_spec is None or v2_builder_spec.loader is None:
+            raise AssertionError("learning v2 builder is unavailable")
+        v2_builder = importlib.util.module_from_spec(v2_builder_spec)
+        sys.modules[v2_builder_spec.name] = v2_builder
+        v2_builder_spec.loader.exec_module(v2_builder)
+
+        v2_validator_path = SCRIPTS / "validate_career_learning_decision_v2.py"
+        v2_validator_spec = importlib.util.spec_from_file_location(
+            "career_learning_v2_compat_validator", v2_validator_path
+        )
+        if v2_validator_spec is None or v2_validator_spec.loader is None:
+            raise AssertionError("learning v2 validator is unavailable")
+        v2_validator = importlib.util.module_from_spec(v2_validator_spec)
+        sys.modules[v2_validator_spec.name] = v2_validator
+        v2_validator_spec.loader.exec_module(v2_validator)
+
+        fixture_root = ROOT / "tests/evals/with-skill/fixtures"
+        cases = (
+            ("complete-es.json", "complete-five-es.json", "scenario-a-es.json", "complete-es.json"),
+            ("limited-en.json", "limited-four-en.json", "scenario-c-market-en.json", "limited-en.json"),
+            ("unavailable-es.json", "unavailable-es.json", "scenario-a-es.json", "unavailable-es.json"),
+        )
+        market_v2_builder = importlib.import_module(
+            "build_career_market_learning_dossier_v2"
+        )
+        for learning_name, research_name, dossier_name, provider_name in cases:
+            with self.subTest(learning=learning_name):
+                source_research = _load_json(
+                    fixture_root / "target-vacancy-research" / research_name
+                )
+                source_dossier = _load_json(
+                    fixture_root / "executive-career-dossier-v2" / dossier_name
+                )
+                source_provider = _load_json(
+                    fixture_root
+                    / "career-learning-provider-research"
+                    / provider_name
+                )
+                source_market = market_v2_builder.build_market_dossier_v2(
+                    source_research, source_dossier
+                )
+                learning = _load_json(
+                    fixture_root / "career-learning-decision-v2" / learning_name
+                )
+                requests = [
+                    {
+                        field: row[field]
+                        for field in (
+                            "decision_rank",
+                            "decision_code",
+                            "source_signals",
+                            "provider_option_id",
+                        )
+                    }
+                    for row in learning["decisions"]
+                ]
+                self.assertEqual(
+                    learning,
+                    v2_builder.build_learning_bundle_v2(
+                        source_research,
+                        source_market,
+                        source_dossier,
+                        source_provider,
+                        requests,
+                    ),
+                )
+                self.assertEqual(
+                    [],
+                    v2_validator.validate_learning_bundle_v2(
+                        learning,
+                        source_research,
+                        source_market,
+                        source_dossier,
+                        source_provider,
+                    ),
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

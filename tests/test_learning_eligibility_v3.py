@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import inspect
 import json
 import sys
 import tempfile
@@ -37,6 +38,9 @@ ASSESSMENT_BUILDER = load_sibling("build_candidate_gap_assessment_v1.py")
 ASSESSMENT_VALIDATOR = load_sibling("validate_candidate_gap_assessment_v1.py")
 ELIGIBILITY_BUILDER = load_sibling("build_career_next_action_eligibility_v1.py")
 ELIGIBILITY_VALIDATOR = load_sibling("validate_career_next_action_eligibility_v1.py")
+LEARNING_V3_BUILDER = load_sibling("build_career_learning_decision_v3.py")
+LEARNING_V3_VALIDATOR = load_sibling("validate_career_learning_decision_v3.py")
+LEARNING_V3_PROJECTOR = load_sibling("project_career_learning_decision_v3.py")
 SNAPSHOT = load_sibling("semantic_provenance_snapshot.py")
 MARKET_BUILDER = load_sibling("build_career_market_learning_dossier_v2.py")
 
@@ -248,6 +252,20 @@ def build_eligibility(inputs: EligibilityInputs) -> dict[str, object]:
         sources.market,
         inputs.response,
         inputs.assessment,
+        sources.provider,
+    )
+
+
+def build_learning_v3(inputs: EligibilityInputs) -> dict[str, object]:
+    sources = inputs.sources
+    eligibility = build_eligibility(inputs)
+    return LEARNING_V3_BUILDER.build_career_learning_decision_v3(
+        sources.research,
+        sources.dossier,
+        sources.market,
+        inputs.response,
+        inputs.assessment,
+        eligibility,
         sources.provider,
     )
 
@@ -2193,6 +2211,514 @@ class CareerNextActionEligibilityV1Tests(unittest.TestCase):
                         source_group["provider_research"],
                     ),
                 )
+
+
+class CareerLearningDecisionV3Tests(unittest.TestCase):
+    ZERO_CASES = (
+        "unavailable",
+        "selection_required",
+        "insufficient_recurrence",
+        "gap_unknown",
+        "supported",
+        "provider_choice",
+        "provider_evidence",
+        "experience",
+    )
+    ONE_CASES = {
+        "proof": (
+            "build_bounded_proof",
+            "proof",
+            "portfolio_project",
+            "do_now",
+            None,
+        ),
+        "practice": (
+            "run_validation_lab",
+            "practice",
+            "lab",
+            "do_now",
+            None,
+        ),
+        "knowledge": (
+            "research_provider_option",
+            "knowledge",
+            "course",
+            "research_first",
+            "LP-003",
+        ),
+        "terminology": (
+            "run_role_search_experiment",
+            "terminology",
+            "role_search",
+            "research_first",
+            None,
+        ),
+    }
+
+    def assert_learning_valid(
+        self, value: object, inputs: EligibilityInputs
+    ) -> None:
+        sources = inputs.sources
+        self.assertEqual(
+            [],
+            LEARNING_V3_VALIDATOR.validate_career_learning_decision_v3(
+                value,
+                sources.research,
+                sources.dossier,
+                sources.market,
+                inputs.response,
+                inputs.assessment,
+                build_eligibility(inputs),
+                sources.provider,
+            ),
+        )
+
+    def test_learning_v3_projects_only_the_eligibility_action(self):
+        inputs = eligibility_inputs_for_case("proof")
+        bundle = build_learning_v3(inputs)
+        self.assertEqual("career-learning-decision-v3", bundle["schema_version"])
+        self.assertEqual(1, len(bundle["decisions"]))
+        row = bundle["decisions"][0]
+        self.assertEqual("build_bounded_proof", row["decision_code"])
+        self.assertEqual(["terraform"], row["source_signals"])
+        self.assertEqual(["V-001", "V-003"], row["vacancy_ids"])
+        self.assertEqual(
+            ["V-001-R-01", "V-003-R-01"], row["requirement_ids"]
+        )
+        self.assertEqual("2/5", row["signal_routes"][0]["recurrence"])
+        self.assert_learning_valid(bundle, inputs)
+
+    def test_learning_v3_has_no_caller_decision_or_provider_override(self):
+        signature = inspect.signature(
+            LEARNING_V3_BUILDER.build_career_learning_decision_v3
+        )
+        self.assertNotIn("decision_requests", signature.parameters)
+        self.assertNotIn("provider_option_id", signature.parameters)
+        projector_signature = inspect.signature(
+            LEARNING_V3_PROJECTOR.project_career_learning_decision_v3
+        )
+        self.assertNotIn("request", projector_signature.parameters)
+        self.assertNotIn("decision_requests", projector_signature.parameters)
+
+    def test_all_eight_non_learning_actions_project_zero_decisions(self):
+        for name in self.ZERO_CASES:
+            with self.subTest(case=name):
+                inputs = eligibility_inputs_for_case(name)
+                eligibility = build_eligibility(inputs)
+                bundle = build_learning_v3(inputs)
+                self.assertNotIn(
+                    eligibility["recommended_next_action"],
+                    LEARNING_V3_PROJECTOR.LEARNING_ACTIONS,
+                )
+                self.assertEqual([], bundle["decisions"])
+                self.assertEqual(
+                    eligibility["source_provider_research_snapshot"],
+                    bundle["source_provider_research_snapshot"],
+                )
+                self.assert_learning_valid(bundle, inputs)
+
+    def test_all_four_learning_actions_have_exact_v3_owned_mappings(self):
+        for name, expected in self.ONE_CASES.items():
+            with self.subTest(case=name):
+                locale = "en" if name in {"knowledge", "terminology"} else "es"
+                inputs = eligibility_inputs_for_case(name, locale=locale)
+                bundle = build_learning_v3(inputs)
+                self.assertEqual(1, len(bundle["decisions"]))
+                row = bundle["decisions"][0]
+                self.assertEqual(
+                    expected,
+                    (
+                        row["decision_code"],
+                        row["gap_type"],
+                        row["option_type"],
+                        row["decision"],
+                        row["provider_option_id"],
+                    ),
+                )
+                self.assertEqual(1, row["decision_rank"])
+                self.assert_learning_valid(bundle, inputs)
+
+    def test_exact_route_and_source_unions_use_current_public_market_order(self):
+        inputs = eligibility_inputs_for_case("proof")
+        row = build_learning_v3(inputs)["decisions"][0]
+        self.assertEqual(["C-002"], row["claim_ids"])
+        self.assertEqual(["E-004"], row["source_evidence_ids"])
+        self.assertEqual(
+            ["V-001-R-01", "V-003-R-01"], row["requirement_ids"]
+        )
+        self.assertEqual(["V-001", "V-003"], row["vacancy_ids"])
+        self.assertEqual(
+            ["devops_engineering", "site_reliability_engineering"],
+            row["target_role_families"],
+        )
+        self.assertEqual(
+            [
+                {
+                    "signal": "terraform",
+                    "term_label": "Terraform",
+                    "support_state": "candidate_reported_match",
+                    "recurrence": "2/5",
+                    "vacancy_ordinals": ["V1", "V2"],
+                }
+            ],
+            row["signal_routes"],
+        )
+
+    def test_provider_id_is_only_eligibility_bound_and_displacement_needs_fresh_sources(self):
+        proof = build_learning_v3(eligibility_inputs_for_case("proof"))["decisions"][0]
+        self.assertIsNone(proof["provider_option_id"])
+        inputs = eligibility_inputs_for_case("knowledge")
+        eligibility = build_eligibility(inputs)
+        bundle = build_learning_v3(inputs)
+        self.assertEqual(
+            eligibility["selected_provider_option_id"],
+            bundle["decisions"][0]["provider_option_id"],
+        )
+
+        assert inputs.sources.provider is not None
+        displaced = copy.deepcopy(inputs.sources.provider)
+        displaced["options"][0]["option"] = "Zulu Terraform"
+        displaced["options"][1].update(
+            {"option": "Alpha Terraform", "covered_signals": ["terraform"]}
+        )
+        self.assertEqual(
+            ["career learning decision v3 does not match validated sources"],
+            LEARNING_V3_VALIDATOR.validate_career_learning_decision_v3(
+                bundle,
+                inputs.sources.research,
+                inputs.sources.dossier,
+                inputs.sources.market,
+                inputs.response,
+                inputs.assessment,
+                eligibility,
+                displaced,
+            ),
+        )
+
+    def test_unrelated_ids_signals_quantum_copy_and_reordered_unions_are_rejected(self):
+        inputs = eligibility_inputs_for_case("proof")
+        value = build_learning_v3(inputs)
+        cases: list[dict[str, object]] = []
+        for field, replacement in (
+            ("source_signals", ["quantum"]),
+            ("claim_ids", ["C-999"]),
+            ("source_evidence_ids", ["E-999"]),
+            ("requirement_ids", ["V-999-R-99"]),
+            ("vacancy_ids", ["V-999"]),
+            ("decision_basis", "Quantum caller prose"),
+        ):
+            malformed = copy.deepcopy(value)
+            malformed["decisions"][0][field] = replacement
+            cases.append(malformed)
+        reordered = copy.deepcopy(value)
+        reordered["decisions"][0]["vacancy_ids"] = ["V-003", "V-001"]
+        cases.append(reordered)
+        for malformed in cases:
+            with self.subTest(row=malformed["decisions"][0]):
+                self.assertEqual(
+                    ["career learning decision v3 does not match validated sources"],
+                    LEARNING_V3_VALIDATOR.validate_career_learning_decision_v3(
+                        malformed,
+                        inputs.sources.research,
+                        inputs.sources.dossier,
+                        inputs.sources.market,
+                        inputs.response,
+                        inputs.assessment,
+                        build_eligibility(inputs),
+                    ),
+                )
+
+    def test_forged_or_crossed_response_assessment_and_eligibility_fail_closed(self):
+        inputs = eligibility_inputs_for_case("proof")
+        value = build_learning_v3(inputs)
+        forged = build_eligibility(inputs)
+        forged["recommended_next_action"] = "run_validation_lab"
+        with self.assertRaisesRegex(
+            ValueError, r"^career learning decision v3 is invalid$"
+        ):
+            LEARNING_V3_BUILDER.build_career_learning_decision_v3(
+                inputs.sources.research,
+                inputs.sources.dossier,
+                inputs.sources.market,
+                inputs.response,
+                inputs.assessment,
+                forged,
+            )
+        crossed = eligibility_inputs_for_case("practice", locale="en")
+        self.assertEqual(
+            ["career learning decision v3 does not match validated sources"],
+            LEARNING_V3_VALIDATOR.validate_career_learning_decision_v3(
+                value,
+                crossed.sources.research,
+                crossed.sources.dossier,
+                crossed.sources.market,
+                inputs.response,
+                inputs.assessment,
+                build_eligibility(inputs),
+                crossed.sources.provider,
+            ),
+        )
+
+    def test_noncanonical_source_market_order_is_rejected(self):
+        inputs = eligibility_inputs_for_case("proof")
+        reordered = copy.deepcopy(inputs.sources.market)
+        reordered["vacancies"][:2] = reversed(reordered["vacancies"][:2])
+        with self.assertRaisesRegex(
+            ValueError, r"^career learning decision v3 is invalid$"
+        ):
+            LEARNING_V3_BUILDER.build_career_learning_decision_v3(
+                inputs.sources.research,
+                inputs.sources.dossier,
+                reordered,
+                inputs.response,
+                inputs.assessment,
+                build_eligibility(inputs),
+            )
+
+    def test_es_and_en_copy_is_deterministic_and_source_prose_is_not_used(self):
+        expected = {
+            ("proof", "es"): (
+                "Prueba acotada de Terraform",
+                "Prioriza una prueba acotada antes de comprar formación; la ruta estructurada de evidencia es la base completa de esta decisión preliminar.",
+                "No evaluado; requiere confirmación separada.",
+            ),
+            ("knowledge", "en"): (
+                "Terraform course",
+                "Research this verified provider option before buying; its structured signal binding does not predict employment outcomes.",
+                "Not evaluated; separate confirmation is required.",
+            ),
+        }
+        for (case, locale), literals in expected.items():
+            with self.subTest(case=case, locale=locale):
+                row = build_learning_v3(
+                    eligibility_inputs_for_case(case, locale=locale)
+                )["decisions"][0]
+                self.assertEqual(
+                    literals,
+                    (row["option_name"], row["decision_basis"], row["cost_time_band"]),
+                )
+                self.assertNotIn("Synthetic test requirement", json.dumps(row))
+
+    def test_builder_and_validator_capture_once_and_call_only_frozen_task_internals(self):
+        inputs = eligibility_inputs_for_case("proof")
+        sentinel = "learning-v3-toctou-sentinel"
+
+        class OnePassMapping(Mapping[str, object]):
+            def __init__(self, safe: dict[str, object]):
+                self.safe = safe
+                self.exhausted = False
+
+            def __getitem__(self, key: str) -> object:
+                if self.exhausted:
+                    return sentinel
+                return self.safe[key]
+
+            def __iter__(self) -> Iterator[str]:
+                return iter((sentinel,)) if self.exhausted else iter(self.safe)
+
+            def __len__(self) -> int:
+                return len(self.safe)
+
+            def items(self):
+                if self.exhausted:
+                    return iter(((sentinel, sentinel),))
+
+                def captured():
+                    try:
+                        yield from self.safe.items()
+                    finally:
+                        self.exhausted = True
+
+                return captured()
+
+        originals = [
+            OnePassMapping(inputs.sources.research),
+            OnePassMapping(inputs.sources.dossier),
+            OnePassMapping(inputs.sources.market),
+            OnePassMapping(inputs.response),
+            OnePassMapping(inputs.assessment),
+            OnePassMapping(build_eligibility(inputs)),
+        ]
+        public_builder = LEARNING_V3_BUILDER._eligibility_builder.build_career_next_action_eligibility_v1
+        public_validator = LEARNING_V3_BUILDER._eligibility_validator.validate_career_next_action_eligibility_v1
+        LEARNING_V3_BUILDER._eligibility_builder.build_career_next_action_eligibility_v1 = lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError(sentinel))
+        LEARNING_V3_BUILDER._eligibility_validator.validate_career_next_action_eligibility_v1 = lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError(sentinel))
+        try:
+            value = LEARNING_V3_BUILDER.build_career_learning_decision_v3(*originals)
+        finally:
+            LEARNING_V3_BUILDER._eligibility_builder.build_career_next_action_eligibility_v1 = public_builder
+            LEARNING_V3_BUILDER._eligibility_validator.validate_career_next_action_eligibility_v1 = public_validator
+        self.assertTrue(all(original.exhausted for original in originals))
+        self.assertNotIn(sentinel, json.dumps(value, sort_keys=True))
+
+        validator_originals = [
+            OnePassMapping(value),
+            OnePassMapping(inputs.sources.research),
+            OnePassMapping(inputs.sources.dossier),
+            OnePassMapping(inputs.sources.market),
+            OnePassMapping(inputs.response),
+            OnePassMapping(inputs.assessment),
+            OnePassMapping(build_eligibility(inputs)),
+        ]
+        validator_builder = (
+            LEARNING_V3_VALIDATOR._builder._eligibility_builder.build_career_next_action_eligibility_v1
+        )
+        validator_validator = (
+            LEARNING_V3_VALIDATOR._builder._eligibility_validator.validate_career_next_action_eligibility_v1
+        )
+        LEARNING_V3_VALIDATOR._builder._eligibility_builder.build_career_next_action_eligibility_v1 = lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError(sentinel))
+        LEARNING_V3_VALIDATOR._builder._eligibility_validator.validate_career_next_action_eligibility_v1 = lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError(sentinel))
+        try:
+            self.assertEqual(
+                [],
+                LEARNING_V3_VALIDATOR.validate_career_learning_decision_v3(
+                    *validator_originals
+                ),
+            )
+        finally:
+            LEARNING_V3_VALIDATOR._builder._eligibility_builder.build_career_next_action_eligibility_v1 = validator_builder
+            LEARNING_V3_VALIDATOR._builder._eligibility_validator.validate_career_next_action_eligibility_v1 = validator_validator
+        self.assertTrue(all(original.exhausted for original in validator_originals))
+
+    def test_totality_budgets_and_exceptional_values_have_generic_no_echo_failures(self):
+        inputs = eligibility_inputs_for_case("proof")
+        value = build_learning_v3(inputs)
+        sentinel = "learning-v3-private-sentinel"
+
+        class RaisingMapping(Mapping[str, object]):
+            def __getitem__(self, key: str) -> object:
+                raise RuntimeError(sentinel)
+
+            def __iter__(self) -> Iterator[str]:
+                raise RuntimeError(sentinel)
+
+            def __len__(self) -> int:
+                raise RuntimeError(sentinel)
+
+        cycle: dict[str, object] = {}
+        cycle["cycle"] = cycle
+        depth: object = None
+        for _ in range(34):
+            depth = {"child": depth}
+        hostile_values: tuple[object, ...] = (
+            cycle,
+            depth,
+            {"rows": [[0 for _ in range(99)] for _ in range(101)]},
+            {"items": list(range(151))},
+            {"text": "x" * 4097 + sentinel},
+            {"text": chr(0xD800) + sentinel},
+            {"float": 1.5},
+            RaisingMapping(),
+        )
+        for hostile in hostile_values:
+            with self.subTest(kind=type(hostile).__name__):
+                with self.assertRaisesRegex(
+                    ValueError, r"^career learning decision v3 is invalid$"
+                ) as raised:
+                    LEARNING_V3_BUILDER.build_career_learning_decision_v3(
+                        inputs.sources.research,
+                        inputs.sources.dossier,
+                        inputs.sources.market,
+                        inputs.response,
+                        inputs.assessment,
+                        hostile,
+                    )
+                self.assertIsNone(raised.exception.__cause__)
+                self.assertNotIn(sentinel, str(raised.exception))
+                errors = LEARNING_V3_VALIDATOR.validate_career_learning_decision_v3(
+                    hostile,
+                    inputs.sources.research,
+                    inputs.sources.dossier,
+                    inputs.sources.market,
+                    inputs.response,
+                    inputs.assessment,
+                    build_eligibility(inputs),
+                )
+                self.assertEqual(
+                    ["career learning decision v3 does not match validated sources"],
+                    errors,
+                )
+                self.assertNotIn(sentinel, str(errors))
+
+    def test_snapshot_loader_and_closed_root_contract(self):
+        inputs = eligibility_inputs_for_case("proof")
+        value = build_learning_v3(inputs)
+        self.assertEqual(
+            {
+                "schema_version", "locale", "as_of_date", "state",
+                "source_research_snapshot", "source_dossier_snapshot",
+                "source_alignment_snapshot", "source_market_snapshot",
+                "source_provider_research_snapshot", "source_gap_response_snapshot",
+                "source_gap_assessment_snapshot",
+                "source_next_action_eligibility_snapshot", "decisions",
+                "privacy_boundary", "no_external_action", "outcome_boundary",
+            },
+            set(value),
+        )
+        self.assertRegex(
+            LEARNING_V3_VALIDATOR.snapshot_for_learning_bundle_v3(value),
+            r"^snap-learning-v3-sha256-[0-9a-f]{64}$",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "learning.json"
+            path.write_text(json.dumps(value), encoding="utf-8")
+            self.assertEqual(value, LEARNING_V3_VALIDATOR.load_learning_bundle_v3(path))
+            invalid = Path(directory) / "invalid.json"
+            invalid.write_text("[]", encoding="utf-8")
+            with self.assertRaisesRegex(
+                LEARNING_V3_VALIDATOR.CareerLearningDecisionV3LoadError,
+                r"^cannot load career learning decision v3$",
+            ) as raised:
+                LEARNING_V3_VALIDATOR.load_learning_bundle_v3(invalid)
+            self.assertIsNone(raised.exception.__cause__)
+            duplicate = Path(directory) / "duplicate.json"
+            duplicate.write_text(
+                '{"schema_version":"career-learning-decision-v3",'
+                '"schema_version":"career-learning-decision-v3"}',
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                LEARNING_V3_VALIDATOR.CareerLearningDecisionV3LoadError,
+                r"^cannot load career learning decision v3$",
+            ) as raised:
+                LEARNING_V3_VALIDATOR.load_learning_bundle_v3(duplicate)
+            self.assertIsNone(raised.exception.__cause__)
+
+    def test_four_checked_in_fixtures_are_self_contained_and_builder_canonical(self):
+        fixture_root = FIXTURES / "career-learning-decision-v3"
+        expected_directories = {
+            "proof-es", "knowledge-en", "selection-required-es", "unavailable-es"
+        }
+        self.assertEqual(
+            expected_directories,
+            {path.name for path in fixture_root.iterdir() if path.is_dir()},
+        )
+        for name in sorted(expected_directories):
+            with self.subTest(directory=name):
+                directory = fixture_root / name
+                self.assertEqual(
+                    {"sources.json", "learning.json"},
+                    {path.name for path in directory.iterdir() if path.is_file()},
+                )
+                source_group = load_json(directory / "sources.json")
+                self.assertEqual(
+                    {
+                        "research", "executive_dossier", "market_dossier",
+                        "gap_response", "gap_assessment", "eligibility",
+                        "provider_research",
+                    },
+                    set(source_group),
+                )
+                expected = LEARNING_V3_BUILDER.build_career_learning_decision_v3(
+                    source_group["research"],
+                    source_group["executive_dossier"],
+                    source_group["market_dossier"],
+                    source_group["gap_response"],
+                    source_group["gap_assessment"],
+                    source_group["eligibility"],
+                    source_group["provider_research"],
+                )
+                self.assertEqual(expected, load_json(directory / "learning.json"))
 
 
 if __name__ == "__main__":

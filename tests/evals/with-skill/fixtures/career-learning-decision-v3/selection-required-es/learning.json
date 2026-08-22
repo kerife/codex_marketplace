@@ -1,0 +1,18 @@
+{
+  "as_of_date": "2026-08-13",
+  "decisions": [],
+  "locale": "es",
+  "no_external_action": true,
+  "outcome_boundary": "not_an_interview_offer_salary_or_roi_prediction",
+  "privacy_boundary": "identity_free_structured_provenance_only",
+  "schema_version": "career-learning-decision-v3",
+  "source_alignment_snapshot": "snap-alignment-sha256-cac631385f26e544adea7ce8a8aef267f8d1cfb9335792cd9278473087023f6e",
+  "source_dossier_snapshot": "snap-dossier-sha256-1cc5d236dc6a805748612a7765895e94adb4c3250d325239a4a398797fdc18a1",
+  "source_gap_assessment_snapshot": "snap-gap-assessment-v1-sha256-f5bd829bd362f74ddbd2d0af247df3840ac8a15c7d06080e3ec6ff096e4ad2e5",
+  "source_gap_response_snapshot": "snap-gap-response-v1-sha256-1bcdf9749cee5f1805380aa6b7a436c4412567e013d4f50d20f2ca002bc51535",
+  "source_market_snapshot": "snap-market-dossier-v2-sha256-170c3b21b6d2343a35011f7b4bac3f24c8d22a0bf7d3847a300bb14bf8191487",
+  "source_next_action_eligibility_snapshot": "snap-next-action-eligibility-v1-sha256-b0a35c66c2a44c23c3cc97c6d9f0852a99f0fafc4d178cb83d7d6efa8e0d71a1",
+  "source_provider_research_snapshot": null,
+  "source_research_snapshot": "snap-market-sha256-8273d3c23da3158584005569e48be00cb1a380c4d6d6d15b2c4f8d8464ffb924",
+  "state": "complete"
+}

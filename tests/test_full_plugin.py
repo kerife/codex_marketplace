@@ -507,6 +507,13 @@ class FullPluginIntegrationTests(unittest.TestCase):
             for locale in ("es", "en")
             for name in ("sources", "eligibility")
         )
+        learning_v3_fixture_paths = tuple(
+            f"tests/evals/with-skill/fixtures/career-learning-decision-v3/{condition}/{name}.json"
+            for condition in (
+                "proof-es", "knowledge-en", "selection-required-es", "unavailable-es"
+            )
+            for name in ("sources", "learning")
+        )
         self.assertEqual(
             eligibility_conditions,
             checker_module.CAREER_NEXT_ACTION_ELIGIBILITY_CONDITIONS,
@@ -514,6 +521,10 @@ class FullPluginIntegrationTests(unittest.TestCase):
         self.assertEqual(
             eligibility_fixture_paths,
             checker_module.CAREER_NEXT_ACTION_ELIGIBILITY_FIXTURE_PATHS,
+        )
+        self.assertEqual(
+            learning_v3_fixture_paths,
+            checker_module.CAREER_LEARNING_DECISION_V3_FIXTURE_PATHS,
         )
         self.assertEqual(
             (
@@ -536,6 +547,7 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "schemas/career-market-learning-dossier-v2.schema.json",
                 "schemas/career-learning-decision-v1.schema.json",
                 "schemas/career-learning-decision-v2.schema.json",
+                "schemas/career-learning-decision-v3.schema.json",
                 "schemas/career-learning-provider-research-v1.schema.json",
                 "schemas/candidate-gap-response-v1.schema.json",
                 "schemas/candidate-gap-assessment-v1.schema.json",
@@ -547,11 +559,14 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "scripts/build_career_market_learning_dossier_v2.py",
                 "scripts/build_career_learning_decision.py",
                 "scripts/project_career_learning_decision_v2.py",
+                "scripts/project_career_learning_decision_v3.py",
                 "scripts/build_career_learning_decision_v2.py",
+                "scripts/build_career_learning_decision_v3.py",
                 "scripts/validate_career_market_learning_dossier.py",
                 "scripts/validate_career_market_learning_dossier_v2.py",
                 "scripts/validate_career_learning_decision.py",
                 "scripts/validate_career_learning_decision_v2.py",
+                "scripts/validate_career_learning_decision_v3.py",
                 "scripts/validate_career_learning_provider_research.py",
                 "scripts/build_candidate_gap_response_v1.py",
                 "scripts/validate_candidate_gap_response_v1.py",
@@ -585,6 +600,7 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "tests/evals/with-skill/fixtures/candidate-gap-assessment-v1/recurrent-knowledge-en.json",
                 "tests/evals/with-skill/fixtures/candidate-gap-assessment-v1/unavailable-es.json",
                 *eligibility_fixture_paths,
+                *learning_v3_fixture_paths,
             ),
             checker_module.MARKET_DOSSIER_PACKAGE_PATHS,
         )
