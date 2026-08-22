@@ -584,6 +584,7 @@ class CareerLearningProviderResearchTests(unittest.TestCase):
             ("current_cost", "file fee not indicated"),
             ("maintenance", "profile://public-provider-metadata"),
             ("maintenance", "prefile://public-provider-metadata"),
+            ("maintenance", "Terraformfile://public-provider-metadata"),
             ("maintenance", "See (https://developer.hashicorp.com/terraform/tutorials)"),
             ("maintenance", "Harmless punctuation: [](),=\"/\\"),
         )
@@ -614,6 +615,33 @@ class CareerLearningProviderResearchTests(unittest.TestCase):
             ("percent encoded parenthesis", f"See%28file%3A%2F%2Fserver%2Fshare%2Fprobe%2F{sentinel}.json%29"),
             ("HTML encoded bracket", f"See&#91;file&#58;&#47;&#47;server&#47;share&#47;probe&#47;{sentinel}.json&#93;"),
             ("NFKC parenthesis", f"See（ｆｉｌｅ：／／server/share/probe/{sentinel}.json）"),
+        )
+        for field in fields:
+            for name, value in cases:
+                with self.subTest(field=field, name=name):
+                    altered = copy.deepcopy(provider)
+                    altered["options"][0][field] = value
+                    errors = PROVIDER_VALIDATOR.validate_provider_research(altered)
+                    self.assertIn("provider research has unsafe public metadata", errors)
+                    self.assertNotIn(sentinel, "\n".join(errors))
+
+    def test_provider_research_rejects_underscore_prefixed_file_uris_in_every_free_text_field_without_echo(self):
+        provider = self.provider_fixture("complete-es.json")
+        sentinel = "provider-underscore-boundary-sentinel"
+        fields = (
+            "provider", "option", "source_title", "geography", "current_cost", "currency",
+            "tax", "duration", "prerequisite", "renewal", "maintenance", "unknowns",
+        )
+        cases = (
+            ("raw underscore", f"Terraform_file://server/share/probe/{sentinel}.json"),
+            (
+                "percent-encoded underscore",
+                f"Terraform%5Ffile%3A%2F%2Fserver%2Fshare%2Fprobe%2F{sentinel}.json",
+            ),
+            (
+                "NFKC fullwidth low line and file URI",
+                f"Terraform＿ｆｉｌｅ：／／server/share/probe/{sentinel}.json",
+            ),
         )
         for field in fields:
             for name, value in cases:
@@ -884,6 +912,23 @@ class CareerLearningDecisionV2Tests(unittest.TestCase):
         sentinel = "provider-file-uri-sentinel"
         sources[3]["options"][0]["unknowns"] = (
             f"See (file://server/share/probe/{sentinel}.json)"
+        )
+        self.assertEqual(
+            ["provider research has unsafe public metadata"],
+            PROVIDER_VALIDATOR.validate_provider_research(sources[3]),
+        )
+        with self.assertRaisesRegex(ValueError, r"^learning decision v2 is invalid$") as raised:
+            LEARNING_V2_BUILDER.build_learning_bundle_v2(
+                *sources,
+                [self.request("research_provider_option", provider_id="LP-001")],
+            )
+        self.assertNotIn(sentinel, str(raised.exception))
+
+    def test_learning_builder_rejects_underscored_file_uri_provider_before_projection(self):
+        sources = list(self.complete_v2_sources())
+        sentinel = "provider-underscore-file-uri-sentinel"
+        sources[3]["options"][0]["unknowns"] = (
+            f"Terraform_file://server/share/probe/{sentinel}.json"
         )
         self.assertEqual(
             ["provider research has unsafe public metadata"],

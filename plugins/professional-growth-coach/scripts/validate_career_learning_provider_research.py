@@ -67,7 +67,7 @@ _LOCAL_PATH_SEGMENT = re.compile(
     r"(?:^|[\\/])(?:Users|private|var|tmp|home|root)(?:[\\/]|$)", re.I
 )
 _LOCAL_FILE_URI = re.compile(
-    r"(?<!\w)file\s*:(?:[\\/]){2,}", re.I
+    r"(?<![^\W_])file\s*:(?:[\\/]){2,}", re.I
 )
 _ROOT_FIELDS = frozenset(
     {"schema_version", "locale", "as_of_date", "state", "options", "privacy_boundary", "no_external_action"}
