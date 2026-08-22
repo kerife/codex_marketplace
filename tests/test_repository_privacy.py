@@ -13,6 +13,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -169,6 +170,9 @@ def load_market_runtime() -> dict[str, object]:
         for name in (
             "validate_target_vacancy_research",
             "build_career_market_learning_dossier",
+            "build_career_market_learning_dossier_v2",
+            "build_candidate_gap_response_v1",
+            "build_candidate_gap_assessment_v1",
             "render_executive_career_dossier_v2",
         ):
             path = scripts / f"{name}.py"
@@ -1282,6 +1286,63 @@ class RepositoryPrivacyTests(unittest.TestCase):
                 self.assertGreater(
                     violations["SINGLING_OUT_STRUCTURED_COMBINATION"], 0
                 )
+
+    def test_eligibility_source_projection_scans_coordinated_valid_source_content(
+        self,
+    ) -> None:
+        scanner = load_scanner()
+        runtime = load_market_runtime()
+        relative_path = CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_PATHS[-1]
+        payload = json.loads((REPO_ROOT / relative_path).read_text(encoding="utf-8"))
+        payload["executive_dossier"]["analytics"]["reason"] = "profile_views: 314"
+        payload["market_dossier"] = runtime[
+            "build_career_market_learning_dossier_v2"
+        ].build_market_dossier_v2(
+            payload["research"], payload["executive_dossier"]
+        )
+        prior_response = payload["gap_response"]
+        payload["gap_response"] = runtime[
+            "build_candidate_gap_response_v1"
+        ].build_candidate_gap_response_v1(
+            payload["research"],
+            payload["market_dossier"],
+            {
+                field: prior_response[field]
+                for field in (
+                    "selected_vacancy_ordinal",
+                    "selected_signal",
+                    "relation",
+                    "selected_provider_ordinal",
+                )
+            },
+            payload["provider_research"],
+        )
+        payload["gap_assessment"] = runtime[
+            "build_candidate_gap_assessment_v1"
+        ].build_candidate_gap_assessment_v1(
+            payload["research"],
+            payload["executive_dossier"],
+            payload["market_dossier"],
+            payload["gap_response"],
+            payload["provider_research"],
+        )
+        project = scanner._load_career_next_action_eligibility_builder()
+        self.assertTrue(callable(project))
+        eligibility = project(payload)
+        original_read_text = Path.read_text
+
+        def coherent_sibling(path: Path, *args, **kwargs) -> str:
+            if path == REPO_ROOT / relative_path.with_name("eligibility.json"):
+                return json.dumps(eligibility, ensure_ascii=False)
+            return original_read_text(path, *args, **kwargs)
+
+        with mock.patch.object(Path, "read_text", autospec=True) as read_text:
+            read_text.side_effect = coherent_sibling
+            violations = scanner.scan_text(
+                relative_path, json.dumps(payload, ensure_ascii=False)
+            )
+
+        self.assertGreater(violations["PRIVATE_ANALYTICS_VALUE"], 0)
 
     def test_semantic_v2_renderer_projects_no_internal_or_source_provenance(self) -> None:
         runtime = load_market_runtime()

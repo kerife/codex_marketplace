@@ -287,6 +287,24 @@ def _json_scalars(value: object) -> Iterator[str]:
         yield str(value)
 
 
+def _json_scalar_values(value: object) -> Iterator[str]:
+    if isinstance(value, dict):
+        for nested in value.values():
+            yield from _json_scalar_values(nested)
+    elif isinstance(value, list):
+        for nested in value:
+            yield from _json_scalar_values(nested)
+    elif isinstance(value, (str, int, float, bool)) or value is None:
+        yield str(value)
+
+
+def _bounded_scalar_scan_values(value: object) -> list[str]:
+    return [
+        f"{scalar}|validated_scalar_boundary"
+        for scalar in _json_scalar_values(value)
+    ]
+
+
 def _json_leaf_assignments(value: object) -> Iterator[str]:
     if isinstance(value, dict):
         for key, nested in value.items():
@@ -728,7 +746,33 @@ def _safe_career_next_action_eligibility_sources_scan_value(
         or not _json_depth_is_bounded(expected, 8)
     ):
         return None
-    return projected
+    research = value["research"]
+    dossier = value["executive_dossier"]
+    research_scan = _safe_target_research_scan_value(
+        json.dumps(research, ensure_ascii=False), research
+    )
+    dossier_scan = _safe_dossier_v2_scan_value(
+        json.dumps(dossier, ensure_ascii=False), dossier
+    )
+    if research_scan is None or dossier_scan is None:
+        return None
+    return {
+        "validated_research": research_scan,
+        "validated_executive_dossier": dossier_scan,
+        "validated_market_values": _bounded_scalar_scan_values(
+            value["market_dossier"]
+        ),
+        "validated_provider_values": _bounded_scalar_scan_values(
+            value["provider_research"]
+        ),
+        "validated_gap_response_values": _bounded_scalar_scan_values(
+            value["gap_response"]
+        ),
+        "validated_gap_assessment_values": _bounded_scalar_scan_values(
+            value["gap_assessment"]
+        ),
+        "eligibility": projected,
+    }
 
 
 def _is_exact_synthetic_market_v2_fixture(
