@@ -27,6 +27,7 @@ _market_builder = _sibling("build_career_market_learning_dossier_v2.py")
 _market_validator = _sibling("validate_career_market_learning_dossier_v2.py")
 _provider_validator = _sibling("validate_career_learning_provider_research.py")
 _projection = _sibling("project_career_learning_decision_v2.py")
+_semantic_snapshot = _sibling("semantic_provenance_snapshot.py")
 
 SCHEMA_VERSION = "career-learning-decision-v2"
 _PRIVACY_BOUNDARY = "identity_free_structured_provenance_only"
@@ -38,54 +39,7 @@ _MAX_STRING = 4096
 
 
 def _bounded_tree(value: object) -> bool:
-    pending: list[tuple[str, object, int]] = [("visit", value, 0)]
-    active: set[int] = set()
-    nodes = 0
-    while pending:
-        operation, current, depth = pending.pop()
-        if operation == "leave":
-            active.discard(id(current))
-            continue
-        if operation == "children":
-            try:
-                child = next(current)
-            except StopIteration:
-                continue
-            except Exception:
-                return False
-            pending.append(("children", current, depth))
-            pending.append(("visit", child, depth))
-            continue
-        nodes += 1
-        if nodes > _MAX_NODES or depth > _MAX_DEPTH:
-            return False
-        if isinstance(current, str):
-            if len(current) > _MAX_STRING or any(
-                0xD800 <= ord(character) <= 0xDFFF for character in current
-            ):
-                return False
-            continue
-        if current is None or isinstance(current, (bool, int, float)):
-            continue
-        if not isinstance(current, (Mapping, list)):
-            return False
-        identity = id(current)
-        if identity in active:
-            return False
-        try:
-            if len(current) > _MAX_ITEMS:
-                return False
-            children = iter(
-                (item for pair in current.items() for item in pair)
-                if isinstance(current, Mapping)
-                else current
-            )
-        except Exception:
-            return False
-        active.add(identity)
-        pending.append(("leave", current, depth))
-        pending.append(("children", children, depth + 1))
-    return True
+    return _semantic_snapshot.bounded_tree(value)
 
 
 def _validated_source_copies(

@@ -224,6 +224,8 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/career-learning-decision-v1.schema.json",
     "schemas/career-learning-decision-v2.schema.json",
     "schemas/career-learning-provider-research-v1.schema.json",
+    "schemas/candidate-gap-response-v1.schema.json",
+    "scripts/semantic_provenance_snapshot.py",
     "scripts/validate_target_vacancy_research.py",
     "scripts/derive_candidate_market_alignment_v2.py",
     "scripts/build_career_market_learning_dossier.py",
@@ -236,7 +238,10 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "scripts/validate_career_learning_decision.py",
     "scripts/validate_career_learning_decision_v2.py",
     "scripts/validate_career_learning_provider_research.py",
+    "scripts/build_candidate_gap_response_v1.py",
+    "scripts/validate_candidate_gap_response_v1.py",
     "assets/career-market-learning-dossier-v1.css",
+    "tests/test_learning_eligibility_v3.py",
     "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
     "tests/evals/with-skill/fixtures/target-vacancy-research/limited-four-en.json",
     "tests/evals/with-skill/fixtures/target-vacancy-research/unavailable-es.json",
@@ -770,6 +775,8 @@ def _load_market_package_modules(plugin_root: Path) -> dict[str, object]:
             "validate_career_learning_decision",
             "validate_career_learning_decision_v2",
             "validate_career_learning_provider_research",
+            "build_candidate_gap_response_v1",
+            "validate_candidate_gap_response_v1",
             "render_executive_career_dossier_v2",
         ):
             path = scripts_root / f"{name}.py"
@@ -846,6 +853,7 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         "schemas/career-learning-decision-v1.schema.json": "source_market_snapshot",
         "schemas/career-learning-decision-v2.schema.json": "source_provider_research_snapshot",
         "schemas/career-learning-provider-research-v1.schema.json": "options",
+        "schemas/candidate-gap-response-v1.schema.json": "source_market_snapshot",
     }
     for relative_path, required_field in schema_requirements.items():
         try:
@@ -913,6 +921,16 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             "validate_provider_research",
             "load_provider_research",
             "snapshot_for_provider_research",
+        ),
+        "build_candidate_gap_response_v1": (
+            "build_candidate_gap_response_v1",
+            "_project_candidate_gap_response_from_frozen",
+        ),
+        "validate_candidate_gap_response_v1": (
+            "validate_candidate_gap_response_v1",
+            "snapshot_for_candidate_gap_response_v1",
+            "load_candidate_gap_response_v1",
+            "_validate_candidate_gap_response_from_frozen",
         ),
         "render_executive_career_dossier_v2": ("render_dossier_html",),
     }

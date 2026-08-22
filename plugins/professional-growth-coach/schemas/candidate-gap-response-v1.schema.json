@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/professional-growth-coach/candidate-gap-response-v1.schema.json",
+  "title": "Candidate Gap Response v1",
+  "type": "object",
+  "required": [
+    "schema_version", "locale", "as_of_date", "source_research_snapshot",
+    "source_market_snapshot", "source_provider_research_snapshot", "response_state",
+    "selected_vacancy_ordinal", "selected_signal", "relation",
+    "selected_provider_ordinal", "privacy_boundary", "draft_only", "no_external_action"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "candidate-gap-response-v1"},
+    "locale": {"enum": ["es", "en"]},
+    "as_of_date": {"type": "string", "format": "date"},
+    "source_research_snapshot": {"type": "string", "pattern": "^snap-market-sha256-[0-9a-f]{64}$"},
+    "source_market_snapshot": {"type": "string", "pattern": "^snap-market-dossier-v2-sha256-[0-9a-f]{64}$"},
+    "source_provider_research_snapshot": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^snap-provider-sha256-[0-9a-f]{64}$"}
+      ]
+    },
+    "response_state": {"enum": ["unavailable", "selection_required", "partial", "complete"]},
+    "selected_vacancy_ordinal": {
+      "oneOf": [{"type": "null"}, {"type": "string", "pattern": "^V[1-5]$"}]
+    },
+    "selected_signal": {
+      "oneOf": [{"type": "null"}, {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"}]
+    },
+    "relation": {
+      "oneOf": [
+        {"type": "null"},
+        {"enum": ["supported", "proof_gap", "knowledge_gap", "practice_gap", "professional_experience_gap", "terminology_gap", "unknown"]}
+      ]
+    },
+    "selected_provider_ordinal": {
+      "oneOf": [{"type": "null"}, {"type": "string", "pattern": "^L[1-9][0-9]*$"}]
+    },
+    "privacy_boundary": {"const": "identity_free_closed_candidate_response_only"},
+    "draft_only": {"const": true},
+    "no_external_action": {"const": true}
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "response_state": {"const": "unavailable"},
+        "selected_vacancy_ordinal": {"type": "null"},
+        "selected_signal": {"type": "null"},
+        "relation": {"type": "null"},
+        "selected_provider_ordinal": {"type": "null"},
+        "source_provider_research_snapshot": {"type": "null"}
+      }
+    },
+    {
+      "properties": {
+        "response_state": {"const": "selection_required"},
+        "selected_vacancy_ordinal": {"type": "null"},
+        "selected_signal": {"type": "null"},
+        "relation": {"type": "null"},
+        "selected_provider_ordinal": {"type": "null"},
+        "source_provider_research_snapshot": {"type": "null"}
+      }
+    },
+    {
+      "properties": {
+        "response_state": {"const": "partial"},
+        "selected_vacancy_ordinal": {"type": "string", "pattern": "^V[1-5]$"},
+        "selected_signal": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "relation": {"const": "unknown"},
+        "selected_provider_ordinal": {"type": "null"},
+        "source_provider_research_snapshot": {"type": "null"}
+      }
+    },
+    {
+      "properties": {
+        "response_state": {"const": "complete"},
+        "selected_vacancy_ordinal": {"type": "string", "pattern": "^V[1-5]$"},
+        "selected_signal": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "relation": {"enum": ["supported", "proof_gap", "practice_gap", "professional_experience_gap", "terminology_gap"]},
+        "selected_provider_ordinal": {"type": "null"},
+        "source_provider_research_snapshot": {"type": "null"}
+      }
+    },
+    {
+      "properties": {
+        "response_state": {"const": "complete"},
+        "selected_vacancy_ordinal": {"type": "string", "pattern": "^V[1-5]$"},
+        "selected_signal": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "relation": {"const": "knowledge_gap"},
+        "selected_provider_ordinal": {"type": "null"}
+      }
+    },
+    {
+      "properties": {
+        "response_state": {"const": "complete"},
+        "selected_vacancy_ordinal": {"type": "string", "pattern": "^V[1-5]$"},
+        "selected_signal": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "relation": {"const": "knowledge_gap"},
+        "selected_provider_ordinal": {"type": "string", "pattern": "^L[1-9][0-9]*$"},
+        "source_provider_research_snapshot": {"type": "string", "pattern": "^snap-provider-sha256-[0-9a-f]{64}$"}
+      }
+    }
+  ]
+}

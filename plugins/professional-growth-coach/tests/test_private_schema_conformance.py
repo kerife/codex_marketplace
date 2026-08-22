@@ -27,6 +27,7 @@ REPOSITORY_ONLY_TESTS = {
     "test_career_market_dossier_schemas_accept_closed_synthetic_states",
     "test_career_market_dossier_v2_schema_accepts_recomputed_fixtures",
     "test_candidate_market_alignment_v2_schema_accepts_derived_fixture",
+    "test_candidate_gap_response_v1_schema_accepts_closed_public_states",
     "test_dependency_free_checker_rejects_nested_quantifier_patterns",
     "test_dossier_handoff_rejects_unlabelled_person_name_source_fact",
     "test_dossier_schema_prose_mutations_match_custom_unicode_boundary",
@@ -59,6 +60,8 @@ from validate_career_market_learning_dossier_v2 import validate_market_dossier_v
 from validate_career_learning_provider_research import validate_provider_research
 from build_career_learning_decision_v2 import build_learning_bundle_v2
 from validate_career_learning_decision_v2 import validate_learning_bundle_v2
+from build_candidate_gap_response_v1 import build_candidate_gap_response_v1
+from validate_candidate_gap_response_v1 import validate_candidate_gap_response_v1
 
 
 def _load_v2_dossier_helper():
@@ -244,6 +247,91 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         ]
         self.assertEqual(complete, build_learning_bundle_v2(research, market, dossier, provider, requests))
         self.assertEqual([], validate_learning_bundle_v2(complete, research, market, dossier, provider))
+
+    def test_candidate_gap_response_v1_schema_accepts_closed_public_states(self):
+        schema = self._schema("candidate-gap-response-v1.schema.json")
+        snapshot = "0" * 64
+        base = {
+            "schema_version": "candidate-gap-response-v1",
+            "locale": "es",
+            "as_of_date": "2026-08-13",
+            "source_research_snapshot": f"snap-market-sha256-{snapshot}",
+            "source_market_snapshot": f"snap-market-dossier-v2-sha256-{snapshot}",
+            "source_provider_research_snapshot": None,
+            "response_state": "selection_required",
+            "selected_vacancy_ordinal": None,
+            "selected_signal": None,
+            "relation": None,
+            "selected_provider_ordinal": None,
+            "privacy_boundary": "identity_free_closed_candidate_response_only",
+            "draft_only": True,
+            "no_external_action": True,
+        }
+        cases = []
+        unavailable = copy.deepcopy(base)
+        unavailable["response_state"] = "unavailable"
+        cases.append(unavailable)
+        cases.append(copy.deepcopy(base))
+        partial = copy.deepcopy(base)
+        partial.update(
+            {
+                "response_state": "partial",
+                "selected_vacancy_ordinal": "V2",
+                "selected_signal": "terraform",
+                "relation": "unknown",
+            }
+        )
+        cases.append(partial)
+        complete = copy.deepcopy(partial)
+        complete.update({"response_state": "complete", "relation": "proof_gap"})
+        cases.append(complete)
+        knowledge = copy.deepcopy(complete)
+        knowledge.update(
+            {
+                "relation": "knowledge_gap",
+                "selected_provider_ordinal": "L1",
+                "source_provider_research_snapshot": f"snap-provider-sha256-{snapshot}",
+            }
+        )
+        cases.append(knowledge)
+        for value in cases:
+            with self.subTest(state=value["response_state"], relation=value["relation"]):
+                self.assertEqual([], validate_schema_instance(value, schema))
+
+        private_id = copy.deepcopy(complete)
+        private_id["selected_vacancy_id"] = "V-003"
+        self.assertTrue(validate_schema_instance(private_id, schema))
+        crossed_state = copy.deepcopy(partial)
+        crossed_state["response_state"] = "complete"
+        self.assertTrue(validate_schema_instance(crossed_state, schema))
+
+        fixture_root = ROOT.parent.parent / "tests/evals/with-skill/fixtures"
+        research = json.loads(
+            (fixture_root / "target-vacancy-research/complete-five-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        research["vacancies"][0]["requirements"][0]["signal"] = "terraform"
+        dossier = json.loads(
+            (fixture_root / "executive-career-dossier-v2/scenario-a-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        market = build_market_dossier_v2(research, dossier)
+        built = build_candidate_gap_response_v1(
+            research,
+            market,
+            {
+                "selected_vacancy_ordinal": "V2",
+                "selected_signal": "terraform",
+                "relation": "proof_gap",
+                "selected_provider_ordinal": None,
+            },
+        )
+        self.assertEqual([], validate_schema_instance(built, schema))
+        self.assertEqual(
+            [], validate_candidate_gap_response_v1(built, research, market)
+        )
 
     def test_target_vacancy_research_schema_accepts_closed_synthetic_states(self):
         schema = self._schema("target-vacancy-research-v1.schema.json")
