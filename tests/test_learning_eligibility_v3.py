@@ -1,4 +1,4 @@
-"""Task 1 contracts for the vacancy-first candidate gap response boundary."""
+"""Task 1 and 2 contracts for vacancy-first gap response and assessment."""
 
 from __future__ import annotations
 
@@ -33,6 +33,8 @@ def load_sibling(name: str):
 
 RESPONSE_BUILDER = load_sibling("build_candidate_gap_response_v1.py")
 RESPONSE_VALIDATOR = load_sibling("validate_candidate_gap_response_v1.py")
+ASSESSMENT_BUILDER = load_sibling("build_candidate_gap_assessment_v1.py")
+ASSESSMENT_VALIDATOR = load_sibling("validate_candidate_gap_assessment_v1.py")
 SNAPSHOT = load_sibling("semantic_provenance_snapshot.py")
 MARKET_BUILDER = load_sibling("build_career_market_learning_dossier_v2.py")
 
@@ -47,6 +49,7 @@ def load_json(path: Path) -> dict[str, object]:
 @dataclass(frozen=True)
 class Sources:
     research: dict[str, object]
+    dossier: dict[str, object]
     market: dict[str, object]
     provider: dict[str, object] | None = None
 
@@ -62,13 +65,23 @@ def recurrent_sources(*, locale: str = "es", provider: bool = False) -> Sources:
     dossier = load_json(FIXTURES / "executive-career-dossier-v2" / dossier_name)
     research["vacancies"][0]["requirements"][0]["signal"] = "terraform"
     market = MARKET_BUILDER.build_market_dossier_v2(research, dossier)
+    terraform = next(
+        row for row in market["recurrence_rows"] if row["signal"] == "terraform"
+    )
+    assert terraform["display_fraction"] == (
+        "2/5" if locale == "es" else "2/4"
+    )
+    assert [row["vacancy_id"] for row in market["vacancies"][:2]] == [
+        "V-001",
+        "V-003",
+    ]
     provider_value = None
     if provider:
         provider_name = "complete-es.json" if locale == "es" else "limited-en.json"
         provider_value = load_json(
             FIXTURES / "career-learning-provider-research" / provider_name
         )
-    return Sources(research, market, provider_value)
+    return Sources(research, dossier, market, provider_value)
 
 
 def unavailable_sources() -> Sources:
@@ -77,6 +90,11 @@ def unavailable_sources() -> Sources:
             FIXTURES
             / "target-vacancy-research"
             / "unavailable-es.json"
+        ),
+        load_json(
+            FIXTURES
+            / "executive-career-dossier-v2"
+            / "scenario-a-es.json"
         ),
         load_json(
             FIXTURES
@@ -97,6 +115,32 @@ def response_payload(
         "relation": relation,
         "selected_provider_ordinal": provider_ordinal,
     }
+
+
+def build_response(
+    sources: Sources,
+    *,
+    relation: object = "proof_gap",
+    provider_ordinal: object = None,
+) -> dict[str, object]:
+    return RESPONSE_BUILDER.build_candidate_gap_response_v1(
+        sources.research,
+        sources.market,
+        response_payload(relation=relation, provider_ordinal=provider_ordinal),
+        sources.provider,
+    )
+
+
+def build_assessment(
+    sources: Sources, response: object
+) -> dict[str, object]:
+    return ASSESSMENT_BUILDER.build_candidate_gap_assessment_v1(
+        sources.research,
+        sources.dossier,
+        sources.market,
+        response,
+        sources.provider,
+    )
 
 
 class CandidateGapResponseV1Tests(unittest.TestCase):
@@ -566,6 +610,550 @@ class CandidateGapResponseV1Tests(unittest.TestCase):
         ):
             with self.subTest(expected=expected):
                 self.assertEqual(expected, v2._bounded_tree(value))
+
+
+class CandidateGapAssessmentV1Tests(unittest.TestCase):
+    def assert_assessment_valid(
+        self,
+        value: object,
+        sources: Sources,
+        response: object,
+    ) -> None:
+        self.assertEqual(
+            [],
+            ASSESSMENT_VALIDATOR.validate_candidate_gap_assessment_v1(
+                value,
+                sources.research,
+                sources.dossier,
+                sources.market,
+                response,
+                sources.provider,
+            ),
+        )
+
+    def test_assessment_resolves_public_v2_to_exact_private_vacancy(self):
+        sources = recurrent_sources(locale="es")
+        response = build_response(sources, relation="proof_gap")
+        result = build_assessment(sources, response)
+        self.assertEqual("V-003", result["selected_vacancy_id"])
+        self.assertEqual("terraform", result["selected_signal"])
+        self.assertEqual("proof_gap", result["assessments"][0]["relation"])
+        self.assertEqual(
+            RESPONSE_VALIDATOR.snapshot_for_candidate_gap_response_v1(response),
+            result["source_gap_response_snapshot"],
+        )
+        self.assert_assessment_valid(result, sources, response)
+
+    def test_all_states_enforce_exact_selection_cardinality_and_dates(self):
+        available = recurrent_sources(locale="es")
+        unavailable = unavailable_sources()
+        cases = (
+            (
+                "unavailable",
+                unavailable,
+                RESPONSE_BUILDER.build_candidate_gap_response_v1(
+                    unavailable.research, unavailable.market, None
+                ),
+                (None, None, None),
+                [],
+            ),
+            (
+                "selection_required",
+                available,
+                RESPONSE_BUILDER.build_candidate_gap_response_v1(
+                    available.research, available.market, None
+                ),
+                (None, None, None),
+                [],
+            ),
+            (
+                "partial",
+                available,
+                build_response(available, relation="unknown"),
+                ("V-003", "terraform", None),
+                [
+                    {
+                        "signal": "terraform",
+                        "relation": "unknown",
+                        "confirmation_state": "not_assessed",
+                        "assessment_date": None,
+                    }
+                ],
+            ),
+            (
+                "complete",
+                available,
+                build_response(available, relation="proof_gap"),
+                ("V-003", "terraform", None),
+                [
+                    {
+                        "signal": "terraform",
+                        "relation": "proof_gap",
+                        "confirmation_state": "candidate_confirmed",
+                        "assessment_date": "2026-08-13",
+                    }
+                ],
+            ),
+        )
+        for state, sources, response, selected, assessments in cases:
+            with self.subTest(state=state):
+                result = build_assessment(sources, response)
+                self.assertEqual(state, result["state"])
+                self.assertEqual(
+                    selected,
+                    (
+                        result["selected_vacancy_id"],
+                        result["selected_signal"],
+                        result["selected_provider_option_id"],
+                    ),
+                )
+                self.assertEqual(assessments, result["assessments"])
+                self.assertIsNone(result["source_provider_research_snapshot"])
+                self.assert_assessment_valid(result, sources, response)
+
+    def test_all_relations_project_only_closed_confirmation_metadata(self):
+        sources = recurrent_sources(locale="es")
+        relations = (
+            "supported",
+            "proof_gap",
+            "knowledge_gap",
+            "practice_gap",
+            "professional_experience_gap",
+            "terminology_gap",
+            "unknown",
+        )
+        for relation in relations:
+            with self.subTest(relation=relation):
+                response = build_response(sources, relation=relation)
+                result = build_assessment(sources, response)
+                row = result["assessments"][0]
+                self.assertEqual(relation, row["relation"])
+                self.assertEqual(
+                    "not_assessed" if relation == "unknown" else "candidate_confirmed",
+                    row["confirmation_state"],
+                )
+                self.assertEqual(
+                    None if relation == "unknown" else "2026-08-13",
+                    row["assessment_date"],
+                )
+                self.assert_assessment_valid(result, sources, response)
+
+    def test_public_provider_l1_resolves_to_locale_specific_private_option(self):
+        for locale, expected_id in (("es", "LP-001"), ("en", "LP-003")):
+            with self.subTest(locale=locale):
+                sources = recurrent_sources(locale=locale, provider=True)
+                response = build_response(
+                    sources, relation="knowledge_gap", provider_ordinal="L1"
+                )
+                result = build_assessment(sources, response)
+                self.assertEqual(expected_id, result["selected_provider_option_id"])
+                self.assertEqual(
+                    response["source_provider_research_snapshot"],
+                    result["source_provider_research_snapshot"],
+                )
+                self.assert_assessment_valid(result, sources, response)
+
+    def test_knowledge_provider_source_may_be_bound_without_selecting_an_option(self):
+        sources = recurrent_sources(locale="es", provider=True)
+        response = build_response(sources, relation="knowledge_gap")
+        result = build_assessment(sources, response)
+        self.assertIsNone(result["selected_provider_option_id"])
+        self.assertIsNotNone(result["source_provider_research_snapshot"])
+        self.assert_assessment_valid(result, sources, response)
+
+    def test_assessment_is_a_closed_source_only_projection_without_prose_or_urls(self):
+        sources = recurrent_sources(locale="es", provider=True)
+        response = build_response(
+            sources, relation="knowledge_gap", provider_ordinal="L1"
+        )
+        result = build_assessment(sources, response)
+        self.assertEqual(
+            {
+                "schema_version",
+                "locale",
+                "as_of_date",
+                "state",
+                "source_research_snapshot",
+                "source_dossier_snapshot",
+                "source_market_snapshot",
+                "source_gap_response_snapshot",
+                "source_provider_research_snapshot",
+                "selected_vacancy_id",
+                "selected_signal",
+                "selected_provider_option_id",
+                "assessments",
+                "privacy_boundary",
+                "draft_only",
+                "no_external_action",
+            },
+            set(result),
+        )
+        self.assertEqual(
+            {"signal", "relation", "confirmation_state", "assessment_date"},
+            set(result["assessments"][0]),
+        )
+        serialized = json.dumps(result, ensure_ascii=False, sort_keys=True)
+        for forbidden in (
+            "source_paraphrase",
+            "employer",
+            "title",
+            "https://",
+            "HashiCorp",
+            "candidate gap response",
+        ):
+            self.assertNotIn(forbidden, serialized)
+        self.assertEqual(
+            "identity_free_closed_candidate_assessment_only",
+            result["privacy_boundary"],
+        )
+        self.assertIs(result["draft_only"], True)
+        self.assertIs(result["no_external_action"], True)
+
+    def test_assessment_cannot_reconstruct_or_override_response(self):
+        sources = recurrent_sources(locale="es")
+        response = build_response(sources, relation="proof_gap")
+        result = build_assessment(sources, response)
+        altered = copy.deepcopy(result)
+        altered["assessments"][0]["relation"] = "knowledge_gap"
+        self.assertEqual(
+            ["candidate gap assessment does not match validated sources"],
+            ASSESSMENT_VALIDATOR.validate_candidate_gap_assessment_v1(
+                altered,
+                sources.research,
+                sources.dossier,
+                sources.market,
+                response,
+            ),
+        )
+
+        different_response = build_response(sources, relation="practice_gap")
+        self.assertEqual(
+            ["candidate gap assessment does not match validated sources"],
+            ASSESSMENT_VALIDATOR.validate_candidate_gap_assessment_v1(
+                result,
+                sources.research,
+                sources.dossier,
+                sources.market,
+                different_response,
+            ),
+        )
+
+    def test_wrong_private_ids_extra_fields_and_extra_or_reordered_rows_fail(self):
+        sources = recurrent_sources(locale="es")
+        response = build_response(sources)
+        result = build_assessment(sources, response)
+        malformed = []
+        wrong_vacancy = copy.deepcopy(result)
+        wrong_vacancy["selected_vacancy_id"] = "V-001"
+        malformed.append(wrong_vacancy)
+        wrong_provider = copy.deepcopy(result)
+        wrong_provider["selected_provider_option_id"] = "LP-001"
+        malformed.append(wrong_provider)
+        extra = copy.deepcopy(result)
+        extra["reason"] = "private-sentinel-prose"
+        malformed.append(extra)
+        two_rows = copy.deepcopy(result)
+        second = copy.deepcopy(two_rows["assessments"][0])
+        second["relation"] = "practice_gap"
+        two_rows["assessments"].append(second)
+        malformed.extend((two_rows, two_rows | {"assessments": list(reversed(two_rows["assessments"]))}))
+        for value in malformed:
+            with self.subTest(fields=sorted(value)):
+                errors = ASSESSMENT_VALIDATOR.validate_candidate_gap_assessment_v1(
+                    value,
+                    sources.research,
+                    sources.dossier,
+                    sources.market,
+                    response,
+                )
+                self.assertEqual(
+                    ["candidate gap assessment does not match validated sources"],
+                    errors,
+                )
+                self.assertNotIn("private-sentinel", str(errors))
+
+    def test_noncanonical_market_order_cannot_redefine_the_public_ordinal(self):
+        sources = recurrent_sources(locale="es")
+        reordered_market = copy.deepcopy(sources.market)
+        reordered_market["vacancies"][:2] = reversed(
+            reordered_market["vacancies"][:2]
+        )
+        response = RESPONSE_BUILDER.build_candidate_gap_response_v1(
+            sources.research,
+            reordered_market,
+            response_payload(),
+        )
+        with self.assertRaisesRegex(
+            ValueError, r"^candidate gap assessment is invalid$"
+        ):
+            ASSESSMENT_BUILDER.build_candidate_gap_assessment_v1(
+                sources.research,
+                sources.dossier,
+                reordered_market,
+                response,
+            )
+
+    def test_crossed_market_dossier_response_and_provider_sources_fail_closed(self):
+        sources = recurrent_sources(locale="es")
+        response = build_response(sources)
+        result = build_assessment(sources, response)
+        other = recurrent_sources(locale="en")
+        crossed_cases = (
+            (sources.research, other.dossier, sources.market, response, None),
+            (other.research, other.dossier, other.market, response, None),
+            (
+                sources.research,
+                sources.dossier,
+                sources.market,
+                build_response(sources, relation="practice_gap"),
+                None,
+            ),
+        )
+        for research, dossier, market, candidate_response, provider in crossed_cases:
+            with self.subTest(locale=research["locale"]):
+                self.assertEqual(
+                    ["candidate gap assessment does not match validated sources"],
+                    ASSESSMENT_VALIDATOR.validate_candidate_gap_assessment_v1(
+                        result,
+                        research,
+                        dossier,
+                        market,
+                        candidate_response,
+                        provider,
+                    ),
+                )
+
+        provider_sources = recurrent_sources(locale="es", provider=True)
+        provider_response = build_response(
+            provider_sources, relation="knowledge_gap", provider_ordinal="L1"
+        )
+        provider_result = build_assessment(provider_sources, provider_response)
+        assert provider_sources.provider is not None
+        crossed_provider = copy.deepcopy(provider_sources.provider)
+        crossed_provider["options"][0]["source_title"] = "Updated Terraform source"
+        self.assertEqual(
+            ["candidate gap assessment does not match validated sources"],
+            ASSESSMENT_VALIDATOR.validate_candidate_gap_assessment_v1(
+                provider_result,
+                provider_sources.research,
+                provider_sources.dossier,
+                provider_sources.market,
+                provider_response,
+                crossed_provider,
+            ),
+        )
+
+    def test_builder_and_validator_enforce_totality_budgets_without_echo(self):
+        sources = recurrent_sources(locale="es")
+        response = build_response(sources)
+        result = build_assessment(sources, response)
+        sentinel = "assessment-private-sentinel"
+        cycle: dict[str, object] = {}
+        cycle["cycle"] = cycle
+        depth: object = None
+        for _ in range(34):
+            depth = {"child": depth}
+        too_many_nodes = {"rows": [[0 for _ in range(99)] for _ in range(101)]}
+        hostile_values = (
+            cycle,
+            depth,
+            too_many_nodes,
+            {"items": list(range(151))},
+            {"text": "x" * 4097 + sentinel},
+            {"text": chr(0xD800) + sentinel},
+            {"float": 1.5},
+        )
+        for hostile in hostile_values:
+            with self.subTest(kind=next(iter(hostile))):
+                with self.assertRaisesRegex(
+                    ValueError, r"^candidate gap assessment is invalid$"
+                ) as raised:
+                    ASSESSMENT_BUILDER.build_candidate_gap_assessment_v1(
+                        sources.research,
+                        sources.dossier,
+                        sources.market,
+                        hostile,
+                    )
+                self.assertIsNone(raised.exception.__cause__)
+                self.assertNotIn(sentinel, str(raised.exception))
+                errors = ASSESSMENT_VALIDATOR.validate_candidate_gap_assessment_v1(
+                    hostile,
+                    sources.research,
+                    sources.dossier,
+                    sources.market,
+                    response,
+                )
+                self.assertEqual(
+                    ["candidate gap assessment does not match validated sources"],
+                    errors,
+                )
+                self.assertNotIn(sentinel, str(errors))
+
+        malformed = copy.deepcopy(result)
+        malformed["assessments"][0]["signal"] = sentinel
+        errors = ASSESSMENT_VALIDATOR.validate_candidate_gap_assessment_v1(
+            malformed,
+            sources.research,
+            sources.dossier,
+            sources.market,
+            response,
+        )
+        self.assertEqual(
+            ["candidate gap assessment does not match validated sources"], errors
+        )
+        self.assertNotIn(sentinel, str(errors))
+
+    def test_builder_and_validator_capture_the_group_once_and_use_internal_response_validation(self):
+        sources = recurrent_sources(locale="es")
+        response = build_response(sources)
+        sentinel = "assessment-toctou-sentinel"
+
+        class OnePassMapping(Mapping[str, object]):
+            def __init__(self, safe: dict[str, object]):
+                self.safe = safe
+                self.exhausted = False
+
+            def __getitem__(self, key: str) -> object:
+                if self.exhausted:
+                    return sentinel
+                return self.safe[key]
+
+            def __iter__(self) -> Iterator[str]:
+                if self.exhausted:
+                    return iter((sentinel,))
+                return iter(self.safe)
+
+            def __len__(self) -> int:
+                return len(self.safe)
+
+            def items(self):
+                if self.exhausted:
+                    return iter(((sentinel, sentinel),))
+
+                def captured():
+                    try:
+                        yield from self.safe.items()
+                    finally:
+                        self.exhausted = True
+
+                return captured()
+
+        originals = [
+            OnePassMapping(sources.research),
+            OnePassMapping(sources.dossier),
+            OnePassMapping(sources.market),
+            OnePassMapping(response),
+        ]
+        public_validator = ASSESSMENT_BUILDER._response_validator.validate_candidate_gap_response_v1
+        public_snapshot = ASSESSMENT_BUILDER._response_validator.snapshot_for_candidate_gap_response_v1
+        ASSESSMENT_BUILDER._response_validator.validate_candidate_gap_response_v1 = (
+            lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError(sentinel))
+        )
+        ASSESSMENT_BUILDER._response_validator.snapshot_for_candidate_gap_response_v1 = (
+            lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError(sentinel))
+        )
+        try:
+            result = ASSESSMENT_BUILDER.build_candidate_gap_assessment_v1(
+                *originals
+            )
+        finally:
+            ASSESSMENT_BUILDER._response_validator.validate_candidate_gap_response_v1 = public_validator
+            ASSESSMENT_BUILDER._response_validator.snapshot_for_candidate_gap_response_v1 = public_snapshot
+        self.assertTrue(all(original.exhausted for original in originals))
+        self.assertNotIn(sentinel, json.dumps(result, sort_keys=True))
+
+        captured_result = OnePassMapping(result)
+        captured_response = OnePassMapping(response)
+        self.assertEqual(
+            [],
+            ASSESSMENT_VALIDATOR.validate_candidate_gap_assessment_v1(
+                captured_result,
+                sources.research,
+                sources.dossier,
+                sources.market,
+                captured_response,
+            ),
+        )
+        self.assertTrue(captured_result.exhausted)
+        self.assertTrue(captured_response.exhausted)
+
+    def test_snapshot_and_bounded_loader_use_the_closed_assessment_contract(self):
+        sources = recurrent_sources(locale="es")
+        response = build_response(sources)
+        result = build_assessment(sources, response)
+        self.assertRegex(
+            ASSESSMENT_VALIDATOR.snapshot_for_candidate_gap_assessment_v1(result),
+            r"^snap-gap-assessment-v1-sha256-[0-9a-f]{64}$",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "assessment.json"
+            path.write_text(json.dumps(result), encoding="utf-8")
+            self.assertEqual(
+                result,
+                ASSESSMENT_VALIDATOR.load_candidate_gap_assessment_v1(path),
+            )
+            invalid = Path(directory) / "invalid.json"
+            invalid.write_text("[]", encoding="utf-8")
+            with self.assertRaisesRegex(
+                ASSESSMENT_VALIDATOR.CandidateGapAssessmentLoadError,
+                r"^cannot load candidate gap assessment$",
+            ) as raised:
+                ASSESSMENT_VALIDATOR.load_candidate_gap_assessment_v1(invalid)
+            self.assertIsNone(raised.exception.__cause__)
+
+    def test_safe_es_and_en_technical_labels_remain_exact(self):
+        for locale in ("es", "en"):
+            with self.subTest(locale=locale):
+                sources = recurrent_sources(locale=locale)
+                response = build_response(sources, relation="terminology_gap")
+                result = build_assessment(sources, response)
+                self.assertEqual("terraform", result["selected_signal"])
+                self.assertEqual("terraform", result["assessments"][0]["signal"])
+                self.assertEqual(locale, result["locale"])
+                self.assert_assessment_valid(result, sources, response)
+
+    def test_checked_in_response_and_assessment_fixtures_are_builder_canonical(self):
+        available_es = recurrent_sources(locale="es")
+        knowledge_en = recurrent_sources(locale="en", provider=True)
+        unavailable_es = unavailable_sources()
+        cases = (
+            (
+                "selection-required-es.json",
+                available_es,
+                RESPONSE_BUILDER.build_candidate_gap_response_v1(
+                    available_es.research, available_es.market, None
+                ),
+            ),
+            (
+                "recurrent-proof-es.json",
+                available_es,
+                build_response(available_es, relation="proof_gap"),
+            ),
+            (
+                "recurrent-knowledge-en.json",
+                knowledge_en,
+                build_response(
+                    knowledge_en, relation="knowledge_gap", provider_ordinal="L1"
+                ),
+            ),
+            (
+                "unavailable-es.json",
+                unavailable_es,
+                RESPONSE_BUILDER.build_candidate_gap_response_v1(
+                    unavailable_es.research, unavailable_es.market, None
+                ),
+            ),
+        )
+        for name, sources, response in cases:
+            with self.subTest(name=name):
+                self.assertEqual(
+                    response,
+                    load_json(FIXTURES / "candidate-gap-response-v1" / name),
+                )
+                expected = build_assessment(sources, response)
+                fixture = load_json(FIXTURES / "candidate-gap-assessment-v1" / name)
+                self.assertEqual(expected, fixture)
+                self.assert_assessment_valid(fixture, sources, response)
 
 
 if __name__ == "__main__":

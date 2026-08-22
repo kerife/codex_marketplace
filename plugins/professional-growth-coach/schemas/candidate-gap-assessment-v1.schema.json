@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/professional-growth-coach/candidate-gap-assessment-v1.schema.json",
+  "title": "Candidate Gap Assessment v1",
+  "type": "object",
+  "required": [
+    "schema_version", "locale", "as_of_date", "state",
+    "source_research_snapshot", "source_dossier_snapshot", "source_market_snapshot",
+    "source_gap_response_snapshot", "source_provider_research_snapshot",
+    "selected_vacancy_id", "selected_signal", "selected_provider_option_id",
+    "assessments", "privacy_boundary", "draft_only", "no_external_action"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "candidate-gap-assessment-v1"},
+    "locale": {"enum": ["es", "en"]},
+    "as_of_date": {"type": "string", "format": "date"},
+    "state": {"enum": ["selection_required", "complete", "partial", "unavailable"]},
+    "source_research_snapshot": {"type": "string", "pattern": "^snap-market-sha256-[0-9a-f]{64}$"},
+    "source_dossier_snapshot": {"type": "string", "pattern": "^snap-dossier-sha256-[0-9a-f]{64}$"},
+    "source_market_snapshot": {"type": "string", "pattern": "^snap-market-dossier-v2-sha256-[0-9a-f]{64}$"},
+    "source_gap_response_snapshot": {"type": "string", "pattern": "^snap-gap-response-v1-sha256-[0-9a-f]{64}$"},
+    "source_provider_research_snapshot": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^snap-provider-sha256-[0-9a-f]{64}$"}
+      ]
+    },
+    "selected_vacancy_id": {
+      "oneOf": [{"type": "null"}, {"type": "string", "pattern": "^V-[0-9]{3}$"}]
+    },
+    "selected_signal": {
+      "oneOf": [{"type": "null"}, {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"}]
+    },
+    "selected_provider_option_id": {
+      "oneOf": [{"type": "null"}, {"type": "string", "pattern": "^LP-[0-9]{3}$"}]
+    },
+    "assessments": {
+      "type": "array",
+      "maxItems": 1,
+      "items": {"$ref": "#/$defs/assessment"}
+    },
+    "privacy_boundary": {"const": "identity_free_closed_candidate_assessment_only"},
+    "draft_only": {"const": true},
+    "no_external_action": {"const": true}
+  },
+  "$defs": {
+    "assessment": {
+      "type": "object",
+      "required": ["signal", "relation", "confirmation_state", "assessment_date"],
+      "additionalProperties": false,
+      "properties": {
+        "signal": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "relation": {"enum": ["supported", "proof_gap", "knowledge_gap", "practice_gap", "professional_experience_gap", "terminology_gap", "unknown"]},
+        "confirmation_state": {"enum": ["candidate_confirmed", "not_assessed"]},
+        "assessment_date": {
+          "oneOf": [{"type": "null"}, {"type": "string", "format": "date"}]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "relation": {"const": "unknown"},
+            "confirmation_state": {"const": "not_assessed"},
+            "assessment_date": {"type": "null"}
+          }
+        },
+        {
+          "properties": {
+            "relation": {"enum": ["supported", "proof_gap", "knowledge_gap", "practice_gap", "professional_experience_gap", "terminology_gap"]},
+            "confirmation_state": {"const": "candidate_confirmed"},
+            "assessment_date": {"type": "string", "format": "date"}
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "state": {"const": "unavailable"},
+        "source_provider_research_snapshot": {"type": "null"},
+        "selected_vacancy_id": {"type": "null"},
+        "selected_signal": {"type": "null"},
+        "selected_provider_option_id": {"type": "null"},
+        "assessments": {"maxItems": 0}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "selection_required"},
+        "source_provider_research_snapshot": {"type": "null"},
+        "selected_vacancy_id": {"type": "null"},
+        "selected_signal": {"type": "null"},
+        "selected_provider_option_id": {"type": "null"},
+        "assessments": {"maxItems": 0}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "partial"},
+        "source_provider_research_snapshot": {"type": "null"},
+        "selected_vacancy_id": {"type": "string", "pattern": "^V-[0-9]{3}$"},
+        "selected_signal": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "selected_provider_option_id": {"type": "null"},
+        "assessments": {
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "properties": {
+              "relation": {"const": "unknown"},
+              "confirmation_state": {"const": "not_assessed"},
+              "assessment_date": {"type": "null"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "complete"},
+        "source_provider_research_snapshot": {"type": "null"},
+        "selected_vacancy_id": {"type": "string", "pattern": "^V-[0-9]{3}$"},
+        "selected_signal": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "selected_provider_option_id": {"type": "null"},
+        "assessments": {
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "properties": {
+              "relation": {"enum": ["supported", "proof_gap", "practice_gap", "professional_experience_gap", "terminology_gap"]},
+              "confirmation_state": {"const": "candidate_confirmed"},
+              "assessment_date": {"type": "string", "format": "date"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "complete"},
+        "source_provider_research_snapshot": {"type": "null"},
+        "selected_vacancy_id": {"type": "string", "pattern": "^V-[0-9]{3}$"},
+        "selected_signal": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "selected_provider_option_id": {"type": "null"},
+        "assessments": {
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "properties": {
+              "relation": {"const": "knowledge_gap"},
+              "confirmation_state": {"const": "candidate_confirmed"},
+              "assessment_date": {"type": "string", "format": "date"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "complete"},
+        "source_provider_research_snapshot": {"type": "string", "pattern": "^snap-provider-sha256-[0-9a-f]{64}$"},
+        "selected_vacancy_id": {"type": "string", "pattern": "^V-[0-9]{3}$"},
+        "selected_signal": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "selected_provider_option_id": {
+          "oneOf": [{"type": "null"}, {"type": "string", "pattern": "^LP-[0-9]{3}$"}]
+        },
+        "assessments": {
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "properties": {
+              "relation": {"const": "knowledge_gap"},
+              "confirmation_state": {"const": "candidate_confirmed"},
+              "assessment_date": {"type": "string", "format": "date"}
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -27,6 +27,7 @@ REPOSITORY_ONLY_TESTS = {
     "test_career_market_dossier_schemas_accept_closed_synthetic_states",
     "test_career_market_dossier_v2_schema_accepts_recomputed_fixtures",
     "test_candidate_market_alignment_v2_schema_accepts_derived_fixture",
+    "test_candidate_gap_assessment_v1_schema_accepts_closed_source_projection",
     "test_candidate_gap_response_v1_schema_accepts_closed_public_states",
     "test_dependency_free_checker_rejects_nested_quantifier_patterns",
     "test_dossier_handoff_rejects_unlabelled_person_name_source_fact",
@@ -62,6 +63,8 @@ from build_career_learning_decision_v2 import build_learning_bundle_v2
 from validate_career_learning_decision_v2 import validate_learning_bundle_v2
 from build_candidate_gap_response_v1 import build_candidate_gap_response_v1
 from validate_candidate_gap_response_v1 import validate_candidate_gap_response_v1
+from build_candidate_gap_assessment_v1 import build_candidate_gap_assessment_v1
+from validate_candidate_gap_assessment_v1 import validate_candidate_gap_assessment_v1
 
 
 def _load_v2_dossier_helper():
@@ -331,6 +334,116 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
         self.assertEqual([], validate_schema_instance(built, schema))
         self.assertEqual(
             [], validate_candidate_gap_response_v1(built, research, market)
+        )
+
+    def test_candidate_gap_assessment_v1_schema_accepts_closed_source_projection(self):
+        schema = self._schema("candidate-gap-assessment-v1.schema.json")
+        snapshot = "0" * 64
+        base = {
+            "schema_version": "candidate-gap-assessment-v1",
+            "locale": "es",
+            "as_of_date": "2026-08-13",
+            "state": "selection_required",
+            "source_research_snapshot": f"snap-market-sha256-{snapshot}",
+            "source_dossier_snapshot": f"snap-dossier-sha256-{snapshot}",
+            "source_market_snapshot": f"snap-market-dossier-v2-sha256-{snapshot}",
+            "source_gap_response_snapshot": f"snap-gap-response-v1-sha256-{snapshot}",
+            "source_provider_research_snapshot": None,
+            "selected_vacancy_id": None,
+            "selected_signal": None,
+            "selected_provider_option_id": None,
+            "assessments": [],
+            "privacy_boundary": "identity_free_closed_candidate_assessment_only",
+            "draft_only": True,
+            "no_external_action": True,
+        }
+        unavailable = copy.deepcopy(base)
+        unavailable["state"] = "unavailable"
+        partial = copy.deepcopy(base)
+        partial.update(
+            {
+                "state": "partial",
+                "selected_vacancy_id": "V-003",
+                "selected_signal": "terraform",
+                "assessments": [{
+                    "signal": "terraform",
+                    "relation": "unknown",
+                    "confirmation_state": "not_assessed",
+                    "assessment_date": None,
+                }],
+            }
+        )
+        complete = copy.deepcopy(partial)
+        complete.update(
+            {
+                "state": "complete",
+                "assessments": [{
+                    "signal": "terraform",
+                    "relation": "proof_gap",
+                    "confirmation_state": "candidate_confirmed",
+                    "assessment_date": "2026-08-13",
+                }],
+            }
+        )
+        knowledge = copy.deepcopy(complete)
+        knowledge.update(
+            {
+                "source_provider_research_snapshot": f"snap-provider-sha256-{snapshot}",
+                "selected_provider_option_id": "LP-001",
+                "assessments": [{
+                    "signal": "terraform",
+                    "relation": "knowledge_gap",
+                    "confirmation_state": "candidate_confirmed",
+                    "assessment_date": "2026-08-13",
+                }],
+            }
+        )
+        for value in (unavailable, base, partial, complete, knowledge):
+            with self.subTest(state=value["state"]):
+                self.assertEqual([], validate_schema_instance(value, schema))
+
+        wrong_date = copy.deepcopy(complete)
+        wrong_date["assessments"][0]["assessment_date"] = None
+        self.assertTrue(validate_schema_instance(wrong_date, schema))
+        provider_without_source = copy.deepcopy(knowledge)
+        provider_without_source["source_provider_research_snapshot"] = None
+        self.assertTrue(validate_schema_instance(provider_without_source, schema))
+        extra = copy.deepcopy(complete)
+        extra["reason"] = "unsupported"
+        self.assertTrue(validate_schema_instance(extra, schema))
+
+        fixture_root = ROOT.parent.parent / "tests/evals/with-skill/fixtures"
+        research = json.loads(
+            (fixture_root / "target-vacancy-research/complete-five-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        research["vacancies"][0]["requirements"][0]["signal"] = "terraform"
+        dossier = json.loads(
+            (fixture_root / "executive-career-dossier-v2/scenario-a-es.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        market = build_market_dossier_v2(research, dossier)
+        response = build_candidate_gap_response_v1(
+            research,
+            market,
+            {
+                "selected_vacancy_ordinal": "V2",
+                "selected_signal": "terraform",
+                "relation": "proof_gap",
+                "selected_provider_ordinal": None,
+            },
+        )
+        built = build_candidate_gap_assessment_v1(
+            research, dossier, market, response
+        )
+        self.assertEqual([], validate_schema_instance(built, schema))
+        self.assertEqual(
+            [],
+            validate_candidate_gap_assessment_v1(
+                built, research, dossier, market, response
+            ),
         )
 
     def test_target_vacancy_research_schema_accepts_closed_synthetic_states(self):
