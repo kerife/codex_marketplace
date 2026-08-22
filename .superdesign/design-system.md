@@ -91,3 +91,25 @@ Dark, grayscale, high-contrast, and forced-colors modes preserve the same text
 and symbols without color-only meaning. The four-stage gap route remains a
 non-interactive evidence workflow and recommends no course or certification
 while `learning_state=not_evaluated`.
+
+## Vacancy-first weekly decision v3
+
+Career-learning-decision v3 adds one full-width WeeklyDecision card immediately
+after the condensed market card in Decide now. It is the sole primary weekly
+imperative; the existing read-only inspection authorization stays visibly
+secondary and remains a separate permission question. The later learning panel
+appears only for the one eligibility-authorized decision and is not relocated.
+
+The renderer captures dossier, market, research, optional provider, response,
+assessment, eligibility, and learning together in one bounded snapshot before
+schema access. Partial, mixed, stale, and crossed groups fail before CSS or
+template reads. Version 1, version 2, unavailable-market, and legacy no-market
+bytes retain their historical composition.
+
+WeeklyDecision exposes only a public Vn plus title/employer, selected signal,
+exact recurrence, closed localized evidence copy, one action, private
+deliverable, done-when, and the visible no-outcome/no-external-action boundary.
+Provider-selection state renders the complete non-ranked L1–Ln list. The card
+uses stable labelled/described relationships, one-column mobile wrapping,
+atomic print rules, dark tokens, forced system colors, and reduced-motion-safe
+static content. visual QA not run; deterministic DOM/CSS contract only.

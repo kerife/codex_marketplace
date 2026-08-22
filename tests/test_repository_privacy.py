@@ -8,6 +8,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -78,6 +79,18 @@ CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_PATHS = tuple(
     )
     for condition in CAREER_NEXT_ACTION_ELIGIBILITY_CONDITIONS
     for locale in ("es", "en")
+)
+CAREER_LEARNING_V3_SOURCE_PATHS = tuple(
+    Path(
+        "tests/evals/with-skill/fixtures/career-learning-decision-v3/"
+        f"{condition}/sources.json"
+    )
+    for condition in (
+        "knowledge-en",
+        "proof-es",
+        "selection-required-es",
+        "unavailable-es",
+    )
 )
 RECRUITER_PRACTICE_FIXTURE_PATH = (
     REPO_ROOT
@@ -1202,6 +1215,65 @@ class RepositoryPrivacyTests(unittest.TestCase):
                 text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
                 self.assertEqual({}, scanner.scan_text(relative_path, text))
 
+    def test_canonical_learning_v3_source_goldens_pass_repository_privacy_scan(
+        self,
+    ) -> None:
+        scanner = load_scanner()
+
+        self.assertEqual(4, len(CAREER_LEARNING_V3_SOURCE_PATHS))
+        for relative_path in CAREER_LEARNING_V3_SOURCE_PATHS:
+            with self.subTest(path=str(relative_path)):
+                text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertEqual({}, scanner.scan_text(relative_path, text))
+
+    def test_learning_v3_source_projection_is_exact_path_and_fail_closed(self) -> None:
+        scanner = load_scanner()
+        relative_path = CAREER_LEARNING_V3_SOURCE_PATHS[0]
+        text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+        unregistered = Path(
+            "tests/evals/with-skill/fixtures/"
+            "career-learning-decision-v3-copy/knowledge-en/sources.json"
+        )
+        self.assertGreater(
+            scanner.scan_text(unregistered, text)[
+                "SINGLING_OUT_STRUCTURED_COMBINATION"
+            ],
+            0,
+        )
+
+        payload = json.loads(text)
+        mutations = (
+            (
+                "candidate name",
+                lambda value: value["research"]["search_scope"].__setitem__(
+                    "candidate_name", "Private Person"
+                ),
+                "NAME_FIELD",
+            ),
+            (
+                "analytics value",
+                lambda value: value["executive_dossier"]["analytics"].__setitem__(
+                    "profile_views", 314
+                ),
+                "PRIVATE_ANALYTICS_VALUE",
+            ),
+            (
+                "eligibility",
+                lambda value: value["eligibility"].__setitem__(
+                    "recommended_next_action", "no_learning_yet"
+                ),
+                "SINGLING_OUT_STRUCTURED_COMBINATION",
+            ),
+        )
+        for label, mutate, rule_id in mutations:
+            with self.subTest(mutation=label):
+                mutated = copy.deepcopy(payload)
+                mutate(mutated)
+                violations = scanner.scan_text(
+                    relative_path, json.dumps(mutated, ensure_ascii=False)
+                )
+                self.assertGreater(violations[rule_id], 0)
+
     def test_eligibility_source_projection_is_limited_to_registered_paths(self) -> None:
         scanner = load_scanner()
         registered = CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_PATHS[-1]
@@ -1407,6 +1479,58 @@ class RepositoryPrivacyTests(unittest.TestCase):
         self.assertIn("Terraform", rendered)
         self.assertIn("1/5", rendered)
         self.assertIn("V3", rendered)
+
+    def test_v3_weekly_decision_projects_only_public_escaped_values(self) -> None:
+        runtime = load_market_runtime()
+        renderer = runtime["render_executive_career_dossier_v2"]
+        fixture_root = REPO_ROOT / "tests/evals/with-skill/fixtures"
+        source_root = fixture_root / "career-learning-decision-v3/proof-es"
+        sources = json.loads((source_root / "sources.json").read_text(encoding="utf-8"))
+        learning = json.loads((source_root / "learning.json").read_text(encoding="utf-8"))
+
+        rendered = renderer.render_dossier_html(
+            sources["executive_dossier"],
+            sources["market_dossier"],
+            market_research=sources["research"],
+            learning_decision=learning,
+            provider_research=sources["provider_research"],
+            gap_response=sources["gap_response"],
+            gap_assessment=sources["gap_assessment"],
+            next_action_eligibility=sources["eligibility"],
+        )
+        match = re.search(
+            r'<article class="card span-12 weekly-decision"[^>]*>(.*?)</article>',
+            rendered,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        region = match.group(0)
+        forbidden = {
+            sources["eligibility"]["selected_vacancy_id"],
+            sources["eligibility"]["source_research_snapshot"],
+            sources["eligibility"]["source_dossier_snapshot"],
+            sources["eligibility"]["source_market_snapshot"],
+            sources["eligibility"]["source_gap_response_snapshot"],
+            sources["eligibility"]["source_gap_assessment_snapshot"],
+            learning["source_next_action_eligibility_snapshot"],
+            sources["research"]["vacancies"][0]["source_url"],
+            sources["research"]["vacancies"][0]["requirements"][0]["source_paraphrase"],
+            learning["decisions"][0]["claim_ids"][0],
+            learning["decisions"][0]["source_evidence_ids"][0],
+            learning["decisions"][0]["requirement_ids"][0],
+            learning["decisions"][0]["vacancy_ids"][0],
+            "proof_gap",
+            "candidate_reported_match",
+            "build_bounded_proof",
+            "proof_gap_recurrent",
+        }
+        for value in forbidden:
+            with self.subTest(forbidden=value):
+                self.assertNotIn(value, region)
+        self.assertIn("V2", region)
+        self.assertIn("Fixture DevOps Role C", region)
+        self.assertIn("Fixture Employer C", region)
+        self.assertNotRegex(region, r"<(?:a|button|form)\b")
 
     def test_market_v2_golden_policy_does_not_hide_private_injections(self) -> None:
         scanner = load_scanner()

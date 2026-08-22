@@ -37,3 +37,10 @@ This repository is a Python-rendered, offline HTML/CSS plugin rather than a Java
 - Privacy boundary: no source URLs, internal IDs, snapshots, or raw source prose are rendered. These components are not standalone pages, routes, or network-backed widgets; unavailable market evidence produces no learning recommendation.
 
 The exact HTML templates and CSS implementation are included in `layouts.md` and `theme.md` below.
+
+## WeeklyDecision
+
+- Sources: `plugins/professional-growth-coach/schemas/career-next-action-eligibility-v1.schema.json`, `plugins/professional-growth-coach/schemas/career-learning-decision-v3.schema.json`, `plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py`, and `plugins/professional-growth-coach/assets/career-learning-eligibility-v1.css`.
+- Description: the sole primary weekly imperative inside Decide now, after the market summary and before the later detailed learning surface. The read-only inspection authorization remains a separate visibly secondary card.
+- Inputs: one source-recomputed eligibility artifact plus validated public market projection; v3 response, assessment, eligibility, and learning are all-or-none.
+- Privacy boundary: only public Vn/Ln ordinals and escaped public labels render. No internal ID, snapshot, URL, source prose, raw enum, control, or external link is exposed.

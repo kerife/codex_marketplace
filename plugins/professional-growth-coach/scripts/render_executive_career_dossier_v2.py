@@ -48,6 +48,23 @@ MARKET_V2_VALIDATOR = _sibling_with_local_imports(
 LEARNING_V2_VALIDATOR = _sibling_with_local_imports(
     "validate_career_learning_decision_v2.py"
 )
+GAP_RESPONSE_VALIDATOR = _sibling_with_local_imports(
+    "validate_candidate_gap_response_v1.py"
+)
+GAP_ASSESSMENT_VALIDATOR = _sibling_with_local_imports(
+    "validate_candidate_gap_assessment_v1.py"
+)
+ELIGIBILITY_BUILDER = _sibling_with_local_imports(
+    "build_career_next_action_eligibility_v1.py"
+)
+ELIGIBILITY_VALIDATOR = _sibling_with_local_imports(
+    "validate_career_next_action_eligibility_v1.py"
+)
+LEARNING_V3_VALIDATOR = _sibling_with_local_imports(
+    "validate_career_learning_decision_v3.py"
+)
+SNAPSHOT = _sibling_with_local_imports("semantic_provenance_snapshot.py")
+PRIVATE_LOADER = _sibling("private_input_loader.py")
 PROVIDER_VALIDATOR = _sibling_with_local_imports(
     "validate_career_learning_provider_research.py"
 )
@@ -60,6 +77,9 @@ TEMPLATE_PATH = ASSET_ROOT / "executive-career-dossier-v1.html"
 BASE_CSS_PATH = ASSET_ROOT / "executive-career-dossier-v1.css"
 CSS_PATH = ASSET_ROOT / "executive-career-dossier-v2.css"
 MARKET_CSS_PATH = ASSET_ROOT / "career-market-learning-dossier-v1.css"
+WEEKLY_CSS_PATH = ASSET_ROOT / "career-learning-eligibility-v1.css"
+
+bounded_plain_snapshot = SNAPSHOT.bounded_plain_snapshot
 
 DossierValidationError = BASE.DossierValidationError
 RenderReceipt = BASE.RenderReceipt
@@ -71,6 +91,29 @@ class MarketInputLoadError(ValueError):
 
 class MarketCompositionVersionError(ValueError):
     """Market and learning roots do not form one supported generation."""
+
+
+def _unique_plain_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    value: dict[str, object] = {}
+    for key, nested in pairs:
+        if key in value:
+            raise ValueError("duplicate key")
+        value[key] = nested
+    return value
+
+
+def _load_plain_mapping(path: Path) -> Mapping[str, object]:
+    """Load syntax only; the complete group is validated after one snapshot."""
+    try:
+        raw = PRIVATE_LOADER.read_bounded_bytes(Path(path), 256 * 1024)
+        value = json.loads(
+            raw.decode("utf-8"), object_pairs_hook=_unique_plain_object
+        )
+        if not isinstance(value, Mapping):
+            raise ValueError("input is not an object")
+        return value
+    except Exception:
+        raise MarketInputLoadError("cannot load market composition input") from None
 
 
 SECTION_LABELS = {
@@ -236,7 +279,7 @@ COPY = {
         "learning_boundary": "Esto es una hipótesis acotada de aprendizaje; no predice entrevista, oferta, salario ni retorno de inversión.",
         "learning_option_types": {"course": "Curso", "certification": "Certificación", "portfolio_project": "Proyecto de portafolio", "lab": "Laboratorio", "role_search": "Búsqueda de rol", "no_learning_yet": "Todavía no estudiar"},
         "learning_decisions": {"do_now": "Hazlo ahora", "defer": "Déjalo en pausa", "omit": "Omítelo por ahora", "research_first": "Investiga antes"},
-        "learning_gap_types": {"knowledge": "Conocimiento", "proof": "Prueba", "experience": "Experiencia", "terminology": "Terminología", "low_return": "Bajo retorno"},
+        "learning_gap_types": {"knowledge": "Conocimiento", "proof": "Prueba", "practice": "Práctica", "experience": "Experiencia", "terminology": "Terminología", "low_return": "Bajo retorno"},
     },
     "en": {
         "decide_title": "Decide now",
@@ -301,7 +344,7 @@ COPY = {
         "learning_boundary": "This is a bounded learning hypothesis; it predicts neither an interview, offer, salary, nor return on investment.",
         "learning_option_types": {"course": "Course", "certification": "Certification", "portfolio_project": "Portfolio project", "lab": "Lab", "role_search": "Role search", "no_learning_yet": "No learning yet"},
         "learning_decisions": {"do_now": "Do now", "defer": "Defer", "omit": "Omit for now", "research_first": "Research first"},
-        "learning_gap_types": {"knowledge": "Knowledge", "proof": "Proof", "experience": "Experience", "terminology": "Terminology", "low_return": "Low return"},
+        "learning_gap_types": {"knowledge": "Knowledge", "proof": "Proof", "practice": "Practice", "experience": "Experience", "terminology": "Terminology", "low_return": "Low return"},
     },
 }
 
@@ -309,10 +352,35 @@ SUPPORT_STATE_LABELS = {
     "es": {
         "verified_match": "Evidencia directa",
         "candidate_reported_match": "Reportado por cliente",
+        "unknown": "No verificado",
     },
     "en": {
         "verified_match": "Direct evidence",
         "candidate_reported_match": "Candidate reported",
+        "unknown": "Not verified",
+    },
+}
+
+WEEKLY_COPY = {
+    "es": {
+        "title": "Decisión de esta semana",
+        "vacancy": "Vacante seleccionada",
+        "signal": "Señal",
+        "recurrence": "Recurrencia",
+        "choices": "Opciones oficiales verificadas (orden estable, no es una clasificación)",
+        "action": "Siguiente acción",
+        "deliverable": "Entregable privado",
+        "done_when": "Listo cuando",
+    },
+    "en": {
+        "title": "This week's decision",
+        "vacancy": "Selected vacancy",
+        "signal": "Signal",
+        "recurrence": "Recurrence",
+        "choices": "Verified official choices (stable order, not ranked)",
+        "action": "Next action",
+        "deliverable": "Private deliverable",
+        "done_when": "Done when",
     },
 }
 
@@ -592,6 +660,10 @@ def _market_learning_generation(
             "career-market-learning-dossier-v2",
             "career-learning-decision-v2",
         ): "v2",
+        (
+            "career-market-learning-dossier-v2",
+            "career-learning-decision-v3",
+        ): "v3",
     }
     try:
         generation = allowed.get((market_version, learning_version))
@@ -610,7 +682,60 @@ def _composition_generation(
     market_alignment: Mapping[str, object] | None,
     learning_decision: Mapping[str, object] | None,
     provider_research: Mapping[str, object] | None,
+    gap_response: Mapping[str, object] | None = None,
+    gap_assessment: Mapping[str, object] | None = None,
+    next_action_eligibility: Mapping[str, object] | None = None,
 ) -> str | None:
+    v3_sources = (gap_response, gap_assessment, next_action_eligibility)
+    learning_version = None
+    if isinstance(learning_decision, Mapping):
+        try:
+            learning_version = learning_decision.get("schema_version")
+        except (AttributeError, RecursionError, TypeError, ValueError):
+            learning_version = None
+    v3_requested = any(value is not None for value in v3_sources) or (
+        learning_version == "career-learning-decision-v3"
+    )
+    if v3_requested:
+        if (
+            market_dossier is None
+            or market_research is None
+            or learning_decision is None
+            or any(value is None for value in v3_sources)
+            or market_alignment is not None
+            or not all(
+                isinstance(value, Mapping)
+                for value in (
+                    market_dossier,
+                    market_research,
+                    learning_decision,
+                    gap_response,
+                    gap_assessment,
+                    next_action_eligibility,
+                )
+            )
+        ):
+            raise DossierValidationError(
+                ["market composition inputs must be supplied together"]
+            )
+        versions = (
+            market_dossier.get("schema_version"),
+            learning_decision.get("schema_version"),
+            gap_response.get("schema_version"),
+            gap_assessment.get("schema_version"),
+            next_action_eligibility.get("schema_version"),
+        )
+        if versions != (
+            "career-market-learning-dossier-v2",
+            "career-learning-decision-v3",
+            "candidate-gap-response-v1",
+            "candidate-gap-assessment-v1",
+            "career-next-action-eligibility-v1",
+        ):
+            raise DossierValidationError(
+                ["market composition inputs must be supplied together"]
+            )
+        return "v3"
     if market_dossier is None:
         if any(
             value is not None
@@ -619,6 +744,9 @@ def _composition_generation(
                 market_alignment,
                 learning_decision,
                 provider_research,
+                gap_response,
+                gap_assessment,
+                next_action_eligibility,
             )
         ):
             raise DossierValidationError(
@@ -784,6 +912,102 @@ def _validated_learning_group(
         raise DossierValidationError(["learning decision is unavailable"]) from None
 
 
+def _validated_v3_group(
+    frozen_group: Mapping[str, object],
+) -> Mapping[str, Mapping[str, object]]:
+    """Validate the coherent v3 group without recapturing any source."""
+    diagnostic = ["market composition inputs must be supplied together"]
+    try:
+        expected_fields = {
+            "dossier",
+            "market_dossier",
+            "market_research",
+            "market_alignment",
+            "learning_decision",
+            "provider_research",
+            "gap_response",
+            "gap_assessment",
+            "next_action_eligibility",
+        }
+        if set(frozen_group) != expected_fields:
+            raise ValueError("invalid v3 group")
+        dossier = frozen_group["dossier"]
+        market = frozen_group["market_dossier"]
+        research = frozen_group["market_research"]
+        provider = frozen_group["provider_research"]
+        response = frozen_group["gap_response"]
+        assessment = frozen_group["gap_assessment"]
+        eligibility = frozen_group["next_action_eligibility"]
+        learning = frozen_group["learning_decision"]
+        if _composition_generation(
+            market,
+            research,
+            frozen_group["market_alignment"],
+            learning,
+            provider,
+            response,
+            assessment,
+            eligibility,
+        ) != "v3":
+            raise ValueError("invalid v3 generation")
+        if not isinstance(dossier, Mapping) or VALIDATOR.validate_dossier(dossier):
+            raise ValueError("invalid v3 dossier")
+        if GAP_RESPONSE_VALIDATOR._validate_candidate_gap_response_from_frozen(
+            {
+                "value": response,
+                "research": research,
+                "market_dossier": market,
+                "provider_research": provider,
+            }
+        ):
+            raise ValueError("invalid v3 response")
+        if GAP_ASSESSMENT_VALIDATOR._validate_candidate_gap_assessment_from_frozen(
+            {
+                "value": assessment,
+                "research": research,
+                "executive_dossier": dossier,
+                "market_dossier": market,
+                "gap_response": response,
+                "provider_research": provider,
+            }
+        ):
+            raise ValueError("invalid v3 assessment")
+        eligibility_group = {
+            "value": eligibility,
+            "research": research,
+            "executive_dossier": dossier,
+            "market_dossier": market,
+            "gap_response": response,
+            "gap_assessment": assessment,
+            "provider_research": provider,
+        }
+        if ELIGIBILITY_VALIDATOR._validate_career_next_action_eligibility_from_frozen(
+            eligibility_group
+        ):
+            raise ValueError("invalid v3 eligibility")
+        if LEARNING_V3_VALIDATOR._validate_learning_v3_from_frozen(
+            {
+                "value": learning,
+                "research": research,
+                "executive_dossier": dossier,
+                "market_dossier": market,
+                "gap_response": response,
+                "gap_assessment": assessment,
+                "eligibility": eligibility,
+                "provider_research": provider,
+            }
+        ):
+            raise ValueError("invalid v3 learning")
+        return {
+            "dossier": BASE._mapping(BASE._freeze(dossier)),
+            "market": BASE._mapping(BASE._freeze(market)),
+            "learning": BASE._mapping(BASE._freeze(learning)),
+            "eligibility": BASE._mapping(BASE._freeze(eligibility)),
+        }
+    except Exception:
+        raise DossierValidationError(diagnostic) from None
+
+
 def _learning_signal_labels(
     market_dossier: Mapping[str, object], evidence_ids: object, locale: str
 ) -> str:
@@ -940,6 +1164,21 @@ def _render_learning_decision_v2(
     </section>'''
 
 
+def _render_learning_decision_v3(
+    market_dossier: Mapping[str, object],
+    learning_decision: Mapping[str, object],
+    locale: str,
+) -> str:
+    decisions = learning_decision.get("decisions")
+    if not isinstance(decisions, (list, tuple)):
+        raise DossierValidationError(["learning decision is unavailable"])
+    if not decisions:
+        return ""
+    if len(decisions) != 1:
+        raise DossierValidationError(["learning decision is unavailable"])
+    return _render_learning_decision_v2(market_dossier, learning_decision, locale)
+
+
 def _render_learning_decision(
     market_dossier: Mapping[str, object],
     learning_decision: Mapping[str, object] | None,
@@ -947,11 +1186,141 @@ def _render_learning_decision(
 ) -> str:
     if learning_decision is None:
         return ""
-    if learning_decision.get("schema_version") == "career-learning-decision-v2":
+    version = learning_decision.get("schema_version")
+    if version == "career-learning-decision-v3":
+        return _render_learning_decision_v3(
+            market_dossier, learning_decision, locale
+        )
+    if version == "career-learning-decision-v2":
         return _render_learning_decision_v2(
             market_dossier, learning_decision, locale
         )
     return _render_learning_decision_v1(market_dossier, learning_decision, locale)
+
+
+def _weekly_state_statement(
+    eligibility: Mapping[str, object], locale: str
+) -> str:
+    state = eligibility.get("state")
+    relation = eligibility.get("candidate_relation")
+    recurrence = eligibility.get("recurrence")
+    state_copy = ELIGIBILITY_BUILDER.COPY[locale]["states"]
+    if state == "selection_required":
+        template = state_copy["selection_required"]
+    elif state == "insufficient_recurrence":
+        template = state_copy["insufficient_recurrence"]
+    elif state == "insufficient_gap_evidence" and relation == "unknown":
+        template = state_copy["gap_unknown"]
+    elif state == "insufficient_gap_evidence" and relation == "supported":
+        template = state_copy["candidate_supported"]
+    elif state == "provider_selection_required":
+        template = state_copy["provider_selection_required"]
+    elif state == "provider_evidence_required":
+        template = state_copy["provider_evidence_required"]
+    elif state == "learning_not_applicable":
+        template = state_copy["learning_not_applicable"]
+    elif state == "eligible" and relation in ELIGIBILITY_BUILDER.COPY[locale]["relations"]:
+        template = state_copy["eligible"].format(
+            recurrence=recurrence,
+            relation_label=ELIGIBILITY_BUILDER.COPY[locale]["relations"][relation],
+        )
+        return str(template)
+    else:
+        raise DossierValidationError(["market composition inputs must be supplied together"])
+    return str(template).format(recurrence=recurrence)
+
+
+def _render_weekly_decision_card(
+    eligibility: Mapping[str, object],
+    market: Mapping[str, object],
+    locale: str,
+) -> str:
+    if eligibility.get("state") == "unavailable":
+        return ""
+    labels = WEEKLY_COPY[locale]
+    action = eligibility.get("recommended_next_action")
+    actions = ELIGIBILITY_BUILDER.COPY[locale]["actions"]
+    if action not in actions:
+        raise DossierValidationError(["market composition inputs must be supplied together"])
+    action_copy = actions[action]
+    statement = html.escape(_weekly_state_statement(eligibility, locale), quote=True)
+    vacancy_markup = ""
+    labelled_by = "weekly-decision-title"
+    ordinal = eligibility.get("public_vacancy_ordinal")
+    if ordinal is not None:
+        if not isinstance(ordinal, str) or re.fullmatch(r"V[1-5]", ordinal) is None:
+            raise DossierValidationError(["market composition inputs must be supplied together"])
+        vacancies = BASE._rows(market.get("vacancies"))
+        index = int(ordinal[1:]) - 1
+        if index >= len(vacancies):
+            raise DossierValidationError(["market composition inputs must be supplied together"])
+        vacancy = vacancies[index]
+        title = html.escape(str(vacancy["title"]), quote=True)
+        employer = html.escape(str(vacancy["employer"]), quote=True)
+        public_ordinal = html.escape(ordinal, quote=True)
+        accessible = html.escape(
+            f"{ordinal} — {vacancy['title']} — {vacancy['employer']}", quote=True
+        )
+        vacancy_markup = (
+            f'<p id="weekly-decision-vacancy" class="weekly-decision-vacancy" '
+            f'aria-label="{accessible}"><span class="weekly-decision-label">'
+            f'{labels["vacancy"]}</span><strong>{public_ordinal}</strong> — '
+            f'{title} · {employer}</p>'
+        )
+        labelled_by += " weekly-decision-vacancy"
+    signal_markup = ""
+    signal = eligibility.get("selected_signal")
+    recurrence = eligibility.get("recurrence")
+    if signal is not None:
+        signal_markup = (
+            f'<p class="weekly-decision-signal"><span class="weekly-decision-label">'
+            f'{labels["signal"]}</span>{_signal_label(signal)}</p>'
+        )
+    if recurrence is not None:
+        signal_markup += (
+            f'<p class="weekly-decision-recurrence"><span class="weekly-decision-label">'
+            f'{labels["recurrence"]}</span>'
+            f'{html.escape(str(recurrence), quote=True)}</p>'
+        )
+    choices_markup = ""
+    choices = eligibility.get("eligible_provider_choices")
+    if eligibility.get("state") == "provider_selection_required":
+        rows = BASE._rows(choices)
+        items = []
+        for row in rows:
+            choice_ordinal = html.escape(
+                str(row["public_provider_ordinal"]), quote=True
+            )
+            option = html.escape(str(row["option_name"]), quote=True)
+            owner = html.escape(str(row["provider_or_owner"]), quote=True)
+            choice_name = html.escape(
+                f"{row['public_provider_ordinal']} — {row['option_name']} — {row['provider_or_owner']}",
+                quote=True,
+            )
+            items.append(
+                f'<li class="weekly-decision-choice" aria-label="{choice_name}">'
+                f'<strong>{choice_ordinal}</strong> — {option} · {owner}</li>'
+            )
+        choices_markup = (
+            f'<div class="weekly-decision-choices"><h4>{labels["choices"]}</h4>'
+            f'<ol>{"".join(items)}</ol></div>'
+        )
+    boundary = ELIGIBILITY_BUILDER.COPY[locale]["boundaries"][
+        "not_an_interview_offer_salary_or_hiring_prediction"
+    ]
+    return f'''<article class="card span-12 weekly-decision" aria-labelledby="{labelled_by}" aria-describedby="weekly-decision-evidence weekly-decision-boundary">
+          <h3 id="weekly-decision-title">{labels['title']}</h3>
+          {vacancy_markup}
+          <div class="weekly-decision-facts">{signal_markup}</div>
+          {choices_markup}
+          <p id="weekly-decision-evidence" class="weekly-decision-evidence">{statement}</p>
+          <div class="weekly-decision-action">
+            <p><span class="weekly-decision-label">{labels['action']}</span><strong>{html.escape(str(action_copy['label']), quote=True)}</strong></p>
+            <p><span class="weekly-decision-label">{labels['deliverable']}</span>{html.escape(str(eligibility['private_deliverable']), quote=True)}</p>
+            <p><span class="weekly-decision-label">{labels['done_when']}</span>{html.escape(str(eligibility['done_when']), quote=True)}</p>
+          </div>
+          <p id="weekly-decision-boundary" class="weekly-decision-boundary">{html.escape(str(boundary), quote=True)}</p>
+        </article>'''
 
 
 def _matrix_state(state: str, locale: str) -> str:
@@ -999,6 +1368,7 @@ def _render_decide_now(
     locale: str,
     market_dossier: Mapping[str, object],
     learning_decision: Mapping[str, object] | None = None,
+    next_action_eligibility: Mapping[str, object] | None = None,
 ) -> str:
     labels = COPY[locale]
     coverage_rows = BASE._rows(dossier["section_coverage"])
@@ -1082,6 +1452,13 @@ def _render_decide_now(
             f'<h4>{labels["decide_recurrence"]}</h4>'
             f'<ul class="decide-now-recurrence">{fractions}</ul>'
         )
+    weekly_markup = (
+        _render_weekly_decision_card(
+            next_action_eligibility, market_dossier, locale
+        )
+        if next_action_eligibility is not None
+        else ""
+    )
     navigation_items = "".join(
         f'<li><a href="#{priority_ids[index]}">{html.escape(str(priority["title"]), quote=True)}</a></li>'
         for index, priority in enumerate(priorities)
@@ -1092,11 +1469,27 @@ def _render_decide_now(
             f'{SECTION_LABELS[locale][str(pending)]}</a></li>'
         )
     navigation_items += f'<li><a href="#{market_title_id}">{labels["decide_market"]}</a></li>'
+    if weekly_markup:
+        navigation_items += (
+            f'<li><a href="#weekly-decision-title">{WEEKLY_COPY[locale]["title"]}</a></li>'
+        )
     if learning_decision is not None:
         navigation_items += f'<li><a href="#learning-decision-title">{labels["learning_title"]}</a></li>'
+    summary = (
+        f'{WEEKLY_COPY[locale]["title"]} · {labels["decide_priorities"]} · '
+        f'{labels["decide_coverage"]} · {labels["decide_market"]}'
+        if weekly_markup
+        else f'{labels["decide_priorities"]} · {labels["decide_coverage"]} · {labels["decide_market"]}'
+    )
+    authorization_class = (
+        "card span-4 decide-now-card decide-now-authorization weekly-decision-secondary"
+        if weekly_markup
+        else "card span-4 decide-now-card decide-now-authorization"
+    )
+    weekly_suffix = f"\n        {weekly_markup}" if weekly_markup else ""
     return f'''<section class="section-block decide-now" aria-labelledby="decide-now-title" aria-describedby="{described_by}">
       <h2 id="decide-now-title">{labels['decide_title']}</h2>
-      <p id="decide-now-summary" class="decide-now-summary">{labels['decide_priorities']} · {labels['decide_coverage']} · {labels['decide_market']}</p>
+      <p id="decide-now-summary" class="decide-now-summary">{summary}</p>
       <nav class="decide-now-navigation" aria-label="{labels['decide_navigation']}"><ul>{navigation_items}</ul></nav>
       <div class="dossier-grid decide-now-grid">
         <article class="card span-4 decide-now-card" aria-labelledby="decide-now-priorities-title">
@@ -1111,7 +1504,7 @@ def _render_decide_now(
             <dt>{labels['decide_unavailable']}</dt><dd>{unavailable}</dd>
           </dl>
         </article>
-        <article class="card span-4 decide-now-card decide-now-authorization" aria-labelledby="decide-now-authorization-title"{authorization_description_attr}>
+        <article class="{authorization_class}" aria-labelledby="decide-now-authorization-title"{authorization_description_attr}>
           <h3 id="decide-now-authorization-title">{labels['decide_authorization']}</h3>
           {authorization_impact}
           <p>{html.escape(authorization, quote=True)}</p>
@@ -1119,7 +1512,7 @@ def _render_decide_now(
         <article class="card span-12 decide-now-card decide-now-market" aria-labelledby="decide-now-market-title">
           <h3 id="decide-now-market-title">{labels['decide_market']}</h3>
           {market_content}
-        </article>
+        </article>{weekly_suffix}
       </div>
     </section>'''
 
@@ -1432,16 +1825,27 @@ def _render_main(
     market_dossier: Mapping[str, object] | None,
     learning_decision: Mapping[str, object] | None = None,
     generation: str | None = None,
+    next_action_eligibility: Mapping[str, object] | None = None,
 ) -> str:
     public_dossier = _plain(dossier)
     if not isinstance(public_dossier, dict):
         raise DossierValidationError(["dossier projection is unavailable"])
-    if generation == "v2":
+    if generation in {"v2", "v3"}:
         public_dossier["methodology_source_categories"] = []
     projected = COMPAT.project_v2_to_v1(BASE._mapping(public_dossier))
     opening = BASE._render_verdict(projected, locale) + BASE._render_recruiter_scan(projected, locale)
     bridge_holds = BASE._render_holds(projected, locale) + BASE._render_screen_bridge(projected, locale)
-    decide_now = _render_decide_now(dossier, locale, market_dossier, learning_decision) if market_dossier is not None else ""
+    decide_now = (
+        _render_decide_now(
+            dossier,
+            locale,
+            market_dossier,
+            learning_decision,
+            next_action_eligibility,
+        )
+        if market_dossier is not None
+        else ""
+    )
     return f'''<main id="main-content" class="shell" tabindex="-1">
       <div class="dossier-grid">{opening}</div>
       {decide_now}{_render_section_coverage(dossier, locale)}
@@ -1485,7 +1889,7 @@ def build_chat_summary(dossier: Mapping[str, object]) -> str:
     return summary
 
 
-def render_dossier_html(
+def _render_dossier_html_legacy(
     dossier: Mapping[str, object],
     market_dossier: Mapping[str, object] | None = None,
     *,
@@ -1538,6 +1942,112 @@ def render_dossier_html(
     return BASE.STATIC_TEMPLATE_TOKEN.sub(lambda match: substitutions[match.group(0)], template)
 
 
+def _render_dossier_html_from_snapshot(
+    frozen_group: Mapping[str, object],
+) -> str:
+    """Validate and render one v3 composition from its sole bounded snapshot."""
+    validated = _validated_v3_group(frozen_group)
+    dossier = validated["dossier"]
+    market = validated["market"]
+    learning = validated["learning"]
+    eligibility = validated["eligibility"]
+    locale = str(dossier["locale"])
+    template = BASE.ASSET_LOADER.read_private_asset(ASSET_ROOT.parent, TEMPLATE_PATH)
+    base_css = BASE.ASSET_LOADER.read_private_asset(ASSET_ROOT.parent, BASE_CSS_PATH)
+    extension_css = BASE.ASSET_LOADER.read_private_asset(ASSET_ROOT.parent, CSS_PATH)
+    market_css = BASE.ASSET_LOADER.read_private_asset(
+        ASSET_ROOT.parent, MARKET_CSS_PATH
+    )
+    weekly_css = BASE.ASSET_LOADER.read_private_asset(
+        ASSET_ROOT.parent, WEEKLY_CSS_PATH
+    )
+    static_tokens = BASE.STATIC_TEMPLATE_TOKEN.findall(template)
+    if sorted(static_tokens) != sorted(BASE.TEMPLATE_TOKENS):
+        raise RuntimeError("dossier template token contract is invalid")
+    substitutions = {
+        "{{LANG}}": locale,
+        "{{TITLE}}": BASE.COPY[locale]["title"],
+        "{{INLINE_CSS}}": base_css + extension_css + market_css + weekly_css,
+        "{{HEADER}}": BASE._render_header(locale),
+        "{{MAIN}}": _render_main(
+            dossier,
+            locale,
+            market,
+            learning,
+            "v3",
+            eligibility,
+        ),
+        "{{INLINE_SCRIPT}}": BASE.INLINE_SCRIPT,
+    }
+    return BASE.STATIC_TEMPLATE_TOKEN.sub(
+        lambda match: substitutions[match.group(0)], template
+    )
+
+
+def render_dossier_html(
+    dossier: Mapping[str, object],
+    market_dossier: Mapping[str, object] | None = None,
+    *,
+    market_research: Mapping[str, object] | None = None,
+    market_alignment: Mapping[str, object] | None = None,
+    learning_decision: Mapping[str, object] | None = None,
+    provider_research: Mapping[str, object] | None = None,
+    gap_response: Mapping[str, object] | None = None,
+    gap_assessment: Mapping[str, object] | None = None,
+    next_action_eligibility: Mapping[str, object] | None = None,
+) -> str:
+    if learning_decision is not None or any(
+        value is not None
+        for value in (gap_response, gap_assessment, next_action_eligibility)
+    ):
+        try:
+            frozen_group = bounded_plain_snapshot(
+                {
+                    "dossier": dossier,
+                    "market_dossier": market_dossier,
+                    "market_research": market_research,
+                    "market_alignment": market_alignment,
+                    "learning_decision": learning_decision,
+                    "provider_research": provider_research,
+                    "gap_response": gap_response,
+                    "gap_assessment": gap_assessment,
+                    "next_action_eligibility": next_action_eligibility,
+                }
+            )
+        except Exception:
+            raise DossierValidationError(
+                ["market composition inputs have malformed structure"]
+            ) from None
+        captured_learning = frozen_group["learning_decision"]
+        captured_v3_sources = (
+            frozen_group["gap_response"],
+            frozen_group["gap_assessment"],
+            frozen_group["next_action_eligibility"],
+        )
+        if any(value is not None for value in captured_v3_sources) or (
+            isinstance(captured_learning, Mapping)
+            and captured_learning.get("schema_version")
+            == "career-learning-decision-v3"
+        ):
+            return _render_dossier_html_from_snapshot(frozen_group)
+        return _render_dossier_html_legacy(
+            frozen_group["dossier"],
+            frozen_group["market_dossier"],
+            market_research=frozen_group["market_research"],
+            market_alignment=frozen_group["market_alignment"],
+            learning_decision=captured_learning,
+            provider_research=frozen_group["provider_research"],
+        )
+    return _render_dossier_html_legacy(
+        dossier,
+        market_dossier,
+        market_research=market_research,
+        market_alignment=market_alignment,
+        learning_decision=learning_decision,
+        provider_research=provider_research,
+    )
+
+
 def write_dossier_html(
     dossier_path: Path,
     output_path: Path,
@@ -1547,17 +2057,19 @@ def write_dossier_html(
     market_alignment_path: Path | None = None,
     learning_decision_path: Path | None = None,
     provider_research_path: Path | None = None,
+    gap_response_path: Path | None = None,
+    gap_assessment_path: Path | None = None,
+    next_action_eligibility_path: Path | None = None,
     force: bool = False,
 ) -> RenderReceipt:
-    dossier = VALIDATOR.load_dossier(Path(dossier_path))
-    errors = VALIDATOR.validate_dossier(dossier)
-    if errors:
-        raise DossierValidationError(errors)
     required_market_paths = (market_dossier_path, market_research_path)
     optional_source_paths = (
         market_alignment_path,
         learning_decision_path,
         provider_research_path,
+        gap_response_path,
+        gap_assessment_path,
+        next_action_eligibility_path,
     )
     if any(path is not None for path in required_market_paths) and not all(
         path is not None for path in required_market_paths
@@ -1567,46 +2079,123 @@ def write_dossier_html(
         path is not None for path in optional_source_paths
     ):
         raise DossierValidationError(["market composition inputs must be supplied together"])
-    market_dossier = None
-    market_research = None
-    market_alignment = None
-    learning_decision = None
-    provider_research = None
-    if all(path is not None for path in required_market_paths):
+    v3_paths = (
+        gap_response_path,
+        gap_assessment_path,
+        next_action_eligibility_path,
+    )
+    if any(path is not None for path in v3_paths) and (
+        any(path is None for path in v3_paths) or learning_decision_path is None
+    ):
+        raise DossierValidationError(
+            ["market composition inputs must be supplied together"]
+        )
+
+    capture_group = learning_decision_path is not None or any(
+        path is not None for path in v3_paths
+    )
+    if capture_group:
+        loaded = {
+            "dossier": _load_plain_mapping(dossier_path),
+            "market_dossier": _load_plain_mapping(market_dossier_path),
+            "market_research": _load_plain_mapping(market_research_path),
+            "market_alignment": (
+                _load_plain_mapping(market_alignment_path)
+                if market_alignment_path is not None
+                else None
+            ),
+            "learning_decision": _load_plain_mapping(learning_decision_path),
+            "provider_research": (
+                _load_plain_mapping(provider_research_path)
+                if provider_research_path is not None
+                else None
+            ),
+            "gap_response": (
+                _load_plain_mapping(gap_response_path)
+                if gap_response_path is not None
+                else None
+            ),
+            "gap_assessment": (
+                _load_plain_mapping(gap_assessment_path)
+                if gap_assessment_path is not None
+                else None
+            ),
+            "next_action_eligibility": (
+                _load_plain_mapping(next_action_eligibility_path)
+                if next_action_eligibility_path is not None
+                else None
+            ),
+        }
         try:
-            market_dossier = VALIDATOR.load_dossier(Path(market_dossier_path))
-            market_research = RESEARCH_VALIDATOR.load_research(Path(market_research_path))
-            if market_alignment_path is not None:
-                market_alignment = VALIDATOR.load_dossier(Path(market_alignment_path))
-        except (VALIDATOR.DossierLoadError, RESEARCH_VALIDATOR.ResearchLoadError) as error:
-            raise MarketInputLoadError("cannot load market composition input") from error
-        if learning_decision_path is not None:
+            frozen_group = bounded_plain_snapshot(loaded)
+        except Exception:
+            raise DossierValidationError(
+                ["market composition inputs have malformed structure"]
+            ) from None
+        captured_learning = frozen_group["learning_decision"]
+        if any(path is not None for path in v3_paths) or (
+            isinstance(captured_learning, Mapping)
+            and captured_learning.get("schema_version")
+            == "career-learning-decision-v3"
+        ):
+            rendered = _render_dossier_html_from_snapshot(frozen_group)
+        else:
+            rendered = _render_dossier_html_legacy(
+                frozen_group["dossier"],
+                frozen_group["market_dossier"],
+                market_research=frozen_group["market_research"],
+                market_alignment=frozen_group["market_alignment"],
+                learning_decision=captured_learning,
+                provider_research=frozen_group["provider_research"],
+            )
+        dossier = frozen_group["dossier"]
+    else:
+        dossier = VALIDATOR.load_dossier(Path(dossier_path))
+        errors = VALIDATOR.validate_dossier(dossier)
+        if errors:
+            raise DossierValidationError(errors)
+        market_dossier = None
+        market_research = None
+        market_alignment = None
+        provider_research = None
+        if all(path is not None for path in required_market_paths):
             try:
-                learning_decision = LEARNING_VALIDATOR.load_learning_bundle(Path(learning_decision_path))
-            except LEARNING_VALIDATOR.LearningBundleLoadError as error:
-                raise MarketInputLoadError("cannot load learning decision input") from error
-        if provider_research_path is not None:
-            try:
-                provider_research = PROVIDER_VALIDATOR.load_provider_research(
-                    Path(provider_research_path)
+                market_dossier = VALIDATOR.load_dossier(Path(market_dossier_path))
+                market_research = RESEARCH_VALIDATOR.load_research(
+                    Path(market_research_path)
                 )
-            except PROVIDER_VALIDATOR.ProviderResearchLoadError as error:
+                if market_alignment_path is not None:
+                    market_alignment = VALIDATOR.load_dossier(
+                        Path(market_alignment_path)
+                    )
+            except (
+                VALIDATOR.DossierLoadError,
+                RESEARCH_VALIDATOR.ResearchLoadError,
+            ) as error:
                 raise MarketInputLoadError(
-                    "cannot load provider research input"
+                    "cannot load market composition input"
                 ) from error
+            if provider_research_path is not None:
+                try:
+                    provider_research = PROVIDER_VALIDATOR.load_provider_research(
+                        Path(provider_research_path)
+                    )
+                except PROVIDER_VALIDATOR.ProviderResearchLoadError as error:
+                    raise MarketInputLoadError(
+                        "cannot load provider research input"
+                    ) from error
+        rendered = _render_dossier_html_legacy(
+            dossier,
+            market_dossier,
+            market_research=market_research,
+            market_alignment=market_alignment,
+            provider_research=provider_research,
+        )
     try:
         expanded_output = Path(output_path).expanduser()
     except RuntimeError as error:
         raise OSError("output path is unavailable") from error
     output = Path(os.path.abspath(os.fspath(expanded_output)))
-    rendered = render_dossier_html(
-        dossier,
-        market_dossier,
-        market_research=market_research,
-        market_alignment=market_alignment,
-        learning_decision=learning_decision,
-        provider_research=provider_research,
-    )
     summary = build_chat_summary(dossier)
     BASE._atomic_private_write(output, rendered.encode("utf-8"), force=force)
     return RenderReceipt(output, "text/html", str(dossier["locale"]), summary)
@@ -1621,6 +2210,9 @@ def _cli(argv: list[str] | None = None) -> int:
     parser.add_argument("--market-alignment", type=Path)
     parser.add_argument("--learning-decision", type=Path)
     parser.add_argument("--provider-research", type=Path)
+    parser.add_argument("--gap-response", type=Path)
+    parser.add_argument("--gap-assessment", type=Path)
+    parser.add_argument("--next-action-eligibility", type=Path)
     parser.add_argument("--force", action="store_true")
     arguments = parser.parse_args(argv)
     try:
@@ -1632,6 +2224,9 @@ def _cli(argv: list[str] | None = None) -> int:
             market_alignment_path=arguments.market_alignment,
             learning_decision_path=arguments.learning_decision,
             provider_research_path=arguments.provider_research,
+            gap_response_path=arguments.gap_response,
+            gap_assessment_path=arguments.gap_assessment,
+            next_action_eligibility_path=arguments.next_action_eligibility,
             force=arguments.force,
         )
     except OSError:

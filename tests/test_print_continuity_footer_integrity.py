@@ -19,6 +19,20 @@ FOOTERS = {
 
 
 class PrintContinuityFooterIntegrityTests(unittest.TestCase):
+    def test_weekly_decision_card_and_every_provider_choice_are_atomic_in_print(self) -> None:
+        css = (ASSETS / "career-learning-eligibility-v1.css").read_text(
+            encoding="utf-8"
+        )
+        print_css = css[
+            css.index("@media print") : css.index("@media (forced-colors: active)")
+        ]
+        for selector in (".weekly-decision", ".weekly-decision-choice"):
+            with self.subTest(selector=selector):
+                self.assertRegex(
+                    print_css,
+                    rf"{re.escape(selector)}\s*\{{[^}}]*break-inside:\s*avoid;[^}}]*page-break-inside:\s*avoid;",
+                )
+
     def test_market_print_restores_table_semantics_and_keeps_key_cards_and_recurrence_atomic(self) -> None:
         css = (ASSETS / "career-market-learning-dossier-v1.css").read_text(encoding="utf-8")
         print_css = css[css.index("@media print"):css.index("@media (forced-colors: active)")]

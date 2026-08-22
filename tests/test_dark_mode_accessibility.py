@@ -40,6 +40,48 @@ def _contrast(first: str, second: str) -> float:
 
 
 class DarkModeAccessibilityTests(unittest.TestCase):
+    def test_weekly_decision_css_is_isolated_complete_and_non_scrolling(self) -> None:
+        css = (ASSETS / "career-learning-eligibility-v1.css").read_text(
+            encoding="utf-8"
+        )
+        compact = css[
+            css.index("@media (max-width: 680px)") : css.index("@media print")
+        ]
+        self.assertIn("grid-template-columns: minmax(0, 1fr)", compact)
+        self.assertIn("min-width: 0", compact)
+        self.assertIn("overflow-wrap: anywhere", compact)
+        self.assertNotRegex(
+            css,
+            r"overflow-x:\s*(?:auto|scroll)|white-space:\s*nowrap|min-width:\s*[7-9][0-9]{2}px",
+        )
+        selectors = [
+            line.strip().rstrip(",").split("{", 1)[0]
+            for line in css.splitlines()
+            if line.lstrip().startswith(".")
+        ]
+        self.assertTrue(selectors)
+        for selector in selectors:
+            self.assertIn(".weekly-decision", selector)
+
+        dark = css[
+            css.index("@media screen and (prefers-color-scheme: dark)") :
+            css.index("@media (max-width: 680px)")
+        ]
+        self.assertNotRegex(dark, r"#[0-9a-fA-F]{3,8}")
+        for token in ("var(--surface)", "var(--paper)", "var(--ink)", "var(--forest)", "var(--line)"):
+            self.assertIn(token, dark)
+
+        forced = css[css.index("@media (forced-colors: active)") :]
+        for system_color in ("Canvas", "CanvasText", "Highlight"):
+            self.assertIn(system_color, forced)
+        reduced = css[css.index("@media (prefers-reduced-motion: reduce)") :]
+        for contract in (
+            "animation: none !important",
+            "transition: none !important",
+            "transform: none !important",
+        ):
+            self.assertIn(contract, reduced)
+
     def test_learning_signal_route_rows_have_scoped_spacing_and_separation_contracts(self) -> None:
         css = (ASSETS / "career-market-learning-dossier-v1.css").read_text(encoding="utf-8")
         self.assertRegex(

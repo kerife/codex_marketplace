@@ -47,3 +47,11 @@
 - Description: optional ranked proof-and-cost cards. Each card contains a LearningSignalRoute plus localized option/owner, cost/time, expected boundary, lower-cost alternative, overbuying risk, decision, and next-action gate.
 - Extractable props: validated and source-recomputed learning decision bundle plus locale; unavailable or zero-market inputs render no learning panel.
 - Hardcoded: render only projected public fields; never render provider URLs, source/internal IDs, snapshots, raw source prose, or an external-action control.
+
+## WeeklyDecision
+
+- Source: `plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py` and `plugins/professional-growth-coach/assets/career-learning-eligibility-v1.css`.
+- Category: composed v3 subcomponent.
+- Description: one full-width, non-interactive weekly decision after the condensed market summary. It presents a public vacancy/signal, exact evidence statement, one action, one deliverable, one done-when, and the fixed outcome/no-action boundary.
+- Extractable props: validated eligibility public projection, validated public market vacancies, and locale; provider-selection state includes the complete non-ranked L1–Ln choice list.
+- Hardcoded: unavailable renders no card; no forms, buttons, links, internal IDs, snapshots, URLs, source prose, raw enums, or caller-authored recommendation text.

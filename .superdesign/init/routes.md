@@ -24,3 +24,10 @@ is a rendered coach-priority subcomponent, not a persisted route or standalone
 artifact. LearningSignalRoute is the compact, ARIA-labelled per-decision group
 that projects public term labels, localized support, vacancy ordinals,
 recurrence, deterministic basis, and localized decision without source values.
+
+The v3 route accepts `career-learning-decision-v3` only with its response,
+assessment, and eligibility sources. WeeklyDecision is a rendered subcomponent,
+not a separate route: it is the sole primary weekly imperative and leaves the
+inspection authorization visibly secondary. Its v3-only stylesheet is
+`assets/career-learning-eligibility-v1.css`; unavailable eligibility omits the
+card and preserves the existing safe step.

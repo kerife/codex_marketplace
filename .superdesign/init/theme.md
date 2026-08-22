@@ -1736,3 +1736,97 @@ dd { margin: .15rem 0 0; font-weight: 600; }
   .learning-decision-card { border-width: 2px; }
 }
 ```
+
+### `plugins/professional-growth-coach/assets/career-learning-eligibility-v1.css`
+
+```css
+.weekly-decision {
+  min-width: 0;
+  border-top: 4px solid var(--coral);
+  overflow-wrap: anywhere;
+}
+
+.weekly-decision > h3 { margin-bottom: .75rem; }
+.weekly-decision-vacancy { margin: 0; font-family: var(--serif); font-size: 1.15rem; }
+.weekly-decision-label {
+  display: block;
+  margin-bottom: .2rem;
+  color: var(--forest);
+  font-family: var(--sans);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.weekly-decision-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+  min-width: 0;
+  margin-top: .9rem;
+}
+.weekly-decision-facts:empty { display: none; }
+.weekly-decision-signal,
+.weekly-decision-recurrence { min-width: 0; margin: 0; }
+.weekly-decision-choices { min-width: 0; margin-top: 1rem; }
+.weekly-decision-choices h4 { margin: 0; font-size: 1rem; }
+.weekly-decision-choices ol { margin: .55rem 0 0; padding-left: 1.4rem; }
+.weekly-decision-choice { min-width: 0; overflow-wrap: anywhere; }
+.weekly-decision-choice + .weekly-decision-choice { margin-top: .45rem; }
+.weekly-decision-evidence {
+  margin: 1rem 0 0;
+  padding: .75rem .9rem;
+  border-left: 4px solid var(--forest);
+  background: var(--paper);
+}
+.weekly-decision-action {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+  min-width: 0;
+  margin-top: 1rem;
+}
+.weekly-decision-action p { min-width: 0; margin: 0; }
+.weekly-decision-boundary { margin: 1rem 0 0; color: var(--muted-text); font-size: .875rem; }
+.weekly-decision-secondary { border-style: dashed; }
+
+@media screen and (prefers-color-scheme: dark) {
+  .weekly-decision { border-color: var(--coral); background: var(--surface); color: var(--ink); }
+  .weekly-decision-evidence { border-color: var(--forest); background: var(--paper); color: var(--ink); }
+  .weekly-decision-label { color: var(--forest); }
+  .weekly-decision-choice { border-color: var(--line); }
+  .weekly-decision-boundary { color: var(--ink); }
+  .weekly-decision-secondary { border-color: var(--line); background: var(--surface); color: var(--ink); }
+}
+
+@media (max-width: 680px) {
+  .weekly-decision,
+  .weekly-decision-facts,
+  .weekly-decision-action,
+  .weekly-decision-choices,
+  .weekly-decision-choice { min-width: 0; overflow-wrap: anywhere; }
+  .weekly-decision-facts,
+  .weekly-decision-action { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media print {
+  .weekly-decision { break-inside: avoid; page-break-inside: avoid; }
+  .weekly-decision-choice { break-inside: avoid; page-break-inside: avoid; }
+  .weekly-decision-boundary { font-size: 9.5pt; }
+}
+
+@media (forced-colors: active) {
+  .weekly-decision,
+  .weekly-decision-evidence,
+  .weekly-decision-secondary { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .weekly-decision { border-top-color: Highlight; }
+  .weekly-decision-evidence { border-left-color: Highlight; }
+  .weekly-decision-label,
+  .weekly-decision-boundary { color: CanvasText; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weekly-decision,
+  .weekly-decision * { animation: none !important; transition: none !important; transform: none !important; }
+}
+```

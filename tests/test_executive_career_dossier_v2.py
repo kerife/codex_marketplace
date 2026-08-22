@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import functools
 import hashlib
 import html
 import importlib.util
@@ -14,8 +15,10 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from collections.abc import Iterator, Mapping
 from html.parser import HTMLParser
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -32,9 +35,90 @@ LEARNING_V2_FIXTURE_ROOT = FIXTURE_ROOT.with_name("career-learning-decision-v2")
 PROVIDER_RESEARCH_FIXTURE_ROOT = FIXTURE_ROOT.with_name(
     "career-learning-provider-research"
 )
+ELIGIBILITY_V3_FIXTURE_ROOT = FIXTURE_ROOT.with_name(
+    "career-next-action-eligibility-v1"
+)
+LEARNING_V3_FIXTURE_ROOT = FIXTURE_ROOT.with_name("career-learning-decision-v3")
+WEEKLY_CSS_PATH = (
+    REPO_ROOT
+    / "plugins"
+    / "professional-growth-coach"
+    / "assets"
+    / "career-learning-eligibility-v1.css"
+)
 NO_MARKET_RENDER_SNAPSHOTS = {
     "scenario-a-es.json": (48801, "19d85f8a4061ca5eb44746801a2f0094a9109d9d5764e80d515d84bafdfd79d6"),
     "scenario-c-en.json": (46856, "7f4513fc555d60a6042981168437aea3b1dc470027fd700d1604588e291ece7c"),
+}
+HISTORICAL_COMPLETE_RENDER_SNAPSHOTS = {
+    "v1": (97805, "4dbb6be8e1a95cdcc8f3e937dcca600fb26f9dc53d7ef519027048c73b12316f"),
+    "v2": (101282, "0232f7d71de6e85f1b18d7407703b7af944c936c9c905b55fd9a3592067d6167"),
+}
+ELIGIBILITY_V3_CASES = (
+    "unavailable",
+    "selection_required",
+    "insufficient_recurrence",
+    "gap_unknown",
+    "supported",
+    "provider_choice",
+    "provider_evidence",
+    "experience",
+    "proof",
+    "practice",
+    "terminology",
+    "knowledge",
+)
+WEEKLY_STATE_COPY = {
+    "es": {
+        "selection_required": "Elige una pareja válida de vacante y señal (V1–Vn) para decidir el siguiente paso; no se preselecciona ninguna.",
+        "insufficient_recurrence": "La señal aparece en 1/5; no alcanza el umbral de dos vacantes activas.",
+        "gap_unknown": "La relación de brecha todavía no está confirmada.",
+        "supported": "La señal está respaldada; ese respaldo no demuestra una brecha.",
+        "provider_choice": "Hay recurrencia y una brecha de conocimiento confirmada; falta elegir una opción oficial verificada.",
+        "provider_evidence": "Hay recurrencia y una brecha de conocimiento confirmada, pero no hay una opción oficial verificada para esta señal.",
+        "experience": "La brecha requiere experiencia profesional o de producción; un laboratorio, curso o certificación no la sustituye.",
+        "proof": "La señal aparece en 2/5 y la relación brecha de evidencia práctica fue confirmada por la persona candidata.",
+        "practice": "La señal aparece en 2/5 y la relación brecha de práctica fue confirmada por la persona candidata.",
+        "terminology": "La señal aparece en 2/5 y la relación brecha de terminología fue confirmada por la persona candidata.",
+        "knowledge": "La señal aparece en 2/5 y la relación brecha de conocimiento fue confirmada por la persona candidata.",
+    },
+    "en": {
+        "selection_required": "Choose one valid vacancy-and-signal pair (V1–Vn) to decide the next step; none is preselected.",
+        "insufficient_recurrence": "The signal appears in 1/4; it does not meet the two-active-vacancy threshold.",
+        "gap_unknown": "The gap relation is not confirmed yet.",
+        "supported": "The signal is supported; that support does not establish a gap.",
+        "provider_choice": "Recurrence and a confirmed knowledge gap exist; one verified official option still needs to be selected.",
+        "provider_evidence": "Recurrence and a confirmed knowledge gap exist, but no verified official option covers this signal.",
+        "experience": "The gap requires professional or production experience; a lab, course, or certification cannot substitute for it.",
+        "proof": "The signal appears in 2/4, and the proof gap relation was candidate-confirmed.",
+        "practice": "The signal appears in 2/4, and the practice gap relation was candidate-confirmed.",
+        "terminology": "The signal appears in 2/4, and the terminology gap relation was candidate-confirmed.",
+        "knowledge": "The signal appears in 2/4, and the knowledge gap relation was candidate-confirmed.",
+    },
+}
+WEEKLY_ACTION_COPY = {
+    "es": {
+        "select_target_vacancy_and_signal": ("Elige vacante y señal", "Una pareja pública Vn + señal elegida por ti.", "La vacante y la señal pertenecen a la misma vacante activa."),
+        "confirm_gap_relation": ("Confirma la relación de brecha", "Una respuesta estructurada, sin prosa libre, para la señal elegida.", "La relación queda confirmada o marcada como desconocida."),
+        "select_provider_option": ("Elige una opción oficial para investigar", "Una opción pública elegida explícitamente; no es una recomendación de compra.", "La opción activa cubre la señal exacta y su fuente oficial está fechada."),
+        "prepare_private_vacancy_packet": ("Prepara primero el paquete privado de vacante", "Un borrador privado y verificable para la vacante elegida; no se envía.", "Cada afirmación está respaldada o marcada para confirmar u omitir."),
+        "build_bounded_proof": ("Construye una prueba acotada", "Una prueba privada e inspeccionable de la señal elegida.", "La prueba muestra alcance, acción y resultado sin afirmar producción no demostrada."),
+        "run_validation_lab": ("Ejecuta un laboratorio de práctica", "Un laboratorio privado y acotado para practicar la señal.", "El resultado es inspeccionable y no se presenta como experiencia profesional."),
+        "research_provider_option": ("Investiga la opción elegida", "Una revisión privada de costo, tiempo, requisitos y desconocidos.", "Costo, tiempo, requisitos y mantenimiento están confirmados o marcados como desconocidos."),
+        "run_role_search_experiment": ("Prueba una búsqueda acotada de roles", "Una búsqueda privada con la terminología elegida; no se postula.", "La consulta devuelve evidencia fechada o queda registrada como no disponible."),
+        "no_learning_yet": ("No compres aprendizaje todavía", "Una nota privada de la evidencia de proveedor que falta.", "Existe una fuente oficial vigente o la decisión permanece aplazada."),
+    },
+    "en": {
+        "select_target_vacancy_and_signal": ("Choose vacancy and signal", "One public Vn + signal pair chosen by you.", "The vacancy and signal belong to the same active vacancy."),
+        "confirm_gap_relation": ("Confirm the gap relation", "One structured response without free-form prose for the selected signal.", "The relation is confirmed or marked unknown."),
+        "select_provider_option": ("Choose one official option to research", "One explicitly selected public option; this is not a purchase recommendation.", "The active option covers the exact signal and has a dated official source."),
+        "prepare_private_vacancy_packet": ("Prepare the private vacancy packet first", "One private, verifiable draft for the selected vacancy; it is not sent.", "Every claim is supported or marked to confirm or omit."),
+        "build_bounded_proof": ("Build one bounded proof", "One private, inspectable proof for the selected signal.", "The proof shows scope, action, and result without claiming unsupported production work."),
+        "run_validation_lab": ("Run one practice lab", "One private, bounded lab for practicing the signal.", "The result is inspectable and is not presented as professional experience."),
+        "research_provider_option": ("Research the selected option", "One private review of cost, time, prerequisites, and unknowns.", "Cost, time, prerequisites, and maintenance are confirmed or marked unknown."),
+        "run_role_search_experiment": ("Run one bounded role-search experiment", "One private search using the selected terminology; no application is submitted.", "The query returns dated evidence or is recorded as unavailable."),
+        "no_learning_yet": ("Do not buy learning yet", "One private note of the missing provider evidence.", "A current official source exists or the decision remains deferred."),
+    },
 }
 COPY_MARKET_PLACEHOLDER_ES = (
     "Este dossier no incluye evidencia de mercado. Continúa con la evidencia del perfil ya revisada."
@@ -445,6 +529,60 @@ def semantic_v2_case(
     )
 
 
+def eligibility_v3_case(
+    condition: str, locale: str
+) -> tuple[dict[str, object], dict[str, object]]:
+    root = ELIGIBILITY_V3_FIXTURE_ROOT / f"{condition}-{locale}"
+    sources = load_json_fixture(root / "sources.json")
+    eligibility = load_json_fixture(root / "eligibility.json")
+    return sources, eligibility
+
+
+@functools.lru_cache(maxsize=None)
+def _built_learning_v3(condition: str, locale: str) -> dict[str, object]:
+    sources, eligibility = eligibility_v3_case(condition, locale)
+    scripts = str(SCRIPTS)
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    from build_career_learning_decision_v3 import build_career_learning_decision_v3
+
+    return build_career_learning_decision_v3(
+        sources["research"],
+        sources["executive_dossier"],
+        sources["market_dossier"],
+        sources["gap_response"],
+        sources["gap_assessment"],
+        eligibility,
+        sources["provider_research"],
+    )
+
+
+def semantic_v3_case(condition: str, locale: str) -> dict[str, object]:
+    sources, eligibility = eligibility_v3_case(condition, locale)
+    canonical = {
+        ("proof", "es"): "proof-es",
+        ("knowledge", "en"): "knowledge-en",
+        ("selection_required", "es"): "selection-required-es",
+        ("unavailable", "es"): "unavailable-es",
+    }.get((condition, locale))
+    learning = (
+        load_json_fixture(LEARNING_V3_FIXTURE_ROOT / canonical / "learning.json")
+        if canonical is not None
+        else copy.deepcopy(_built_learning_v3(condition, locale))
+    )
+    return {
+        "dossier": sources["executive_dossier"],
+        "market_dossier": sources["market_dossier"],
+        "market_research": sources["research"],
+        "market_alignment": None,
+        "learning_decision": learning,
+        "provider_research": sources["provider_research"],
+        "gap_response": sources["gap_response"],
+        "gap_assessment": sources["gap_assessment"],
+        "next_action_eligibility": eligibility,
+    }
+
+
 def build_limited_market_case(
     count: int,
 ) -> tuple[dict[str, object], dict[str, object], dict[str, object], dict[str, object]]:
@@ -510,6 +648,50 @@ def decide_now_region(rendered: str) -> tuple[set[str], str, str]:
     if match is None:
         raise AssertionError("Decide now section is missing")
     return set(re.findall(r'<a href="#([^"]+)">', match.group(2))), match.group(1), match.group(2)
+
+
+def weekly_decision_region(rendered: str) -> str:
+    match = re.search(
+        r'<article class="card span-12 weekly-decision"[^>]*>(.*?)</article>',
+        rendered,
+        re.DOTALL,
+    )
+    if match is None:
+        raise AssertionError("weekly decision card is missing")
+    return match.group(0)
+
+
+class OnePassMapping(Mapping[str, object]):
+    """Expose one safe items traversal and make every other read observable."""
+
+    def __init__(self, value: Mapping[str, object], sentinel: str) -> None:
+        self._value = dict(value)
+        self.sentinel = sentinel
+        self.items_calls = 0
+
+    def items(self):
+        self.items_calls += 1
+        if self.items_calls != 1:
+            raise RuntimeError(self.sentinel)
+        return self._value.items()
+
+    def __getitem__(self, key: str) -> object:
+        raise RuntimeError(self.sentinel)
+
+    def __iter__(self) -> Iterator[str]:
+        raise RuntimeError(self.sentinel)
+
+    def __len__(self) -> int:
+        raise RuntimeError(self.sentinel)
+
+    def get(self, key: str, default: object = None) -> object:
+        raise RuntimeError(self.sentinel)
+
+    def __deepcopy__(self, memo: object) -> object:
+        raise RuntimeError(self.sentinel)
+
+    def __str__(self) -> str:
+        raise RuntimeError(self.sentinel)
 
 
 class DossierDOMAudit(HTMLParser):
@@ -1000,6 +1182,315 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             "provider_research": provider,
         }
 
+    def test_v3_weekly_card_is_ordered_named_and_single_action(self):
+        rendered = self.renderer.render_dossier_html(**semantic_v3_case("proof", "es"))
+        decide = decide_now_region(rendered)[2]
+        self.assertLess(
+            decide.index('class="card span-12 decide-now-card decide-now-market"'),
+            decide.index('class="card span-12 weekly-decision"'),
+        )
+        self.assertLess(
+            rendered.index('class="card span-12 weekly-decision"'),
+            rendered.index('class="section-block learning-decision"'),
+        )
+        self.assertEqual(1, decide.count('class="card span-12 weekly-decision"'))
+        self.assertEqual(1, decide.count('class="weekly-decision-action"'))
+        self.assertEqual(1, decide.count("weekly-decision-secondary"))
+        self.assertIn("Decisión de esta semana", decide)
+        audit = DossierDOMAudit()
+        audit.feed(rendered)
+        self.assertEqual(len(audit.ids), len(set(audit.ids)))
+        self.assertFalse(set(audit.references) - set(audit.ids))
+
+    def test_v3_provider_choice_list_is_complete_non_ranked_and_public(self):
+        rendered = self.renderer.render_dossier_html(
+            **semantic_v3_case("provider_choice", "en")
+        )
+        region = weekly_decision_region(rendered)
+        self.assertIn("L1", region)
+        self.assertIn("Terraform course", region)
+        self.assertIn("HashiCorp", region)
+        self.assertIn("not ranked", region)
+        for forbidden in ("LP-001", "LP-003", "https://", "snap-", "V-003"):
+            self.assertNotIn(forbidden, region)
+        self.assertNotIn("<button", region)
+        self.assertNotIn("<form", region)
+        self.assertNotIn("<a ", region)
+
+        sources, eligibility = eligibility_v3_case("provider_choice", "en")
+        eligibility = copy.deepcopy(eligibility)
+        eligibility["eligible_provider_choices"].extend(
+            [
+                {
+                    "public_provider_ordinal": "L2",
+                    "option_name": "Kubernetes lab",
+                    "provider_or_owner": "CNCF",
+                },
+                {
+                    "public_provider_ordinal": "L3",
+                    "option_name": "Terraform proof lab",
+                    "provider_or_owner": "candidate-owned",
+                },
+            ]
+        )
+        complete_region = self.renderer._render_weekly_decision_card(
+            eligibility, sources["market_dossier"], "en"
+        )
+        self.assertEqual(3, complete_region.count('class="weekly-decision-choice"'))
+        self.assertLess(complete_region.index("L1"), complete_region.index("L2"))
+        self.assertLess(complete_region.index("L2"), complete_region.index("L3"))
+        for public_value in (
+            "Terraform course",
+            "HashiCorp",
+            "Kubernetes lab",
+            "CNCF",
+            "Terraform proof lab",
+            "candidate-owned",
+        ):
+            self.assertIn(public_value, complete_region)
+
+    def test_v3_every_state_has_exact_es_en_copy_and_one_primary_action(self) -> None:
+        for locale in ("es", "en"):
+            for condition in ELIGIBILITY_V3_CASES:
+                with self.subTest(locale=locale, condition=condition):
+                    sources, eligibility = eligibility_v3_case(condition, locale)
+                    region = self.renderer._render_weekly_decision_card(
+                        eligibility, sources["market_dossier"], locale
+                    )
+                    if condition == "unavailable":
+                        self.assertEqual("", region)
+                        continue
+                    self.assertEqual(1, region.count('class="weekly-decision-action"'))
+                    self.assertIn(WEEKLY_STATE_COPY[locale][condition], html.unescape(region))
+                    action = eligibility["recommended_next_action"]
+                    expected_copy = WEEKLY_ACTION_COPY[locale][action]
+                    for expected in expected_copy:
+                        self.assertIn(expected, html.unescape(region))
+                    self.assertEqual(
+                        1,
+                        region.count(
+                            "no ejecuta ninguna acción externa"
+                            if locale == "es"
+                            else "performs no external action"
+                        ),
+                    )
+
+    def test_v3_unavailable_preserves_one_existing_safe_step_only(self) -> None:
+        for locale in ("es", "en"):
+            with self.subTest(locale=locale):
+                rendered = self.renderer.render_dossier_html(
+                    **semantic_v3_case("unavailable", locale)
+                )
+                decide = decide_now_region(rendered)[2]
+                self.assertNotIn('class="card span-12 weekly-decision"', rendered)
+                self.assertNotIn('class="section-block learning-decision"', rendered)
+                self.assertEqual(1, decide.count(self.renderer.COPY[locale]["decide_no_market"]))
+                self.assertEqual(
+                    1,
+                    decide.count(
+                        'class="card span-4 decide-now-card decide-now-authorization"'
+                    ),
+                )
+                self.assertNotIn("weekly-decision-secondary", decide)
+
+    def test_v3_public_vacancy_ordinal_title_and_employer_are_visible_and_named(self) -> None:
+        rendered = self.renderer.render_dossier_html(**semantic_v3_case("proof", "es"))
+        region = weekly_decision_region(rendered)
+        self.assertIn("V2", visible_text(region))
+        self.assertIn("Fixture DevOps Role C", visible_text(region))
+        self.assertIn("Fixture Employer C", visible_text(region))
+        self.assertRegex(
+            region,
+            r'aria-labelledby="weekly-decision-title weekly-decision-vacancy"',
+        )
+        self.assertRegex(
+            region,
+            r'aria-describedby="weekly-decision-evidence weekly-decision-boundary"',
+        )
+        self.assertRegex(
+            region,
+            r'id="weekly-decision-vacancy"[^>]*>.*V2.*Fixture DevOps Role C.*Fixture Employer C',
+        )
+
+    def test_v3_weekly_card_escapes_every_public_projection_field(self) -> None:
+        sources, eligibility = eligibility_v3_case("proof", "en")
+        market = copy.deepcopy(sources["market_dossier"])
+        eligibility = copy.deepcopy(eligibility)
+        eligibility["public_vacancy_ordinal"] = "V1"
+        eligibility["selected_signal"] = '<script data-private="x">signal</script>'
+        eligibility["private_deliverable"] = '<img src=x onerror="bad">'
+        eligibility["done_when"] = 'done & <strong>unsafe</strong>'
+        market["vacancies"][0]["title"] = '<svg onload="bad">Title</svg>'
+        market["vacancies"][0]["employer"] = 'Employer & "Owner"'
+        region = self.renderer._render_weekly_decision_card(
+            eligibility, market, "en"
+        )
+        for raw in ("<script", "</script>", "<img", "<strong>unsafe", "<svg"):
+            self.assertNotIn(raw, region)
+        for escaped in (
+            "&lt;Script",
+            "&lt;img",
+            "done &amp; &lt;strong&gt;unsafe&lt;/strong&gt;",
+            "&lt;svg",
+            "Employer &amp; &quot;Owner&quot;",
+        ):
+            self.assertIn(escaped, region)
+
+    def test_v3_learning_panel_closes_practice_and_unknown_labels_in_es_and_en(self) -> None:
+        base_row = {
+            "decision_rank": 1,
+            "option_name": "Bounded lab",
+            "gap_type": "practice",
+            "option_type": "lab",
+            "provider_or_owner": "candidate_owned",
+            "decision_basis": "Bounded basis.",
+            "signal_routes": [{
+                "term_label": "Terraform",
+                "support_state": "unknown",
+                "vacancy_ordinals": ["V1", "V2"],
+                "recurrence": "2/4",
+            }],
+            "cost_time_band": "Not evaluated.",
+            "expected_signal_boundary": "Bounded signal.",
+            "portfolio_or_no_learning_alternative": "Private alternative.",
+            "overbuying_risk": "Bounded risk.",
+            "decision": "do_now",
+            "next_action_gate": "Separate authorization required.",
+        }
+        for locale, gap_label, support_label in (
+            ("es", "Práctica", "No verificado"),
+            ("en", "Practice", "Not verified"),
+        ):
+            with self.subTest(locale=locale):
+                rendered = self.renderer._render_learning_decision_v3(
+                    {"vacancies": [{}, {}]},
+                    {"schema_version": "career-learning-decision-v3", "decisions": [base_row]},
+                    locale,
+                )
+                self.assertIn(gap_label, rendered)
+                self.assertIn(support_label, rendered)
+                self.assertNotIn(">practice<", rendered)
+                self.assertNotIn(">unknown<", rendered)
+                self.assertEqual(
+                    "",
+                    self.renderer._render_learning_decision_v3(
+                        {"vacancies": [{}, {}]},
+                        {"schema_version": "career-learning-decision-v3", "decisions": []},
+                        locale,
+                    ),
+                )
+
+    def test_v3_all_partial_masks_and_crossed_inputs_fail_before_asset_reads(self) -> None:
+        proof = semantic_v3_case("proof", "es")
+        fields = (
+            "gap_response",
+            "gap_assessment",
+            "next_action_eligibility",
+            "learning_decision",
+        )
+        base = {
+            key: proof[key]
+            for key in (
+                "dossier",
+                "market_dossier",
+                "market_research",
+                "market_alignment",
+                "provider_research",
+            )
+        }
+        with mock.patch.object(
+            self.renderer.BASE.ASSET_LOADER,
+            "read_private_asset",
+            side_effect=AssertionError("asset read before v3 preflight"),
+        ) as asset_read:
+            for mask in range(1, (1 << len(fields)) - 1):
+                arguments = dict(base)
+                arguments.update(
+                    {
+                        field: proof[field] if mask & (1 << index) else None
+                        for index, field in enumerate(fields)
+                    }
+                )
+                with self.subTest(mask=mask), self.assertRaises(
+                    self.renderer.DossierValidationError
+                ) as raised:
+                    self.renderer.render_dossier_html(**arguments)
+                self.assertEqual(
+                    ("market composition inputs must be supplied together",),
+                    raised.exception.errors,
+                )
+            crossed = semantic_v3_case("selection_required", "es")
+            for field in fields:
+                arguments = dict(proof)
+                arguments[field] = crossed[field]
+                with self.subTest(crossed=field), self.assertRaises(
+                    self.renderer.DossierValidationError
+                ):
+                    self.renderer.render_dossier_html(**arguments)
+            asset_read.assert_not_called()
+
+    def test_lone_v3_learning_uses_one_snapshot_before_schema_access_and_no_echo(self) -> None:
+        sentinel = "lone-v3-learning-private-sentinel"
+        hostile = OnePassMapping(
+            {"schema_version": "career-learning-decision-v3", sentinel: "private"},
+            sentinel,
+        )
+        with mock.patch.object(
+            self.renderer.BASE.ASSET_LOADER,
+            "read_private_asset",
+            side_effect=AssertionError("asset read before v3 preflight"),
+        ) as asset_read, self.assertRaises(
+            self.renderer.DossierValidationError
+        ) as raised:
+            self.renderer.render_dossier_html(
+                make_v2_dossier(), learning_decision=hostile
+            )
+        self.assertEqual(1, hostile.items_calls)
+        self.assertEqual(
+            ("market composition inputs must be supplied together",),
+            raised.exception.errors,
+        )
+        self.assertNotIn(sentinel, str(raised.exception))
+        asset_read.assert_not_called()
+
+    def test_v3_group_is_captured_once_without_deepcopy_or_original_rereads(self) -> None:
+        arguments = semantic_v3_case("proof", "es")
+        sentinel = "v3-original-reread-sentinel"
+        wrapped: list[OnePassMapping] = []
+        for field, value in list(arguments.items()):
+            if isinstance(value, Mapping):
+                current = OnePassMapping(value, sentinel)
+                wrapped.append(current)
+                arguments[field] = current
+        with mock.patch.object(
+            self.renderer,
+            "bounded_plain_snapshot",
+            wraps=self.renderer.bounded_plain_snapshot,
+        ) as snapshot:
+            rendered = self.renderer.render_dossier_html(**arguments)
+        self.assertIn('class="card span-12 weekly-decision"', rendered)
+        self.assertEqual(1, snapshot.call_count)
+        self.assertTrue(wrapped)
+        self.assertTrue(all(value.items_calls == 1 for value in wrapped))
+        self.assertNotIn(sentinel, rendered)
+
+    def test_historical_v1_v2_bytes_and_inline_css_exclude_v3_selectors(self) -> None:
+        renders = {
+            "v1": self.renderer.render_dossier_html(**self.v1_render_sources()),
+            "v2": self.renderer.render_dossier_html(**self.v2_render_sources()),
+        }
+        for generation, rendered in renders.items():
+            with self.subTest(generation=generation):
+                expected_size, expected_digest = HISTORICAL_COMPLETE_RENDER_SNAPSHOTS[
+                    generation
+                ]
+                encoded = rendered.encode("utf-8")
+                self.assertEqual(expected_size, len(encoded))
+                self.assertEqual(expected_digest, hashlib.sha256(encoded).hexdigest())
+                inline_css = re.search(r"<style>(.*?)</style>", rendered, re.DOTALL)
+                self.assertIsNotNone(inline_css)
+                self.assertNotIn(".weekly-decision", inline_css.group(1))
+
     def v2_multi_signal_render_sources(self) -> dict[str, object]:
         sources = copy.deepcopy(self.v2_render_sources())
         dossier = sources["dossier"]
@@ -1359,39 +1850,38 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     hashlib.sha256(rendered.encode("utf-8")).hexdigest(),
                 )
 
-    def test_v2_deepcopy_runtime_errors_are_generic_total_and_unlinked(self) -> None:
+    def test_v2_learning_group_snapshots_before_schema_access_without_original_deepcopy(self) -> None:
         sources = self.v2_render_sources()
         sentinel = "renderer-deepcopy-runtime-sentinel"
-
-        class CopyBomb(dict):
-            def __deepcopy__(self, memo):
-                raise RuntimeError(sentinel)
-
+        baseline = self.renderer.render_dossier_html(**sources)
         cases = (
             (
                 "market",
-                dict(sources, market_dossier=CopyBomb(sources["market_dossier"])),
-                ("market composition inputs have malformed structure",),
+                "market_dossier",
             ),
             (
                 "learning",
-                dict(sources, learning_decision=CopyBomb(sources["learning_decision"])),
-                ("learning decision is unavailable",),
+                "learning_decision",
             ),
             (
                 "provider",
-                dict(sources, provider_research=CopyBomb(sources["provider_research"])),
-                ("learning decision is unavailable",),
+                "provider_research",
             ),
         )
-        for name, arguments, expected_errors in cases:
+        for name, field in cases:
             with self.subTest(source=name):
-                with self.assertRaises(self.renderer.DossierValidationError) as raised:
-                    self.renderer.render_dossier_html(**arguments)
-                self.assertIsNone(raised.exception.__cause__)
-                self.assertEqual(expected_errors, raised.exception.errors)
-                self.assertNotIn(sentinel, str(raised.exception))
-                self.assertNotIn(sentinel, "\n".join(raised.exception.errors))
+                hostile = OnePassMapping(sources[field], sentinel)
+                arguments = dict(sources, **{field: hostile})
+                with mock.patch.object(
+                    self.renderer,
+                    "bounded_plain_snapshot",
+                    wraps=self.renderer.bounded_plain_snapshot,
+                ) as snapshot:
+                    rendered = self.renderer.render_dossier_html(**arguments)
+                self.assertEqual(1, snapshot.call_count)
+                self.assertEqual(1, hostile.items_calls)
+                self.assertEqual(baseline, rendered)
+                self.assertNotIn(sentinel, rendered)
 
     def test_v2_private_source_mutations_fail_before_render_without_echo(self) -> None:
         for label, mutation, sentinel in V2_SOURCE_MUTATION_CASES:
@@ -1421,16 +1911,34 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     path.write_text(json.dumps(value), encoding="utf-8")
                     paths[name] = path
                 expected_errors = self.expected_v2_mutation_errors(mutation)
-                provider_load_failure = mutation in {
-                    "provider_url", "provider_control", "provider_local_path"
-                }
-                expected_writer_type = (
-                    self.renderer.MarketInputLoadError
-                    if provider_load_failure
-                    else self.renderer.DossierValidationError
-                )
                 writer_output = root / "writer.html"
-                with self.assertRaises(expected_writer_type) as raised:
+                with mock.patch.object(
+                    self.renderer,
+                    "bounded_plain_snapshot",
+                    wraps=self.renderer.bounded_plain_snapshot,
+                ) as snapshot, mock.patch.object(
+                    self.renderer.VALIDATOR,
+                    "load_dossier",
+                    side_effect=AssertionError("schema load before shared snapshot"),
+                ) as dossier_loader, mock.patch.object(
+                    self.renderer.RESEARCH_VALIDATOR,
+                    "load_research",
+                    side_effect=AssertionError("schema load before shared snapshot"),
+                ) as research_loader, mock.patch.object(
+                    self.renderer.LEARNING_VALIDATOR,
+                    "load_learning_bundle",
+                    side_effect=AssertionError("schema load before shared snapshot"),
+                ) as learning_loader, mock.patch.object(
+                    self.renderer.PROVIDER_VALIDATOR,
+                    "load_provider_research",
+                    side_effect=AssertionError("schema load before shared snapshot"),
+                ) as provider_loader, mock.patch.object(
+                    self.renderer.BASE.ASSET_LOADER,
+                    "read_private_asset",
+                    side_effect=AssertionError("asset read before validation"),
+                ) as asset_read, self.assertRaises(
+                    self.renderer.DossierValidationError
+                ) as raised:
                     self.renderer.write_dossier_html(
                         paths["dossier"],
                         writer_output,
@@ -1439,16 +1947,19 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                         learning_decision_path=paths["learning_decision"],
                         provider_research_path=paths["provider_research"],
                     )
-                self.assertIs(type(raised.exception), expected_writer_type)
-                if provider_load_failure:
-                    self.assertEqual(
-                        "cannot load provider research input", str(raised.exception)
-                    )
-                    expected_stderr = "cannot load provider research input\n"
-                else:
-                    self.assertEqual(expected_errors, raised.exception.errors)
-                    self.assertEqual("dossier validation failed", str(raised.exception))
-                    expected_stderr = "\n".join(expected_errors) + "\n"
+                self.assertEqual(1, snapshot.call_count)
+                for schema_loader in (
+                    dossier_loader,
+                    research_loader,
+                    learning_loader,
+                    provider_loader,
+                ):
+                    schema_loader.assert_not_called()
+                asset_read.assert_not_called()
+                self.assertIs(type(raised.exception), self.renderer.DossierValidationError)
+                self.assertEqual(expected_errors, raised.exception.errors)
+                self.assertEqual("dossier validation failed", str(raised.exception))
+                expected_stderr = "\n".join(expected_errors) + "\n"
                 self.assertNotIn(sentinel, str(raised.exception))
                 self.assertFalse(writer_output.exists())
 
@@ -3451,6 +3962,196 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             self.assertTrue(receipt.artifact_path.is_absolute())
             self.assertTrue(os.path.samefile(output, receipt.artifact_path))
 
+    def test_v3_writer_is_atomic_private_and_bypasses_public_recapture(self) -> None:
+        arguments = semantic_v3_case("proof", "es")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths: dict[str, Path] = {}
+            for name, value in arguments.items():
+                if value is None:
+                    continue
+                path = root / f"{name}.json"
+                path.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+                paths[name] = path
+            output = root / "v3.html"
+            with mock.patch.object(
+                self.renderer,
+                "bounded_plain_snapshot",
+                wraps=self.renderer.bounded_plain_snapshot,
+            ) as snapshot, mock.patch.object(
+                self.renderer,
+                "_render_dossier_html_from_snapshot",
+                wraps=self.renderer._render_dossier_html_from_snapshot,
+            ) as internal_render, mock.patch.object(
+                self.renderer,
+                "render_dossier_html",
+                side_effect=AssertionError("v3 writer must not recapture through public render"),
+            ) as public_render:
+                receipt = self.renderer.write_dossier_html(
+                    paths["dossier"],
+                    output,
+                    market_dossier_path=paths["market_dossier"],
+                    market_research_path=paths["market_research"],
+                    learning_decision_path=paths["learning_decision"],
+                    gap_response_path=paths["gap_response"],
+                    gap_assessment_path=paths["gap_assessment"],
+                    next_action_eligibility_path=paths["next_action_eligibility"],
+                )
+            self.assertEqual(1, snapshot.call_count)
+            self.assertEqual(1, internal_render.call_count)
+            public_render.assert_not_called()
+            self.assertTrue(receipt.artifact_path.is_absolute())
+            self.assertTrue(os.path.samefile(output, receipt.artifact_path))
+            self.assertEqual(0o600, stat.S_IMODE(output.stat().st_mode))
+            self.assertIn('class="card span-12 weekly-decision"', output.read_text(encoding="utf-8"))
+
+    def test_v3_writer_hostile_loaded_values_are_captured_once_without_echo(self) -> None:
+        arguments = semantic_v3_case("proof", "es")
+        sentinel = "writer-v3-private-sentinel"
+        names = (
+            "dossier",
+            "market_dossier",
+            "market_research",
+            "learning_decision",
+            "gap_response",
+            "gap_assessment",
+            "next_action_eligibility",
+        )
+        wrapped = {
+            name: OnePassMapping(arguments[name], sentinel)
+            for name in names
+        }
+
+        def checked_internal(group: object) -> str:
+            self.assertIs(type(group), dict)
+            self.assertTrue(all(not isinstance(value, OnePassMapping) for value in group.values()))
+            return "<html><body>safe v3</body></html>"
+
+        def checked_summary(dossier: object) -> str:
+            self.assertIs(type(dossier), dict)
+            return "safe summary"
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "hostile.html"
+            with mock.patch.object(
+                self.renderer,
+                "_load_plain_mapping",
+                side_effect=[wrapped[name] for name in names],
+            ) as loader, mock.patch.object(
+                self.renderer,
+                "bounded_plain_snapshot",
+                wraps=self.renderer.bounded_plain_snapshot,
+            ) as snapshot, mock.patch.object(
+                self.renderer,
+                "_render_dossier_html_from_snapshot",
+                side_effect=checked_internal,
+            ) as internal_render, mock.patch.object(
+                self.renderer,
+                "build_chat_summary",
+                side_effect=checked_summary,
+            ):
+                self.renderer.write_dossier_html(
+                    Path("dossier.json"),
+                    output,
+                    market_dossier_path=Path("market.json"),
+                    market_research_path=Path("research.json"),
+                    learning_decision_path=Path("learning.json"),
+                    gap_response_path=Path("response.json"),
+                    gap_assessment_path=Path("assessment.json"),
+                    next_action_eligibility_path=Path("eligibility.json"),
+                )
+            self.assertEqual(1, snapshot.call_count)
+            self.assertEqual(1, internal_render.call_count)
+            self.assertEqual(len(names), loader.call_count)
+            self.assertTrue(all(value.items_calls == 1 for value in wrapped.values()))
+            self.assertNotIn(sentinel, output.read_text(encoding="utf-8"))
+
+    def test_v3_writer_and_cli_reject_partial_or_crossed_groups_without_output(self) -> None:
+        arguments = semantic_v3_case("proof", "es")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths: dict[str, Path] = {}
+            for name, value in arguments.items():
+                if value is None:
+                    continue
+                path = root / f"{name}.json"
+                path.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+                paths[name] = path
+            field_paths = {
+                "gap_response_path": paths["gap_response"],
+                "gap_assessment_path": paths["gap_assessment"],
+                "next_action_eligibility_path": paths["next_action_eligibility"],
+                "learning_decision_path": paths["learning_decision"],
+            }
+            names = tuple(field_paths)
+            for mask in range(1, (1 << len(names)) - 1):
+                output = root / f"partial-{mask}.html"
+                selected = {
+                    name: field_paths[name] if mask & (1 << index) else None
+                    for index, name in enumerate(names)
+                }
+                with self.subTest(mask=mask), self.assertRaises(
+                    self.renderer.DossierValidationError
+                ):
+                    self.renderer.write_dossier_html(
+                        paths["dossier"],
+                        output,
+                        market_dossier_path=paths["market_dossier"],
+                        market_research_path=paths["market_research"],
+                        **selected,
+                    )
+                self.assertFalse(output.exists())
+
+            crossed = semantic_v3_case("selection_required", "es")
+            crossed_path = root / "crossed-eligibility.json"
+            crossed_path.write_text(
+                json.dumps(crossed["next_action_eligibility"], ensure_ascii=False),
+                encoding="utf-8",
+            )
+            crossed_output = root / "crossed.html"
+            with self.assertRaises(self.renderer.DossierValidationError):
+                self.renderer.write_dossier_html(
+                    paths["dossier"],
+                    crossed_output,
+                    market_dossier_path=paths["market_dossier"],
+                    market_research_path=paths["market_research"],
+                    learning_decision_path=paths["learning_decision"],
+                    gap_response_path=paths["gap_response"],
+                    gap_assessment_path=paths["gap_assessment"],
+                    next_action_eligibility_path=crossed_path,
+                )
+            self.assertFalse(crossed_output.exists())
+
+            cli_output = root / "cli-partial.html"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(RENDERER_PATH),
+                    str(paths["dossier"]),
+                    "--output",
+                    str(cli_output),
+                    "--market-dossier",
+                    str(paths["market_dossier"]),
+                    "--market-research",
+                    str(paths["market_research"]),
+                    "--learning-decision",
+                    str(paths["learning_decision"]),
+                    "--gap-response",
+                    str(paths["gap_response"]),
+                ],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=60,
+            )
+            self.assertEqual(2, result.returncode)
+            self.assertFalse(cli_output.exists())
+            self.assertNotIn(str(paths["gap_response"]), result.stderr)
+            self.assertNotIn("Traceback", result.stderr)
+
     def test_writer_rejects_partial_market_path_group_before_creating_output(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "partial.html"
@@ -3683,3 +4384,50 @@ class ExecutiveCareerDossierV2LoadAndCliTests(unittest.TestCase):
             self.assertEqual(2, partial.returncode)
             self.assertFalse((root / "partial.html").exists())
             self.assertNotIn("Traceback", partial.stderr)
+
+    def test_renderer_cli_accepts_complete_v3_group_and_writes_mode_600(self) -> None:
+        arguments = semantic_v3_case("proof", "es")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths: dict[str, Path] = {}
+            for name, value in arguments.items():
+                if value is None:
+                    continue
+                path = root / f"{name}.json"
+                path.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+                paths[name] = path
+            output = root / "v3-cli.html"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(RENDERER_PATH),
+                    str(paths["dossier"]),
+                    "--output",
+                    str(output),
+                    "--market-dossier",
+                    str(paths["market_dossier"]),
+                    "--market-research",
+                    str(paths["market_research"]),
+                    "--learning-decision",
+                    str(paths["learning_decision"]),
+                    "--gap-response",
+                    str(paths["gap_response"]),
+                    "--gap-assessment",
+                    str(paths["gap_assessment"]),
+                    "--next-action-eligibility",
+                    str(paths["next_action_eligibility"]),
+                ],
+                cwd=root,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=180,
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertEqual(1, len(result.stdout.splitlines()))
+            self.assertEqual(0o600, stat.S_IMODE(output.stat().st_mode))
+            self.assertIn(
+                'class="card span-12 weekly-decision"',
+                output.read_text(encoding="utf-8"),
+            )

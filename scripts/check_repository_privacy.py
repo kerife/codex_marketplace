@@ -141,6 +141,18 @@ CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_PATHS = frozenset(
     for condition in CAREER_NEXT_ACTION_ELIGIBILITY_CONDITIONS
     for locale in ("es", "en")
 )
+CAREER_LEARNING_V3_SOURCE_PATHS = frozenset(
+    Path(
+        "tests/evals/with-skill/fixtures/career-learning-decision-v3/"
+        f"{condition}/sources.json"
+    )
+    for condition in (
+        "knowledge-en",
+        "proof-es",
+        "selection-required-es",
+        "unavailable-es",
+    )
+)
 CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_FIELDS = frozenset(
     {
         "research",
@@ -150,6 +162,9 @@ CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_FIELDS = frozenset(
         "gap_assessment",
         "provider_research",
     }
+)
+CAREER_LEARNING_V3_SOURCE_FIELDS = (
+    CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_FIELDS | {"eligibility"}
 )
 MARKET_DOSSIER_V2_SYNTHETIC_SOURCES = {
     Path(
@@ -692,6 +707,28 @@ def _load_career_next_action_eligibility_builder() -> object | None:
     return project if callable(project) else None
 
 
+@lru_cache(maxsize=1)
+def _load_career_learning_v3_builder() -> object | None:
+    path = MARKET_SCRIPTS_ROOT / "build_career_learning_decision_v3.py"
+    specification = importlib.util.spec_from_file_location(
+        "job_search_coach_learning_v3_privacy", path
+    )
+    if specification is None or specification.loader is None:
+        return None
+    module = importlib.util.module_from_spec(specification)
+    sys.modules[specification.name] = module
+    previous_path = list(sys.path)
+    sys.path.insert(0, str(MARKET_SCRIPTS_ROOT))
+    try:
+        specification.loader.exec_module(module)
+    except Exception:
+        return None
+    finally:
+        sys.path[:] = previous_path
+    project = getattr(module, "_project_learning_v3_from_frozen", None)
+    return project if callable(project) else None
+
+
 def _has_known_synthetic_eligibility_provenance(value: object) -> bool:
     if not isinstance(value, dict):
         return False
@@ -713,10 +750,18 @@ def _has_known_synthetic_eligibility_provenance(value: object) -> bool:
 def _safe_career_next_action_eligibility_sources_scan_value(
     path: Path, text: str, value: object
 ) -> dict[str, object] | None:
+    learning_v3_source = path in CAREER_LEARNING_V3_SOURCE_PATHS
+    expected_fields = (
+        CAREER_LEARNING_V3_SOURCE_FIELDS
+        if learning_v3_source
+        else CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_FIELDS
+    )
     if (
         path not in CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_PATHS
-        or not isinstance(value, dict)
-        or set(value) != CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_FIELDS
+        and not learning_v3_source
+    ) or (
+        not isinstance(value, dict)
+        or set(value) != expected_fields
         or len(text.encode("utf-8")) > 256 * 1024
         or not _json_depth_is_bounded(value, 12)
         or not _has_known_synthetic_eligibility_provenance(value)
@@ -727,23 +772,56 @@ def _safe_career_next_action_eligibility_sources_scan_value(
     if project is None:
         return None
     try:
-        projected = project(value)
-        expected_path = Path(__file__).resolve().parents[1] / path.with_name(
-            "eligibility.json"
-        )
-        expected_text = expected_path.read_text(encoding="utf-8")
-        expected = json.loads(
-            expected_text,
-            object_pairs_hook=_unique_json_object,
-        )
+        eligibility_sources = {
+            field: value[field]
+            for field in CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_FIELDS
+        }
+        projected = project(eligibility_sources)
+        if learning_v3_source:
+            expected = value["eligibility"]
+            learning_project = _load_career_learning_v3_builder()
+            if learning_project is None:
+                return None
+            projected_learning = learning_project(value)
+            expected_learning_path = (
+                Path(__file__).resolve().parents[1] / path.with_name("learning.json")
+            )
+            expected_learning_text = expected_learning_path.read_text(
+                encoding="utf-8"
+            )
+            expected_learning = json.loads(
+                expected_learning_text,
+                object_pairs_hook=_unique_json_object,
+            )
+        else:
+            expected_path = Path(__file__).resolve().parents[1] / path.with_name(
+                "eligibility.json"
+            )
+            expected_text = expected_path.read_text(encoding="utf-8")
+            expected = json.loads(
+                expected_text,
+                object_pairs_hook=_unique_json_object,
+            )
+            projected_learning = None
+            expected_learning = None
+            expected_learning_text = ""
     except Exception:
         return None
     if (
         value != before
         or not isinstance(projected, dict)
         or projected != expected
-        or len(expected_text.encode("utf-8")) > 64 * 1024
+        or len(json.dumps(expected, ensure_ascii=False).encode("utf-8")) > 64 * 1024
         or not _json_depth_is_bounded(expected, 8)
+        or (
+            learning_v3_source
+            and (
+                not isinstance(projected_learning, dict)
+                or projected_learning != expected_learning
+                or len(expected_learning_text.encode("utf-8")) > 64 * 1024
+                or not _json_depth_is_bounded(expected_learning, 8)
+            )
+        )
     ):
         return None
     research = value["research"]

@@ -55,3 +55,14 @@ for version 1, plus `build_career_market_learning_dossier_v2.py`,
   - `plugins/professional-growth-coach/assets/private-recruiter-followthrough-checkpoint-v1.css`
 
 Each tree ends at a self-contained HTML/CSS surface. The renderer is responsible for validated data-to-template binding; the artifact is the visual product.
+
+## Executive career dossier v3 extension
+
+- `plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py`
+  - validates `candidate-gap-response-v1.schema.json` and `candidate-gap-assessment-v1.schema.json`
+  - recomputes `career-next-action-eligibility-v1.schema.json`
+  - validates `career-learning-decision-v3.schema.json`
+  - appends `plugins/professional-growth-coach/assets/career-learning-eligibility-v1.css` only for the coherent v3 WeeklyDecision composition
+
+Response, assessment, eligibility, and learning v3 are one all-or-none offline
+input group. Historical v1/v2 pages do not load the v3 stylesheet.

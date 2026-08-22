@@ -17,6 +17,7 @@ EXTRACTABLE = ROOT / ".superdesign" / "init" / "extractable-components.md"
 DESIGN_SYSTEM = ROOT / ".superdesign" / "design-system.md"
 ASSETS = ROOT / "plugins" / "professional-growth-coach" / "assets"
 ASSET_NAMES = (
+    "career-learning-eligibility-v1.css",
     "career-market-learning-dossier-v1.css",
     "executive-career-dossier-v1.css",
     "executive-career-dossier-v2.css",
@@ -26,6 +27,7 @@ ASSET_NAMES = (
     "private-recruiter-conversion-outcome-v1.css",
 )
 EXPECTED_THEME_ASSET_NAMES = {
+    "career-learning-eligibility-v1.css",
     "career-market-learning-dossier-v1.css",
     "executive-career-dossier-v1.css",
     "executive-career-dossier-v2.css",
@@ -77,6 +79,45 @@ def _layout_sources() -> dict[str, bytes]:
 
 
 class SuperdesignThemeAssetParityTests(unittest.TestCase):
+    def test_superdesign_maps_describe_v3_weekly_decision_composition(self):
+        pages = " ".join(PAGES.read_text(encoding="utf-8").split())
+        routes = " ".join(ROUTES.read_text(encoding="utf-8").split())
+        components = " ".join(COMPONENTS.read_text(encoding="utf-8").split())
+        extractable = " ".join(EXTRACTABLE.read_text(encoding="utf-8").split())
+        design_system = " ".join(DESIGN_SYSTEM.read_text(encoding="utf-8").split())
+        for text, contracts in (
+            (
+                pages,
+                (
+                    "career-next-action-eligibility-v1.schema.json",
+                    "career-learning-decision-v3.schema.json",
+                    "career-learning-eligibility-v1.css",
+                ),
+            ),
+            (routes, ("WeeklyDecision", "career-learning-decision-v3")),
+            (
+                components,
+                (
+                    "WeeklyDecision",
+                    "career-next-action-eligibility-v1.schema.json",
+                    "career-learning-eligibility-v1.css",
+                ),
+            ),
+            (extractable, ("## WeeklyDecision", "complete non-ranked L1–Ln")),
+            (
+                design_system,
+                (
+                    "sole primary weekly imperative",
+                    "read-only inspection authorization stays visibly secondary",
+                    "one bounded snapshot",
+                    "visual QA not run",
+                ),
+            ),
+        ):
+            for contract in contracts:
+                with self.subTest(contract=contract):
+                    self.assertIn(contract, text)
+
     def test_compact_facts_keep_one_column_through_640px(self):
         for name, selector in (
             ("private-recruiter-followthrough-checkpoint-v1.css", ".checkpoint-facts"),
