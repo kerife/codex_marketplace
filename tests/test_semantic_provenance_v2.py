@@ -558,6 +558,13 @@ class CareerLearningProviderResearchTests(unittest.TestCase):
             f"%2FUsers%2F{sentinel}%2Fprivate.json",
             f"&#47;Users&#47;{sentinel}&#47;private.json",
             f"/Users/{sentinel}{chr(0x202e)}/private.json",
+            f"file:///Users/{sentinel}/private.json",
+            f"file:///home/{sentinel}/private.json",
+            f"file:///C:/Users/{sentinel}/private.json",
+            f"file://server/share/{sentinel}/private.json",
+            f"file:///%55sers/{sentinel}/private.json",
+            f"file:&#47;&#47;&#47;Users&#47;{sentinel}&#47;private.json",
+            f"FiLe:////uSeRs/{sentinel}/private.json",
         )
         for field in fields:
             for value in path_values:
@@ -567,6 +574,21 @@ class CareerLearningProviderResearchTests(unittest.TestCase):
                     errors = PROVIDER_VALIDATOR.validate_provider_research(altered)
                     self.assertIn("provider research has unsafe public metadata", errors)
                     self.assertNotIn(sentinel, "\n".join(errors))
+
+    def test_provider_research_keeps_harmless_file_words_and_official_urls(self):
+        provider = self.provider_fixture("complete-es.json")
+        cases = (
+            ("option", "Terraform file workflow"),
+            ("source_title", "Terraform file format guide"),
+            ("unknowns", "File formats remain public provider metadata"),
+            ("current_cost", "file fee not indicated"),
+        )
+        for field, value in cases:
+            with self.subTest(field=field):
+                altered = copy.deepcopy(provider)
+                altered["options"][0][field] = value
+                self.assertEqual([], PROVIDER_VALIDATOR.validate_provider_research(altered))
+        self.assertEqual([], PROVIDER_VALIDATOR.validate_provider_research(provider))
 
     def test_provider_research_rejects_closed_structure_and_semantic_mutations(self):
         provider = self.provider_fixture("complete-es.json")
@@ -812,6 +834,23 @@ class CareerLearningDecisionV2Tests(unittest.TestCase):
         sources = list(self.complete_v2_sources())
         sentinel = "/Users/provider-path-sentinel/private.json"
         sources[3]["options"][0]["unknowns"] = sentinel
+        self.assertEqual(
+            ["provider research has unsafe public metadata"],
+            PROVIDER_VALIDATOR.validate_provider_research(sources[3]),
+        )
+        with self.assertRaisesRegex(ValueError, r"^learning decision v2 is invalid$") as raised:
+            LEARNING_V2_BUILDER.build_learning_bundle_v2(
+                *sources,
+                [self.request("research_provider_option", provider_id="LP-001")],
+            )
+        self.assertNotIn(sentinel, str(raised.exception))
+
+    def test_learning_builder_rejects_file_uri_provider_before_projection(self):
+        sources = list(self.complete_v2_sources())
+        sentinel = "provider-file-uri-sentinel"
+        sources[3]["options"][0]["unknowns"] = (
+            f"file:///Users/{sentinel}/private.json"
+        )
         self.assertEqual(
             ["provider research has unsafe public metadata"],
             PROVIDER_VALIDATOR.validate_provider_research(sources[3]),

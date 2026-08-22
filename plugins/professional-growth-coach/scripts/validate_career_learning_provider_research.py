@@ -63,6 +63,12 @@ _LOCAL_PATH = re.compile(
     r")",
     re.I,
 )
+_LOCAL_PATH_SEGMENT = re.compile(
+    r"(?:^|[\\/])(?:Users|private|var|tmp|home|root)(?:[\\/]|$)", re.I
+)
+_LOCAL_FILE_URI = re.compile(
+    r"(?:^|[\s?&#=;\"'])file\s*:(?:[\\/]){2,}", re.I
+)
 _ROOT_FIELDS = frozenset(
     {"schema_version", "locale", "as_of_date", "state", "options", "privacy_boundary", "no_external_action"}
 )
@@ -183,7 +189,7 @@ def _valid_text(value: object, *, provider: bool = False, strict_name: bool = Fa
     if (
         contains_unicode_controls(value)
         or contains_unicode_controls(inspection)
-        or _LOCAL_PATH.search(inspection)
+        or _contains_local_path(inspection)
         or _EMAIL.search(inspection)
         or _PHONE.search(inspection)
         or _HTML.search(inspection)
@@ -194,6 +200,14 @@ def _valid_text(value: object, *, provider: bool = False, strict_name: bool = Fa
     return provider or not (
         contains_obfuscated_candidate_identity(inspection)
         or (strict_name and contains_candidate_like_name(inspection))
+    )
+
+
+def _contains_local_path(value: str) -> bool:
+    return bool(
+        _LOCAL_PATH.search(value)
+        or _LOCAL_PATH_SEGMENT.search(value)
+        or _LOCAL_FILE_URI.search(value)
     )
 
 
@@ -214,7 +228,7 @@ def _safe_url_component(value: object) -> bool:
     return (
         decoded is not None
         and (not decoded or _valid_text(decoded, strict_name=True))
-        and not _LOCAL_PATH.search(decoded)
+        and not _contains_local_path(decoded)
     )
 
 
