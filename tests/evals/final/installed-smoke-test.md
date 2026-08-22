@@ -10,123 +10,97 @@ derivation: `counterfactual_non_mappable`
 
 real_profile_mapping: `none_created`
 
-attestation_state: `installed_green_artifact_hygiene_passed`
+attestation_state: `semantic_provenance_v2_installed_green_pre_publish`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
 release_version_prefix: `0.2.0+codex`
 
-release_timestamp: `2026-08-22T01:00:00Z`
+release_timestamp: `2026-08-22T03:14:09Z`
 
-installed_access_timestamp: `2026-08-22T01:00:00Z`
+installed_validation_timestamp: `2026-08-22T03:37:05Z`
 
-source_commit: `5b8eff07337d3b3fc97550def7f3efe8f5a553e2`
+source_commit: `f454d434e5b86cd47c68238506d400d641644950`
 
-source_tree: `b3e36d7c9a661556e535a40468d9f7fefce9743a`
+source_tree: `8f4472270d27ccdb1f3f4c4932a52b1f7cee9853`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260822010000`
+installed_cache_version: `0.2.0+codex.20260822031409`
+
+installed_cache_resolution: `exact_reported_version_not_lexicographic`
 
 installed_enabled: `true`
 
-source_file_count: `124`
+install_workflow: `codex_plugin_add_json`
 
-installed_file_count: `124`
+manual_config_or_cache_mutation: `false`
 
-normalized_source_cache_sha256: `5bc2726d4c1bbba8318ccd4d7b5d997234e9e907319ef9283d4836855a092c24`
+source_file_count: `135`
 
-active_config: `canonical_public_and_legacy_local_dual_identity`
+installed_file_count: `135`
 
-source_cache_equivalence: `full_inventory_and_sha256_silent`
+sorted_relative_inventory_equal: `true`
+
+per_file_sha256_equal: `true`
+
+normalized_source_cache_sha256: `a9cb2ba7bda35d040b558f180106c97652f9a073857ebd2a8c63cc5fa1d600d5`
+
+source_cache_diff_qr: `silent`
 
 source_bytecode_count: `0`
 
 installed_bytecode_count: `0`
 
-source_release_inventory_gate: `passed`
+source_pycache_directory_count: `0`
 
-installed_cache_inventory_gate: `passed_exact_cache`
+installed_pycache_directory_count: `0`
 
-installed_cache_personal_metadata_gate: `passed`
+source_verification_matrix: `passed; targeted_modules_total=507; package_discovery_total=219; failures=0; errors=0`
 
-installed_cache_artifact_hygiene: `full_inventory_sha256_equal; bytecode=0; pycache_dirs=0`
+source_static_and_privacy: `passed; package_static=passed; repository_privacy=passed`
+
+source_official_release_validation: `passed; locked_CPython_3_11_15_arm64; package_discovery_total=219; root_discovery_total=1296; failures=0; errors=0`
+
+post_cachebuster_verification: `passed; structure_and_full_plugin_total=247; package_static=passed; failures=0; errors=0`
+
+installed_official_validators: `skill_validator=passed; plugin_validator=passed`
+
+installed_test_discovery: `total=177; failures=0; errors=0; skipped=36`
 
 installed_package_static_scope: `package_static_checks=passed; repository_conformance=repository_only_not_bundled`
 
-installed_test_discovery_scope: `package_local_and_mixed_safe; repository_only_selectors_skipped_outside_source_checkout`
+installed_semantic_accepted_smokes: `17/17`
 
-installed_test_discovery: `173/173; errors=0; skips=32; repository_only_scope_explicit`
+installed_semantic_rejected_smokes: `26/26; generic_diagnostics; no_echo`
 
-source_provenance_gate: `passed; immutable_historical_commit_tree_ancestor_verified`
+installed_semantic_acceptance_scope: `installed_module_provenance; ES_and_EN_Terraform_only_alignment; market_provider_learning_source_recomputation; common_source_date; public_V1_resolution; localized_public_routes_options_proof_cost; deterministic_DOM_ARIA; v1_no_market_pinned_bytes; decoder_safe_controls; installed_CSS_repository_docs_parity`
 
-installed_direct_smokes: `6/6`
+installed_semantic_rejection_scope: `observability_E001_isolation; unrelated_claim_evidence_requirement_vacancy_ids; Quantum_signal; caller_semantic_prose; unrelated_provider; decoder_7x_and_20x_file_URI; crossed_versions_both_directions; crossed_snapshot; deepcopy_totality; private_source_mutations; writer_and_CLI_no_partial_output`
 
-installed_validator_smokes: `4/4`
+installed_exact_supported_route: `Terraform_only; C-002; E-004; V-003-R-01; V-003`
 
-installed_renderer_smokes: `6/6`
+installed_public_render_privacy: `ES_and_EN_routes_visible; options_and_proof_cost_visible; internal_IDs_snapshots_URLs_source_prose_and_raw_controls_absent`
 
-installed_visible_privacy_smokes: `2/2`
+installed_v1_no_market_es: `bytes=48801; sha256=19d85f8a4061ca5eb44746801a2f0094a9109d9d5764e80d515d84bafdfd79d6`
 
-installed_schema_pattern_smokes: `2/2`
+installed_v1_no_market_en: `bytes=46856; sha256=7f4513fc555d60a6042981168437aea3b1dc470027fd700d1604588e291ece7c`
 
-installed_target_research_identity_smokes: `12/12; common_and_non_allowlisted_obfuscated_forms_fail_closed; diagnostics_no_echo`
+installed_review_fix_smokes: `V1_resolves_V-003; common_date_2026-08-13; decoder_7x_and_20x; deepcopy_generic_unlinked; CSS_docs_parity`
 
-installed_current_cycle_obfuscated_smokes: `45/45; five_surname_families_across_strict_fields; compact_role_tail_and_hostname_forms_fail_closed; technical_and_organization_controls_pass; diagnostics_no_echo`
+installed_output_atomicity: `writer_rejected_without_output; CLI_exit_2_without_output; diagnostics_generic_no_echo`
 
-installed_current_cycle_organization_allowlist_smokes: `18/18; Grant_Thornton_Brown_University_Miller_Lite_safe_fields_only; location_and_fingerprint_fail_closed; diagnostics_no_echo`
+design_evidence_scope: `deterministic_source_and_installed_DOM_CSS_contracts_only`
 
-installed_current_cycle_progress_boundary_aria_smokes: `5/5; localized_market_render; unique_boundary_ids; progress_aria_references_resolved; no_external_controls`
+visual_browser_assistive_technology_QA: `not_run_not_claimed`
 
-installed_current_cycle_recurrence_boundary_aria_smokes: `9/9; ES_EN_localized_market_render; recurrence_progress_described; unique_boundary_id; no_external_controls`
+fresh_agent_smoke: `not_run_not_claimed`
 
-installed_current_cycle_learning_boundary_aria_smokes: `10/10; ES_EN_localized_learning_render; boundary_before_cards; three_cards_described; unique_boundary_id; no_external_controls`
-
-installed_current_cycle_market_freshness_smokes: `12/12; ES_EN_localized_validated_date; semantic_time; marker_before_learning; unavailable_and_legacy_absent; no_external_controls`
-
-installed_current_cycle_limited_sample_aria_smokes: `4_states_ES_EN; limitation_id_unique; market_region_described; limitation_before_learning_and_vacancies; complete_unavailable_legacy_absent`
-
-installed_current_cycle_triage_identity_alias_smokes: `7/7; v1_v2_safe_context_packet_reentry_fail_closed; one_legitimate_candidate_fact_control_passed; diagnostics_and_renderer_no_echo`
-
-installed_current_cycle_single_token_identity_smokes: `25/25; target_research_and_learning_labels_with_nfkc_punctuation_compact_and_ranked_alias_forms_fail_closed; legitimate_candidate_prose_and_hyphen_compounds_pass; diagnostics_no_echo`
-
-installed_current_cycle_authorization_impact_smokes: `6/6; ES_EN_ranked_priority_impact; coverage_only_fallback; no_pending_absent; one_question; no_external_controls`
-
-installed_current_cycle_contrast_smokes: `3/3; muted_text_contrast; light_line_token; forced_colors_text_override`
-
-installed_market_learning_disclosure_smokes: `3/3; localized; raw_enum_not_visible`
-
-installed_current_cycle_unavailable_market_smokes: `2/2; localized_safe_next_step_before_learning; no_external_controls`
-
-installed_current_cycle_superdesign_docs_smokes: `1/1; unavailable_market_safe_next_step_contract_documented`
-
-installed_current_cycle_learning_proof_to_cost_aria_smokes: `2/2; localized; unique_aria_refs; no_external_controls`
-
-installed_current_cycle_decision_trace_boundary_aria_smokes: `2/2; localized; unique_aria_refs; no_external_controls`
-
-installed_current_cycle_learning_proof_group_smokes: `2/2; localized; role_group; unique_aria_refs`
-
-installed_market_coverage_band_smokes: `3/3; localized; raw_band_enum_not_visible; progress_aria_bound`
-
-installed_decision_trace_layout_smokes: `2/2; desktop_two_columns; mobile_one_column; css_theme_parity`
-
-installed_mobile_market_matrix_label_smokes: `source_contract=2/2; short_V1_to_VN_data_labels; full_headers_and_key_preserved`
-
-installed_current_cycle_print_smokes: `2/2; market_summary_card_atomic; market_vacancy_key_atomic; matrix_remains_paginable`
-
-deferred_privacy_boundary: `unknown_compact_names_without_dictionary_or_role_context_need_follow_up; no length-only heuristic; organization role-suffix URLs remain bounded allowlist`
-
-fresh_agent_smoke: `not_run_in_current_process`
-
-fresh_agent_smoke_scope: `not_claimed_for_intermediate_task1_release`
-
-official_release_validator: `passed_source_and_installed_cache_with_full_repository_gates`
-
-installed_learning_proof_to_cost_smoke: `valid_cards=3; proof_cost=1; source_date=1`
-
-installed_learning_provider_guard_smoke: `unsafe_action=2; fail_closed=1; no_artifact=1`
+repository_conformance_from_installed_cache: `not_bundled_not_claimed`
 
 external_action_state: `not_executed`
 
+employment_outcome_boundary: `structured_provenance_consistency_only_not_real_world_truth_or_employment_outcome_prediction`
+
 This record is a deterministic synthetic release attestation. It contains no
-real profile mapping, recruiter identity, credential, or external action.
+real profile mapping, recruiter identity, access material, or external career action.
