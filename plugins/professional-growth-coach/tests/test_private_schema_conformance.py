@@ -29,6 +29,7 @@ REPOSITORY_ONLY_TESTS = {
     "test_candidate_market_alignment_v2_schema_accepts_derived_fixture",
     "test_candidate_gap_assessment_v1_schema_accepts_closed_source_projection",
     "test_candidate_gap_response_v1_schema_accepts_closed_public_states",
+    "test_career_next_action_eligibility_v1_schema_accepts_only_closed_projection",
     "test_dependency_free_checker_rejects_nested_quantifier_patterns",
     "test_dossier_handoff_rejects_unlabelled_person_name_source_fact",
     "test_dossier_schema_prose_mutations_match_custom_unicode_boundary",
@@ -65,6 +66,8 @@ from build_candidate_gap_response_v1 import build_candidate_gap_response_v1
 from validate_candidate_gap_response_v1 import validate_candidate_gap_response_v1
 from build_candidate_gap_assessment_v1 import build_candidate_gap_assessment_v1
 from validate_candidate_gap_assessment_v1 import validate_candidate_gap_assessment_v1
+from build_career_next_action_eligibility_v1 import build_career_next_action_eligibility_v1
+from validate_career_next_action_eligibility_v1 import validate_career_next_action_eligibility_v1
 
 
 def _load_v2_dossier_helper():
@@ -445,6 +448,70 @@ class PrivateSchemaConformanceTests(unittest.TestCase):
                 built, research, dossier, market, response
             ),
         )
+
+    def test_career_next_action_eligibility_v1_schema_accepts_only_closed_projection(self):
+        schema = self._schema("career-next-action-eligibility-v1.schema.json")
+        fixture_root = (
+            ROOT.parent.parent
+            / "tests/evals/with-skill/fixtures/career-next-action-eligibility-v1"
+        )
+        directories = sorted(path for path in fixture_root.iterdir() if path.is_dir())
+        self.assertEqual(24, len(directories))
+        for directory in directories:
+            with self.subTest(directory=directory.name):
+                value = json.loads(
+                    (directory / "eligibility.json").read_text(encoding="utf-8")
+                )
+                sources = json.loads(
+                    (directory / "sources.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual([], validate_schema_instance(value, schema))
+                rebuilt = build_career_next_action_eligibility_v1(
+                    sources["research"],
+                    sources["executive_dossier"],
+                    sources["market_dossier"],
+                    sources["gap_response"],
+                    sources["gap_assessment"],
+                    sources["provider_research"],
+                )
+                self.assertEqual(rebuilt, value)
+                self.assertEqual(
+                    [],
+                    validate_career_next_action_eligibility_v1(
+                        value,
+                        sources["research"],
+                        sources["executive_dossier"],
+                        sources["market_dossier"],
+                        sources["gap_response"],
+                        sources["gap_assessment"],
+                        sources["provider_research"],
+                    ),
+                )
+
+        proof = json.loads(
+            (fixture_root / "proof-es/eligibility.json").read_text(encoding="utf-8")
+        )
+        for field, replacement in (
+            ("state", "provider_selection_required"),
+            ("selected_provider_option_id", "LP-001"),
+            (
+                "eligible_provider_choices",
+                [
+                    {
+                        "public_provider_ordinal": "L1",
+                        "option_name": "x",
+                        "provider_or_owner": "y",
+                    }
+                ],
+            ),
+        ):
+            with self.subTest(field=field):
+                malformed = copy.deepcopy(proof)
+                malformed[field] = replacement
+                self.assertTrue(validate_schema_instance(malformed, schema))
+        extra = copy.deepcopy(proof)
+        extra["state_statement"] = "not persisted"
+        self.assertTrue(validate_schema_instance(extra, schema))
 
     def test_target_vacancy_research_schema_accepts_closed_synthetic_states(self):
         schema = self._schema("target-vacancy-research-v1.schema.json")

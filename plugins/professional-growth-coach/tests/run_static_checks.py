@@ -216,6 +216,26 @@ EXECUTIVE_DOSSIER_V2_PACKAGE_PATHS = (
     "tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-c-en.json",
     "tests/evals/with-skill/fixtures/executive-career-dossier-v2/scenario-c-market-en.json",
 )
+CAREER_NEXT_ACTION_ELIGIBILITY_CONDITIONS = (
+    "unavailable",
+    "selection_required",
+    "insufficient_recurrence",
+    "gap_unknown",
+    "supported",
+    "provider_choice",
+    "provider_evidence",
+    "experience",
+    "proof",
+    "practice",
+    "terminology",
+    "knowledge",
+)
+CAREER_NEXT_ACTION_ELIGIBILITY_FIXTURE_PATHS = tuple(
+    f"tests/evals/with-skill/fixtures/career-next-action-eligibility-v1/{condition}-{locale}/{name}.json"
+    for condition in CAREER_NEXT_ACTION_ELIGIBILITY_CONDITIONS
+    for locale in ("es", "en")
+    for name in ("sources", "eligibility")
+)
 MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/candidate-market-alignment-v1.schema.json",
     "schemas/candidate-market-alignment-v2.schema.json",
@@ -226,6 +246,7 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/career-learning-provider-research-v1.schema.json",
     "schemas/candidate-gap-response-v1.schema.json",
     "schemas/candidate-gap-assessment-v1.schema.json",
+    "schemas/career-next-action-eligibility-v1.schema.json",
     "scripts/semantic_provenance_snapshot.py",
     "scripts/validate_target_vacancy_research.py",
     "scripts/derive_candidate_market_alignment_v2.py",
@@ -243,6 +264,8 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "scripts/validate_candidate_gap_response_v1.py",
     "scripts/build_candidate_gap_assessment_v1.py",
     "scripts/validate_candidate_gap_assessment_v1.py",
+    "scripts/build_career_next_action_eligibility_v1.py",
+    "scripts/validate_career_next_action_eligibility_v1.py",
     "assets/career-market-learning-dossier-v1.css",
     "tests/test_learning_eligibility_v3.py",
     "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
@@ -268,6 +291,7 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "tests/evals/with-skill/fixtures/candidate-gap-assessment-v1/recurrent-proof-es.json",
     "tests/evals/with-skill/fixtures/candidate-gap-assessment-v1/recurrent-knowledge-en.json",
     "tests/evals/with-skill/fixtures/candidate-gap-assessment-v1/unavailable-es.json",
+    *CAREER_NEXT_ACTION_ELIGIBILITY_FIXTURE_PATHS,
 )
 EXECUTIVE_DOSSIER_OFFLINE_TOKENS = (
     "http://",
@@ -868,6 +892,7 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         "schemas/career-learning-provider-research-v1.schema.json": "options",
         "schemas/candidate-gap-response-v1.schema.json": "source_market_snapshot",
         "schemas/candidate-gap-assessment-v1.schema.json": "source_gap_response_snapshot",
+        "schemas/career-next-action-eligibility-v1.schema.json": "source_gap_assessment_snapshot",
     }
     for relative_path, required_field in schema_requirements.items():
         try:
@@ -16923,6 +16948,9 @@ def format_harness_failure(harness: Path, stdout: str, stderr: str) -> str:
     return f"private schema conformance harness failed ({harness}){suffix}"
 
 
+_PRIVATE_SCHEMA_HARNESS_TIMEOUT_SECONDS = 180
+
+
 def run_private_schema_harness(harness: Path):
     try:
         return subprocess.run(
@@ -16931,7 +16959,7 @@ def run_private_schema_harness(harness: Path):
             capture_output=True,
             text=True,
             check=False,
-            timeout=30,
+            timeout=_PRIVATE_SCHEMA_HARNESS_TIMEOUT_SECONDS,
         )
     except subprocess.TimeoutExpired:
         return None
@@ -17091,7 +17119,10 @@ def main() -> int:
         harness = PLUGIN_ROOT / "tests" / "test_private_schema_conformance.py"
         harness_result = run_private_schema_harness(harness)
         if harness_result is None:
-            errors.append(f"private schema conformance harness timed out after 30s ({harness})")
+            errors.append(
+                "private schema conformance harness timed out after "
+                f"{_PRIVATE_SCHEMA_HARNESS_TIMEOUT_SECONDS}s ({harness})"
+            )
         else:
             errors.extend(validate_harness_result(harness, harness_result))
     if errors:

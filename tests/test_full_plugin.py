@@ -487,6 +487,34 @@ class FullPluginIntegrationTests(unittest.TestCase):
         self.assertIn("dossier practice handoff conformance passed", result.stdout.lower())
         self.assertIn("static checks passed", result.stdout.lower())
         checker_module = load_static_checker()
+        eligibility_conditions = (
+            "unavailable",
+            "selection_required",
+            "insufficient_recurrence",
+            "gap_unknown",
+            "supported",
+            "provider_choice",
+            "provider_evidence",
+            "experience",
+            "proof",
+            "practice",
+            "terminology",
+            "knowledge",
+        )
+        eligibility_fixture_paths = tuple(
+            f"tests/evals/with-skill/fixtures/career-next-action-eligibility-v1/{condition}-{locale}/{name}.json"
+            for condition in eligibility_conditions
+            for locale in ("es", "en")
+            for name in ("sources", "eligibility")
+        )
+        self.assertEqual(
+            eligibility_conditions,
+            checker_module.CAREER_NEXT_ACTION_ELIGIBILITY_CONDITIONS,
+        )
+        self.assertEqual(
+            eligibility_fixture_paths,
+            checker_module.CAREER_NEXT_ACTION_ELIGIBILITY_FIXTURE_PATHS,
+        )
         self.assertEqual(
             (
                 "schemas/executive-career-dossier-v2.schema.json",
@@ -511,6 +539,7 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "schemas/career-learning-provider-research-v1.schema.json",
                 "schemas/candidate-gap-response-v1.schema.json",
                 "schemas/candidate-gap-assessment-v1.schema.json",
+                "schemas/career-next-action-eligibility-v1.schema.json",
                 "scripts/semantic_provenance_snapshot.py",
                 "scripts/validate_target_vacancy_research.py",
                 "scripts/derive_candidate_market_alignment_v2.py",
@@ -528,6 +557,8 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "scripts/validate_candidate_gap_response_v1.py",
                 "scripts/build_candidate_gap_assessment_v1.py",
                 "scripts/validate_candidate_gap_assessment_v1.py",
+                "scripts/build_career_next_action_eligibility_v1.py",
+                "scripts/validate_career_next_action_eligibility_v1.py",
                 "assets/career-market-learning-dossier-v1.css",
                 "tests/test_learning_eligibility_v3.py",
                 "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
@@ -553,6 +584,7 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "tests/evals/with-skill/fixtures/candidate-gap-assessment-v1/recurrent-proof-es.json",
                 "tests/evals/with-skill/fixtures/candidate-gap-assessment-v1/recurrent-knowledge-en.json",
                 "tests/evals/with-skill/fixtures/candidate-gap-assessment-v1/unavailable-es.json",
+                *eligibility_fixture_paths,
             ),
             checker_module.MARKET_DOSSIER_PACKAGE_PATHS,
         )
@@ -672,9 +704,10 @@ class FullPluginIntegrationTests(unittest.TestCase):
 
     def test_static_harness_timeout_is_bounded(self) -> None:
         checker = load_static_checker()
-        timeout = subprocess.TimeoutExpired(["unittest"], 30)
-        with patch.object(checker.subprocess, "run", side_effect=timeout):
+        timeout = subprocess.TimeoutExpired(["unittest"], 180)
+        with patch.object(checker.subprocess, "run", side_effect=timeout) as runner:
             self.assertIsNone(checker.run_private_schema_harness(Path("/tmp/schema.py")))
+        self.assertEqual(180, runner.call_args.kwargs["timeout"])
 
     def test_schema_harness_summary_parser_accepts_growth_and_rejects_bad_counts(self) -> None:
         checker = load_static_checker()

@@ -1,0 +1,1168 @@
+{
+  "executive_dossier": {
+    "analytics": {
+      "reason": "No aggregate observation was requested.",
+      "state": "not_requested"
+    },
+    "authorization": {
+      "action_state": "not_executed",
+      "external_actions_authorized": false
+    },
+    "benchmarking": "disabled",
+    "case_scope": "single_candidate",
+    "claims": [
+      {
+        "evidence_ids": [
+          "E-001",
+          "E-002"
+        ],
+        "id": "C-001",
+        "paraphrase": "The profile can state a clearer professional focus.",
+        "public_use": "allowed",
+        "state": "verified"
+      },
+      {
+        "evidence_ids": [
+          "E-003"
+        ],
+        "id": "C-002",
+        "paraphrase": "Terraform experience was reported and needs bounded confirmation.",
+        "public_use": "confirmation_required",
+        "state": "candidate_reported"
+      }
+    ],
+    "copy_blocks": [
+      {
+        "category": "headline",
+        "claim_boundary": "Use only available evidence.",
+        "claim_ids": [
+          "C-001"
+        ],
+        "copy": "Clear professional focus supported by available evidence",
+        "evidence_ids": [
+          "E-001",
+          "E-002"
+        ],
+        "evidence_state": "verified",
+        "question_rank": null,
+        "state": "ready",
+        "why_it_works": "It states a focus without claiming an outcome."
+      },
+      {
+        "category": "about_opening",
+        "claim_boundary": "Confirm scope before using the example.",
+        "claim_ids": [
+          "C-002"
+        ],
+        "copy": "I bring a clear focus and can explain one confirmed example.",
+        "evidence_ids": [
+          "E-003"
+        ],
+        "evidence_state": "candidate_reported",
+        "question_rank": 1,
+        "state": "requires_confirmation",
+        "why_it_works": "It keeps the example conditional on confirmation."
+      },
+      {
+        "category": "experience_bullet",
+        "claim_boundary": "Do not draft this item without confirmation.",
+        "claim_ids": [
+          "C-002"
+        ],
+        "copy": null,
+        "evidence_ids": [
+          "E-003"
+        ],
+        "evidence_state": "candidate_reported",
+        "question_rank": null,
+        "state": "omit",
+        "why_it_works": "The experience example should stay omitted until its scope is confirmed."
+      }
+    ],
+    "coverage": {
+      "confidence": "medium",
+      "evaluated_count": 4,
+      "not_scored_weight": 35,
+      "overall_score": null,
+      "scored_weight": 65
+    },
+    "dimensions": [
+      {
+        "capture_ref": "CAP-002",
+        "dimension": "visual",
+        "evidence_ids": [
+          "E-005"
+        ],
+        "evidence_state": "unknown",
+        "reason": "The banner is unavailable, so visual presentation is not scored.",
+        "score": null,
+        "state": "not_evaluated"
+      },
+      {
+        "capture_ref": null,
+        "dimension": "headline",
+        "evidence_ids": [
+          "E-001"
+        ],
+        "evidence_state": "verified",
+        "reason": "The focus can be clearer.",
+        "score": 66,
+        "state": "evaluated"
+      },
+      {
+        "capture_ref": null,
+        "dimension": "about",
+        "evidence_ids": [
+          "E-002"
+        ],
+        "evidence_state": "verified",
+        "reason": "The opening can be organized around a clear signal.",
+        "score": 70,
+        "state": "evaluated"
+      },
+      {
+        "capture_ref": null,
+        "dimension": "experience",
+        "evidence_ids": [
+          "E-003"
+        ],
+        "evidence_state": "candidate_reported",
+        "reason": "A reported example needs confirmation.",
+        "score": 64,
+        "state": "evaluated"
+      },
+      {
+        "capture_ref": null,
+        "dimension": "skills",
+        "evidence_ids": [
+          "E-004"
+        ],
+        "evidence_state": "verified",
+        "reason": "Skills need a linked proof boundary.",
+        "score": 62,
+        "state": "evaluated"
+      },
+      {
+        "capture_ref": null,
+        "dimension": "proof",
+        "evidence_ids": [],
+        "evidence_state": "unknown",
+        "reason": "No proof material is available for scoring.",
+        "score": null,
+        "state": "not_evaluated"
+      },
+      {
+        "capture_ref": null,
+        "dimension": "completeness",
+        "evidence_ids": [],
+        "evidence_state": "unknown",
+        "reason": "Completeness evidence is unavailable.",
+        "score": null,
+        "state": "not_evaluated"
+      }
+    ],
+    "do_not_change": [
+      {
+        "claim_ids": [
+          "C-002"
+        ],
+        "evidence_ids": [
+          "E-003"
+        ],
+        "evidence_state": "candidate_reported",
+        "reason": "Do not add the unconfirmed example to the profile."
+      }
+    ],
+    "dossier_kind": "linkedin_profile_diagnostic",
+    "evidence": [
+      {
+        "capture_ref": null,
+        "id": "E-001",
+        "paraphrase": "The headline provides a broad professional signal.",
+        "profile_section": "headline",
+        "section": "headline",
+        "source_kind": "provided_material",
+        "state": "verified"
+      },
+      {
+        "capture_ref": null,
+        "id": "E-002",
+        "paraphrase": "The opening is available for a limited review.",
+        "profile_section": "skills",
+        "section": "about",
+        "source_kind": "provided_material",
+        "state": "verified"
+      },
+      {
+        "capture_ref": null,
+        "id": "E-003",
+        "paraphrase": "Terraform experience was reported for bounded review.",
+        "profile_section": "about",
+        "section": "experience",
+        "source_kind": "candidate_statement",
+        "state": "candidate_reported"
+      },
+      {
+        "capture_ref": null,
+        "id": "E-004",
+        "paraphrase": "Skills are present but lack linked proof.",
+        "profile_section": "experience",
+        "section": "skills",
+        "source_kind": "provided_material",
+        "state": "verified"
+      },
+      {
+        "capture_ref": "CAP-002",
+        "id": "E-005",
+        "paraphrase": "The photo is visible for a limited presentation review.",
+        "profile_section": "photo",
+        "section": "photo",
+        "source_kind": "authorized_visible",
+        "state": "verified"
+      }
+    ],
+    "evidence_as_of": "2026-08-07",
+    "evidence_scope": {
+      "captured_as_of": "2026-08-07",
+      "confidence": "medium",
+      "inspected_sections": [
+        "headline",
+        "about",
+        "experience",
+        "skills",
+        "photo"
+      ],
+      "inspection_mode": "mixed",
+      "unavailable_sections": [
+        "banner",
+        "proof",
+        "completeness"
+      ],
+      "visual_capture_ref": "CAP-002",
+      "visual_state": "partial_visual"
+    },
+    "focus": {
+      "claim_ids": [],
+      "state": "target_under_review",
+      "statement": "Target under review: clarify a professional positioning statement using partial evidence."
+    },
+    "locale": "en",
+    "market_context": {
+      "reason": "No dated vacancy research is available.",
+      "state": "not_researched"
+    },
+    "methodology_source_categories": [
+      "good_profile",
+      "profile_photo",
+      "cover_image",
+      "skills"
+    ],
+    "priorities": [
+      {
+        "action": "Review a more specific headline draft in private.",
+        "client_template": {
+          "field_keys": [
+            "context",
+            "action",
+            "result"
+          ],
+          "template_id": "context_action_result_v1"
+        },
+        "coach_observation": "The headline gives a broad signal that could be more precise.",
+        "coach_prompt": "Complete this private outline to sharpen the headline.",
+        "dimensions": [
+          "headline"
+        ],
+        "done_when": "A draft states the focus without new facts.",
+        "evidence_ids": [
+          "E-001"
+        ],
+        "evidence_state": "verified",
+        "privacy_boundary": "no_raw_profile_text_or_private_values",
+        "problem": "The first signal remains broad.",
+        "rank": 1,
+        "target_section": "headline",
+        "timebox_minutes": 20,
+        "title": "Clarify the headline",
+        "why_it_matters": "A clearer focus improves the first private review.",
+        "why_now": "A quick scan needs a clearer focus."
+      },
+      {
+        "action": "Confirm the scope of one example before drafting it.",
+        "client_template": {
+          "field_keys": [
+            "context",
+            "action",
+            "result"
+          ],
+          "template_id": "context_action_result_v1"
+        },
+        "coach_observation": "The opening needs a clearer connection between context and contribution.",
+        "coach_prompt": "Complete this private outline before drafting the opening.",
+        "dimensions": [
+          "experience"
+        ],
+        "done_when": "The answer approves or omits the example.",
+        "evidence_ids": [
+          "E-003"
+        ],
+        "evidence_state": "candidate_reported",
+        "privacy_boundary": "no_raw_profile_text_or_private_values",
+        "problem": "A reported experience lacks confirmed scope.",
+        "rank": 2,
+        "target_section": "about",
+        "timebox_minutes": 25,
+        "title": "Confirm one example",
+        "why_it_matters": "A structured example makes the available evidence easier to review.",
+        "why_now": "The answer determines whether specific copy is usable."
+      },
+      {
+        "action": "List only evidence that can be confirmed privately.",
+        "client_template": {
+          "field_keys": [
+            "context",
+            "action",
+            "result"
+          ],
+          "template_id": "context_action_result_v1"
+        },
+        "coach_observation": "The experience signal needs a bounded proof example.",
+        "coach_prompt": "Complete this private outline before drafting any change.",
+        "dimensions": [
+          "skills",
+          "proof"
+        ],
+        "done_when": "Each listed item has a known evidence boundary.",
+        "evidence_ids": [
+          "E-004"
+        ],
+        "evidence_state": "verified",
+        "privacy_boundary": "no_raw_profile_text_or_private_values",
+        "problem": "Available skills lack linked proof.",
+        "rank": 3,
+        "target_section": "experience",
+        "timebox_minutes": 15,
+        "title": "Review proof boundaries",
+        "why_it_matters": "A verifiable sequence distinguishes contribution from context.",
+        "why_now": "The current evidence cannot support stronger claims."
+      }
+    ],
+    "privacy": {
+      "aggregate_analytics_included": false,
+      "candidate_identity_included": false,
+      "contact_data_included": false,
+      "private_report": true,
+      "raw_private_analytics_included": false,
+      "raw_profile_retained": false
+    },
+    "questions": [
+      {
+        "changes": "It changes the about opening decision.",
+        "evidence_ids": [
+          "E-003"
+        ],
+        "linked_copy_category": "about_opening",
+        "question": "Which confirmed example best explains the reported experience?",
+        "rank": 1
+      }
+    ],
+    "recruiter_scan": {
+      "ambiguity": {
+        "evidence_ids": [
+          "E-003"
+        ],
+        "evidence_state": "candidate_reported",
+        "statement": "The supporting example is not yet confirmed."
+      },
+      "positioning_bridge": {
+        "evidence_ids": [
+          "E-001",
+          "E-002"
+        ],
+        "evidence_state": "verified",
+        "statement": "Describe the focus and offer a confirmed example when appropriate."
+      },
+      "understood_signal": {
+        "evidence_ids": [
+          "E-001"
+        ],
+        "evidence_state": "verified",
+        "statement": "A broad professional focus is visible."
+      }
+    },
+    "requested_technology_terms": [
+      {
+        "claim_ids": [
+          "C-002"
+        ],
+        "term": "Terraform"
+      }
+    ],
+    "schema_version": "executive-career-dossier-v2",
+    "screen_bridge": {
+      "claim_boundary": "It does not promise a conversation outcome.",
+      "claim_ids": [
+        "C-001"
+      ],
+      "copy": "My profile presents a clear focus, and I can share a confirmed example when useful.",
+      "evidence_ids": [
+        "E-001",
+        "E-002"
+      ],
+      "evidence_state": "verified",
+      "question_rank": null,
+      "state": "ready",
+      "why_it_works": "It remains within the available evidence."
+    },
+    "section_coverage": [
+      {
+        "availability": "inspected_present",
+        "evidence_state": "verified",
+        "reason": "inspected_content_available",
+        "section": "photo"
+      },
+      {
+        "availability": "unavailable",
+        "evidence_state": "unknown",
+        "inspection_request": {
+          "access_type": "read_only_visible_section_inspection",
+          "carry_forward": false,
+          "decision": "pending_response",
+          "scope": "current_session_only"
+        },
+        "reason": "authorization_required",
+        "section": "banner"
+      },
+      {
+        "availability": "unavailable",
+        "evidence_state": "unknown",
+        "inspection_request": {
+          "access_type": "read_only_visible_section_inspection",
+          "carry_forward": false,
+          "decision": "pending_response",
+          "scope": "current_session_only"
+        },
+        "reason": "authorization_required",
+        "section": "name"
+      },
+      {
+        "availability": "unavailable",
+        "evidence_state": "unknown",
+        "inspection_request": {
+          "access_type": "read_only_visible_section_inspection",
+          "carry_forward": false,
+          "decision": "pending_response",
+          "scope": "current_session_only"
+        },
+        "reason": "authorization_required",
+        "section": "profile_url"
+      },
+      {
+        "availability": "inspected_present",
+        "evidence_state": "verified",
+        "reason": "inspected_content_available",
+        "section": "headline"
+      },
+      {
+        "availability": "unavailable",
+        "evidence_state": "unknown",
+        "inspection_request": {
+          "access_type": "read_only_visible_section_inspection",
+          "carry_forward": false,
+          "decision": "pending_response",
+          "scope": "current_session_only"
+        },
+        "reason": "authorization_required",
+        "section": "location"
+      },
+      {
+        "availability": "unavailable",
+        "evidence_state": "unknown",
+        "inspection_request": {
+          "access_type": "read_only_visible_section_inspection",
+          "carry_forward": false,
+          "decision": "pending_response",
+          "scope": "current_session_only"
+        },
+        "reason": "authorization_required",
+        "section": "contact_info"
+      },
+      {
+        "availability": "candidate_supplied",
+        "evidence_state": "candidate_reported",
+        "reason": "candidate_material_supplied",
+        "section": "about"
+      },
+      {
+        "availability": "inspected_present",
+        "evidence_state": "verified",
+        "reason": "inspected_content_available",
+        "section": "experience"
+      },
+      {
+        "availability": "inspected_present",
+        "evidence_state": "verified",
+        "reason": "inspected_content_available",
+        "section": "skills"
+      },
+      {
+        "availability": "unavailable",
+        "evidence_state": "unknown",
+        "inspection_request": {
+          "access_type": "read_only_visible_section_inspection",
+          "carry_forward": false,
+          "decision": "pending_response",
+          "scope": "current_session_only"
+        },
+        "reason": "authorization_required",
+        "section": "featured"
+      },
+      {
+        "availability": "unavailable",
+        "evidence_state": "unknown",
+        "inspection_request": {
+          "access_type": "read_only_visible_section_inspection",
+          "carry_forward": false,
+          "decision": "declined_for_session",
+          "scope": "current_session_only"
+        },
+        "reason": "inspection_declined",
+        "section": "certifications"
+      },
+      {
+        "availability": "unavailable",
+        "evidence_state": "unknown",
+        "inspection_request": {
+          "access_type": "read_only_visible_section_inspection",
+          "carry_forward": false,
+          "decision": "pending_response",
+          "scope": "current_session_only"
+        },
+        "reason": "authorization_required",
+        "section": "education"
+      },
+      {
+        "availability": "unavailable",
+        "evidence_state": "unknown",
+        "inspection_request": {
+          "access_type": "read_only_visible_section_inspection",
+          "carry_forward": false,
+          "decision": "pending_response",
+          "scope": "current_session_only"
+        },
+        "reason": "authorization_required",
+        "section": "recommendations"
+      },
+      {
+        "availability": "unavailable",
+        "evidence_state": "unknown",
+        "inspection_request": {
+          "access_type": "read_only_visible_section_inspection",
+          "carry_forward": false,
+          "decision": "pending_response",
+          "scope": "current_session_only"
+        },
+        "reason": "authorization_required",
+        "section": "activity"
+      },
+      {
+        "availability": "unavailable",
+        "evidence_state": "unknown",
+        "inspection_request": {
+          "access_type": "read_only_visible_section_inspection",
+          "carry_forward": false,
+          "decision": "pending_response",
+          "scope": "current_session_only"
+        },
+        "reason": "authorization_required",
+        "section": "analytics"
+      },
+      {
+        "availability": "unavailable",
+        "evidence_state": "unknown",
+        "inspection_request": {
+          "access_type": "read_only_visible_section_inspection",
+          "carry_forward": false,
+          "decision": "pending_response",
+          "scope": "current_session_only"
+        },
+        "reason": "authorization_required",
+        "section": "job_preferences"
+      }
+    ],
+    "seven_day_plan": [
+      {
+        "action": "Confirm the scope of one reported example privately.",
+        "category": "validate_fact",
+        "day": 1,
+        "done_when": "The answer supports approval or omission.",
+        "evidence_ids": [
+          "E-003"
+        ]
+      }
+    ],
+    "verdict": {
+      "evidence_ids": [
+        "E-001",
+        "E-002"
+      ],
+      "evidence_state": "verified",
+      "rationale": "Partial evidence supports a private copy review without filling gaps.",
+      "start_here_action": "Review a private headline draft before making any profile change.",
+      "statement": "The profile needs a clearer first-screen signal."
+    },
+    "visual_review": {
+      "banner": {
+        "capture_ref": null,
+        "evidence_ids": [],
+        "evidence_state": "unknown",
+        "finding": "The banner is unavailable.",
+        "private_action": null,
+        "score": null,
+        "state": "not_evaluated"
+      },
+      "photo": {
+        "capture_ref": "CAP-002",
+        "evidence_ids": [
+          "E-005"
+        ],
+        "evidence_state": "verified",
+        "finding": "The photo is visible for a limited presentation review.",
+        "private_action": "Review whether the photo still supports the current focus.",
+        "score": null,
+        "state": "evaluated"
+      }
+    }
+  },
+  "gap_assessment": {
+    "as_of_date": "2026-08-13",
+    "assessments": [
+      {
+        "assessment_date": "2026-08-13",
+        "confirmation_state": "candidate_confirmed",
+        "relation": "practice_gap",
+        "signal": "terraform"
+      }
+    ],
+    "draft_only": true,
+    "locale": "en",
+    "no_external_action": true,
+    "privacy_boundary": "identity_free_closed_candidate_assessment_only",
+    "schema_version": "candidate-gap-assessment-v1",
+    "selected_provider_option_id": null,
+    "selected_signal": "terraform",
+    "selected_vacancy_id": "V-003",
+    "source_dossier_snapshot": "snap-dossier-sha256-4421cc64f2bca782e998ab2f9488be928bf4f27a0e9bb9a706e0abdde0485b03",
+    "source_gap_response_snapshot": "snap-gap-response-v1-sha256-1773d633d26c2532530b27febcc1c7c4d5ffccf44d23e8e9c973262de102c206",
+    "source_market_snapshot": "snap-market-dossier-v2-sha256-e6481fc131e14bd995628acc38e7b0dc5badb13b9d7c405ca5a01ecdfee7df4e",
+    "source_provider_research_snapshot": null,
+    "source_research_snapshot": "snap-market-sha256-018be6ecf73ffb038a260b4c09cdbfa9b6c083a5e42dd06679b80f814b785183",
+    "state": "complete"
+  },
+  "gap_response": {
+    "as_of_date": "2026-08-13",
+    "draft_only": true,
+    "locale": "en",
+    "no_external_action": true,
+    "privacy_boundary": "identity_free_closed_candidate_response_only",
+    "relation": "practice_gap",
+    "response_state": "complete",
+    "schema_version": "candidate-gap-response-v1",
+    "selected_provider_ordinal": null,
+    "selected_signal": "terraform",
+    "selected_vacancy_ordinal": "V2",
+    "source_market_snapshot": "snap-market-dossier-v2-sha256-e6481fc131e14bd995628acc38e7b0dc5badb13b9d7c405ca5a01ecdfee7df4e",
+    "source_provider_research_snapshot": null,
+    "source_research_snapshot": "snap-market-sha256-018be6ecf73ffb038a260b4c09cdbfa9b6c083a5e42dd06679b80f814b785183"
+  },
+  "market_dossier": {
+    "as_of_date": "2026-08-13",
+    "learning_decisions": [],
+    "learning_state": "not_evaluated",
+    "locale": "en",
+    "matrix_rows": [
+      {
+        "cells": [
+          {
+            "required": false,
+            "requirements": [],
+            "vacancy_id": "V-001"
+          },
+          {
+            "required": false,
+            "requirements": [],
+            "vacancy_id": "V-003"
+          },
+          {
+            "required": true,
+            "requirements": [
+              {
+                "importance": "must_have",
+                "requirement_id": "V-002-R-01",
+                "source_paraphrase": "Synthetic test requirement."
+              }
+            ],
+            "vacancy_id": "V-002"
+          },
+          {
+            "required": false,
+            "requirements": [],
+            "vacancy_id": "V-004"
+          }
+        ],
+        "claim_ids": [],
+        "evidence_ids": [],
+        "requirement_ids": [
+          "V-002-R-01"
+        ],
+        "signal": "kubernetes",
+        "support_state": "unknown",
+        "vacancy_ids": [
+          "V-002"
+        ]
+      },
+      {
+        "cells": [
+          {
+            "required": false,
+            "requirements": [],
+            "vacancy_id": "V-001"
+          },
+          {
+            "required": false,
+            "requirements": [],
+            "vacancy_id": "V-003"
+          },
+          {
+            "required": false,
+            "requirements": [],
+            "vacancy_id": "V-002"
+          },
+          {
+            "required": true,
+            "requirements": [
+              {
+                "importance": "preferred",
+                "requirement_id": "V-004-R-01",
+                "source_paraphrase": "Synthetic test requirement."
+              }
+            ],
+            "vacancy_id": "V-004"
+          }
+        ],
+        "claim_ids": [],
+        "evidence_ids": [],
+        "requirement_ids": [
+          "V-004-R-01"
+        ],
+        "signal": "observability",
+        "support_state": "unknown",
+        "vacancy_ids": [
+          "V-004"
+        ]
+      },
+      {
+        "cells": [
+          {
+            "required": true,
+            "requirements": [
+              {
+                "importance": "must_have",
+                "requirement_id": "V-001-R-01",
+                "source_paraphrase": "Synthetic test requirement."
+              }
+            ],
+            "vacancy_id": "V-001"
+          },
+          {
+            "required": true,
+            "requirements": [
+              {
+                "importance": "must_have",
+                "requirement_id": "V-003-R-01",
+                "source_paraphrase": "Synthetic test requirement."
+              }
+            ],
+            "vacancy_id": "V-003"
+          },
+          {
+            "required": false,
+            "requirements": [],
+            "vacancy_id": "V-002"
+          },
+          {
+            "required": false,
+            "requirements": [],
+            "vacancy_id": "V-004"
+          }
+        ],
+        "claim_ids": [
+          "C-002"
+        ],
+        "evidence_ids": [
+          "E-003"
+        ],
+        "requirement_ids": [
+          "V-001-R-01",
+          "V-003-R-01"
+        ],
+        "signal": "terraform",
+        "support_state": "candidate_reported_match",
+        "vacancy_ids": [
+          "V-001",
+          "V-003"
+        ]
+      }
+    ],
+    "methodology_boundaries": [
+      "directional_documented_evidence_not_hiring_fit",
+      "no_keyword_or_prose_match_inference",
+      "no_sample_wide_score",
+      "unknown_preserved_separately_from_explicit_gap"
+    ],
+    "no_external_action": true,
+    "privacy_boundary": "public_vacancy_metadata_and_identity_free_evidence_references_only",
+    "recurrence_rows": [
+      {
+        "display_fraction": "2/4",
+        "evidence_ids": [
+          "E-003"
+        ],
+        "occurrences": 2,
+        "sample_size": 4,
+        "signal": "terraform",
+        "support_state": "candidate_reported_match"
+      },
+      {
+        "display_fraction": "1/4",
+        "evidence_ids": [],
+        "occurrences": 1,
+        "sample_size": 4,
+        "signal": "kubernetes",
+        "support_state": "unknown"
+      },
+      {
+        "display_fraction": "1/4",
+        "evidence_ids": [],
+        "occurrences": 1,
+        "sample_size": 4,
+        "signal": "observability",
+        "support_state": "unknown"
+      }
+    ],
+    "schema_version": "career-market-learning-dossier-v2",
+    "search_summary": {
+      "as_of_date": "2026-08-13",
+      "bounded_queries_run": 12,
+      "limit_reason": "bounded_search_exhausted",
+      "limitation": "Synthetic test limit.",
+      "locale": "en",
+      "maximum_vacancies": 5,
+      "state": "limited_market_evidence",
+      "vacancy_count": 4
+    },
+    "source_alignment_snapshot": "snap-alignment-sha256-104d247a0d5a90a070292e1d102d79f1a6cc8de0c15ff9a9214298811f7af6eb",
+    "source_executive_dossier_snapshot": "snap-dossier-sha256-4421cc64f2bca782e998ab2f9488be928bf4f27a0e9bb9a706e0abdde0485b03",
+    "source_research_snapshot": "snap-market-sha256-018be6ecf73ffb038a260b4c09cdbfa9b6c083a5e42dd06679b80f814b785183",
+    "state": "limited_market_evidence",
+    "vacancies": [
+      {
+        "access_date": "2026-08-13",
+        "alignment_percent": 100,
+        "arrangement": "remote",
+        "earned_points": 4,
+        "employer": "Fixture Employer A",
+        "employer_id": "EMP-001",
+        "evidence_coverage_percent": 100,
+        "freshness_status": "unknown",
+        "geographic_compatibility": "explicit_mexico",
+        "interpretation": "directional_documented_evidence_not_hiring_fit",
+        "known_points": 4,
+        "location": "Mexico",
+        "maximum_points": 4,
+        "official_referrer_url": null,
+        "publication_date": null,
+        "qualitative_band": "higher_documented_alignment",
+        "role_family": "site_reliability_engineering",
+        "source_kind": "official_employer",
+        "source_state": "active",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc2606#fixture-v-001",
+        "title": "Fixture Reliability Role A",
+        "vacancy_id": "V-001"
+      },
+      {
+        "access_date": "2026-08-13",
+        "alignment_percent": 100,
+        "arrangement": "flexible",
+        "earned_points": 4,
+        "employer": "Fixture Employer C",
+        "employer_id": "EMP-003",
+        "evidence_coverage_percent": 100,
+        "freshness_status": "unknown",
+        "geographic_compatibility": "explicit_mexico",
+        "interpretation": "directional_documented_evidence_not_hiring_fit",
+        "known_points": 4,
+        "location": "Mexico",
+        "maximum_points": 4,
+        "official_referrer_url": null,
+        "publication_date": null,
+        "qualitative_band": "higher_documented_alignment",
+        "role_family": "devops_engineering",
+        "source_kind": "official_employer",
+        "source_state": "active",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc6761#fixture-v-003",
+        "title": "Fixture DevOps Role C",
+        "vacancy_id": "V-003"
+      },
+      {
+        "access_date": "2026-08-13",
+        "alignment_percent": 0,
+        "arrangement": "hybrid",
+        "earned_points": 0,
+        "employer": "Fixture Employer B",
+        "employer_id": "EMP-002",
+        "evidence_coverage_percent": 0,
+        "freshness_status": "unknown",
+        "geographic_compatibility": "explicit_mexico",
+        "interpretation": "directional_documented_evidence_not_hiring_fit",
+        "known_points": 0,
+        "location": "Mexico",
+        "maximum_points": 4,
+        "official_referrer_url": null,
+        "publication_date": null,
+        "qualitative_band": "insufficient_evidence",
+        "role_family": "platform_engineering",
+        "source_kind": "official_employer",
+        "source_state": "active",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc5737#fixture-v-002",
+        "title": "Fixture Platform Role B",
+        "vacancy_id": "V-002"
+      },
+      {
+        "access_date": "2026-08-13",
+        "alignment_percent": 0,
+        "arrangement": "remote",
+        "earned_points": 0,
+        "employer": "Fixture Employer D",
+        "employer_id": "EMP-004",
+        "evidence_coverage_percent": 0,
+        "freshness_status": "unknown",
+        "geographic_compatibility": "stated_remote_unknown_eligibility",
+        "interpretation": "directional_documented_evidence_not_hiring_fit",
+        "known_points": 0,
+        "location": "Remote",
+        "maximum_points": 2,
+        "official_referrer_url": null,
+        "publication_date": null,
+        "qualitative_band": "insufficient_evidence",
+        "role_family": "site_reliability_engineering",
+        "source_kind": "official_employer",
+        "source_state": "active",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc3849#fixture-v-004",
+        "title": "Fixture Reliability Role D",
+        "vacancy_id": "V-004"
+      }
+    ]
+  },
+  "provider_research": null,
+  "research": {
+    "as_of_date": "2026-08-13",
+    "employers": [
+      {
+        "access_date": "2026-08-13",
+        "display_name": "Fixture Employer A",
+        "employer_id": "EMP-001",
+        "official_source_title": "Synthetic careers index",
+        "official_source_url": "https://www.rfc-editor.org/rfc/rfc2606",
+        "qualification_observation": "Synthetic test qualification.",
+        "qualification_type": "official_index_membership",
+        "source_date": "2026-08-13"
+      },
+      {
+        "access_date": "2026-08-13",
+        "display_name": "Fixture Employer B",
+        "employer_id": "EMP-002",
+        "official_source_title": "Synthetic careers index",
+        "official_source_url": "https://www.rfc-editor.org/rfc/rfc5737",
+        "qualification_observation": "Synthetic test qualification.",
+        "qualification_type": "official_index_membership",
+        "source_date": "2026-08-13"
+      },
+      {
+        "access_date": "2026-08-13",
+        "display_name": "Fixture Employer C",
+        "employer_id": "EMP-003",
+        "official_source_title": "Synthetic careers index",
+        "official_source_url": "https://www.rfc-editor.org/rfc/rfc6761",
+        "qualification_observation": "Synthetic test qualification.",
+        "qualification_type": "official_index_membership",
+        "source_date": "2026-08-13"
+      },
+      {
+        "access_date": "2026-08-13",
+        "display_name": "Fixture Employer D",
+        "employer_id": "EMP-004",
+        "official_source_title": "Synthetic careers index",
+        "official_source_url": "https://www.rfc-editor.org/rfc/rfc3849",
+        "qualification_observation": "Synthetic test qualification.",
+        "qualification_type": "official_index_membership",
+        "source_date": "2026-08-13"
+      }
+    ],
+    "locale": "en",
+    "no_external_action": true,
+    "privacy_boundary": "public_vacancy_sources_and_identity_free_candidate_evidence_only",
+    "research_kind": "sre_platform_devops_current_vacancies",
+    "schema_version": "target-vacancy-research-v1",
+    "search_limit": {
+      "bounded_queries_run": 12,
+      "distinct_employer_search_exhausted": false,
+      "limit_reason": "bounded_search_exhausted",
+      "limitation": "Synthetic test limit."
+    },
+    "search_scope": {
+      "distinct_employers_preferred": true,
+      "geography_scope": "mexico_or_stated_remote",
+      "linkedin_jobs_backup_allowed": true,
+      "maximum_vacancies": 5,
+      "no_eligibility_inference": true,
+      "official_sources_first": true,
+      "target_role_families": [
+        "site_reliability_engineering",
+        "platform_engineering",
+        "devops_engineering"
+      ]
+    },
+    "state": "limited_market_evidence",
+    "vacancies": [
+      {
+        "access_date": "2026-08-13",
+        "arrangement": "remote",
+        "duplicate_fingerprint": "limited-fingerprint-001",
+        "eligibility_gates": [
+          {
+            "gate": "country_geography",
+            "observed_condition": "Mexico stated.",
+            "state": "pass"
+          }
+        ],
+        "employer_id": "EMP-001",
+        "freshness_status": "unknown",
+        "geographic_compatibility": "explicit_mexico",
+        "location": "Mexico",
+        "official_referrer_url": null,
+        "publication_date": null,
+        "requirements": [
+          {
+            "importance": "must_have",
+            "requirement_id": "V-001-R-01",
+            "signal": "terraform",
+            "source_paraphrase": "Synthetic test requirement."
+          }
+        ],
+        "role_family": "site_reliability_engineering",
+        "source_kind": "official_employer",
+        "source_state": "active",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc2606#fixture-v-001",
+        "title": "Fixture Reliability Role A",
+        "vacancy_id": "V-001"
+      },
+      {
+        "access_date": "2026-08-13",
+        "arrangement": "hybrid",
+        "duplicate_fingerprint": "limited-fingerprint-002",
+        "eligibility_gates": [
+          {
+            "gate": "country_geography",
+            "observed_condition": "Mexico stated.",
+            "state": "pass"
+          }
+        ],
+        "employer_id": "EMP-002",
+        "freshness_status": "unknown",
+        "geographic_compatibility": "explicit_mexico",
+        "location": "Mexico",
+        "official_referrer_url": null,
+        "publication_date": null,
+        "requirements": [
+          {
+            "importance": "must_have",
+            "requirement_id": "V-002-R-01",
+            "signal": "kubernetes",
+            "source_paraphrase": "Synthetic test requirement."
+          }
+        ],
+        "role_family": "platform_engineering",
+        "source_kind": "official_employer",
+        "source_state": "active",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc5737#fixture-v-002",
+        "title": "Fixture Platform Role B",
+        "vacancy_id": "V-002"
+      },
+      {
+        "access_date": "2026-08-13",
+        "arrangement": "flexible",
+        "duplicate_fingerprint": "limited-fingerprint-003",
+        "eligibility_gates": [
+          {
+            "gate": "country_geography",
+            "observed_condition": "Mexico stated.",
+            "state": "pass"
+          }
+        ],
+        "employer_id": "EMP-003",
+        "freshness_status": "unknown",
+        "geographic_compatibility": "explicit_mexico",
+        "location": "Mexico",
+        "official_referrer_url": null,
+        "publication_date": null,
+        "requirements": [
+          {
+            "importance": "must_have",
+            "requirement_id": "V-003-R-01",
+            "signal": "terraform",
+            "source_paraphrase": "Synthetic test requirement."
+          }
+        ],
+        "role_family": "devops_engineering",
+        "source_kind": "official_employer",
+        "source_state": "active",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc6761#fixture-v-003",
+        "title": "Fixture DevOps Role C",
+        "vacancy_id": "V-003"
+      },
+      {
+        "access_date": "2026-08-13",
+        "arrangement": "remote",
+        "duplicate_fingerprint": "limited-fingerprint-004",
+        "eligibility_gates": [
+          {
+            "gate": "country_geography",
+            "observed_condition": "Remote stated without eligibility conclusion.",
+            "state": "unknown"
+          }
+        ],
+        "employer_id": "EMP-004",
+        "freshness_status": "unknown",
+        "geographic_compatibility": "stated_remote_unknown_eligibility",
+        "location": "Remote",
+        "official_referrer_url": null,
+        "publication_date": null,
+        "requirements": [
+          {
+            "importance": "preferred",
+            "requirement_id": "V-004-R-01",
+            "signal": "observability",
+            "source_paraphrase": "Synthetic test requirement."
+          }
+        ],
+        "role_family": "site_reliability_engineering",
+        "source_kind": "official_employer",
+        "source_state": "active",
+        "source_url": "https://www.rfc-editor.org/rfc/rfc3849#fixture-v-004",
+        "title": "Fixture Reliability Role D",
+        "vacancy_id": "V-004"
+      }
+    ]
+  }
+}

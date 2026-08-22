@@ -1,0 +1,35 @@
+{
+  "as_of_date": "2026-08-13",
+  "candidate_relation": "knowledge_gap",
+  "candidate_support_state": "candidate_reported_match",
+  "decision_basis_code": "provider_choice_missing",
+  "done_when": "The active option covers the exact signal and has a dated official source.",
+  "draft_only": true,
+  "eligible_provider_choices": [
+    {
+      "option_name": "Terraform course",
+      "provider_or_owner": "HashiCorp",
+      "public_provider_ordinal": "L1"
+    }
+  ],
+  "locale": "en",
+  "no_external_action": true,
+  "outcome_boundary": "not_an_interview_offer_salary_or_hiring_prediction",
+  "privacy_boundary": "identity_free_structured_eligibility_only",
+  "private_deliverable": "One explicitly selected public option; this is not a purchase recommendation.",
+  "public_vacancy_ordinal": "V2",
+  "recommended_next_action": "select_provider_option",
+  "recurrence": "2/4",
+  "schema_version": "career-next-action-eligibility-v1",
+  "selected_provider_option_id": null,
+  "selected_signal": "terraform",
+  "selected_vacancy_id": "V-003",
+  "source_alignment_snapshot": "snap-alignment-sha256-104d247a0d5a90a070292e1d102d79f1a6cc8de0c15ff9a9214298811f7af6eb",
+  "source_dossier_snapshot": "snap-dossier-sha256-4421cc64f2bca782e998ab2f9488be928bf4f27a0e9bb9a706e0abdde0485b03",
+  "source_gap_assessment_snapshot": "snap-gap-assessment-v1-sha256-d04a5ec1bae395614e92c7ad50d29a867d05a682dc2d42ec7e8e71214fdbcdd7",
+  "source_gap_response_snapshot": "snap-gap-response-v1-sha256-d55c516935434dd28b50eecd60fc909e1961ecb7897abdd81ab113a67eca8529",
+  "source_market_snapshot": "snap-market-dossier-v2-sha256-e6481fc131e14bd995628acc38e7b0dc5badb13b9d7c405ca5a01ecdfee7df4e",
+  "source_provider_research_snapshot": "snap-provider-sha256-1a47017cdf515c2471fa476fedbfa67ca1a9eaf4ff19d8283cd604aa1bf73a31",
+  "source_research_snapshot": "snap-market-sha256-018be6ecf73ffb038a260b4c09cdbfa9b6c083a5e42dd06679b80f814b785183",
+  "state": "provider_selection_required"
+}

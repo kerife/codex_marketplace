@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/professional-growth-coach/career-next-action-eligibility-v1.schema.json",
+  "title": "Career Next-Action Eligibility v1",
+  "type": "object",
+  "required": [
+    "schema_version", "locale", "as_of_date", "state",
+    "source_research_snapshot", "source_dossier_snapshot", "source_alignment_snapshot",
+    "source_market_snapshot", "source_gap_response_snapshot",
+    "source_gap_assessment_snapshot", "source_provider_research_snapshot",
+    "selected_vacancy_id", "selected_signal", "selected_provider_option_id",
+    "public_vacancy_ordinal", "recurrence", "candidate_support_state",
+    "candidate_relation", "recommended_next_action", "decision_basis_code",
+    "eligible_provider_choices", "private_deliverable", "done_when",
+    "privacy_boundary", "draft_only", "no_external_action", "outcome_boundary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "career-next-action-eligibility-v1"},
+    "locale": {"enum": ["es", "en"]},
+    "as_of_date": {"type": "string", "format": "date"},
+    "state": {"enum": ["selection_required", "insufficient_recurrence", "insufficient_gap_evidence", "provider_selection_required", "provider_evidence_required", "learning_not_applicable", "eligible", "unavailable"]},
+    "source_research_snapshot": {"type": "string", "pattern": "^snap-market-sha256-[0-9a-f]{64}$"},
+    "source_dossier_snapshot": {"type": "string", "pattern": "^snap-dossier-sha256-[0-9a-f]{64}$"},
+    "source_alignment_snapshot": {"type": "string", "pattern": "^snap-alignment-sha256-[0-9a-f]{64}$"},
+    "source_market_snapshot": {"type": "string", "pattern": "^snap-market-dossier-v2-sha256-[0-9a-f]{64}$"},
+    "source_gap_response_snapshot": {"type": "string", "pattern": "^snap-gap-response-v1-sha256-[0-9a-f]{64}$"},
+    "source_gap_assessment_snapshot": {"type": "string", "pattern": "^snap-gap-assessment-v1-sha256-[0-9a-f]{64}$"},
+    "source_provider_research_snapshot": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^snap-provider-sha256-[0-9a-f]{64}$"}
+      ]
+    },
+    "selected_vacancy_id": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^V-[0-9]{3}$"}
+      ]
+    },
+    "selected_signal": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"}
+      ]
+    },
+    "selected_provider_option_id": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^LP-[0-9]{3}$"}
+      ]
+    },
+    "public_vacancy_ordinal": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^V[1-5]$"}
+      ]
+    },
+    "recurrence": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^[0-5]/[1-5]$"}
+      ]
+    },
+    "candidate_support_state": {
+      "oneOf": [
+        {"type": "null"},
+        {"enum": ["verified_match", "candidate_reported_match", "unknown"]}
+      ]
+    },
+    "candidate_relation": {
+      "oneOf": [
+        {"type": "null"},
+        {"enum": ["supported", "proof_gap", "knowledge_gap", "practice_gap", "professional_experience_gap", "terminology_gap", "unknown"]}
+      ]
+    },
+    "recommended_next_action": {"enum": ["select_target_vacancy_and_signal", "confirm_gap_relation", "select_provider_option", "prepare_private_vacancy_packet", "build_bounded_proof", "run_validation_lab", "research_provider_option", "run_role_search_experiment", "no_learning_yet"]},
+    "decision_basis_code": {"enum": ["market_unavailable", "selection_missing", "recurrence_below_two", "gap_unknown", "candidate_supported", "provider_choice_missing", "provider_evidence_missing", "professional_experience_required", "proof_gap_recurrent", "practice_gap_recurrent", "terminology_gap_recurrent", "knowledge_gap_recurrent_provider_selected"]},
+    "eligible_provider_choices": {
+      "type": "array",
+      "maxItems": 150,
+      "items": {"$ref": "#/$defs/provider_choice"}
+    },
+    "private_deliverable": {"type": "string", "minLength": 1, "maxLength": 500},
+    "done_when": {"type": "string", "minLength": 1, "maxLength": 500},
+    "privacy_boundary": {"const": "identity_free_structured_eligibility_only"},
+    "draft_only": {"const": true},
+    "no_external_action": {"const": true},
+    "outcome_boundary": {"const": "not_an_interview_offer_salary_or_hiring_prediction"}
+  },
+  "$defs": {
+    "provider_choice": {
+      "type": "object",
+      "required": ["public_provider_ordinal", "option_name", "provider_or_owner"],
+      "additionalProperties": false,
+      "properties": {
+        "public_provider_ordinal": {"type": "string", "pattern": "^L[1-9][0-9]*$"},
+        "option_name": {"type": "string", "minLength": 1, "maxLength": 500},
+        "provider_or_owner": {"type": "string", "minLength": 1, "maxLength": 500}
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "state": {"const": "unavailable"},
+        "source_provider_research_snapshot": {"type": "null"},
+        "selected_vacancy_id": {"type": "null"},
+        "selected_signal": {"type": "null"},
+        "selected_provider_option_id": {"type": "null"},
+        "public_vacancy_ordinal": {"type": "null"},
+        "recurrence": {"type": "null"},
+        "candidate_support_state": {"type": "null"},
+        "candidate_relation": {"type": "null"},
+        "recommended_next_action": {"const": "no_learning_yet"},
+        "decision_basis_code": {"const": "market_unavailable"},
+        "eligible_provider_choices": {"maxItems": 0}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "selection_required"},
+        "source_provider_research_snapshot": {"type": "null"},
+        "selected_vacancy_id": {"type": "null"},
+        "selected_signal": {"type": "null"},
+        "selected_provider_option_id": {"type": "null"},
+        "public_vacancy_ordinal": {"type": "null"},
+        "recurrence": {"type": "null"},
+        "candidate_support_state": {"type": "null"},
+        "candidate_relation": {"type": "null"},
+        "recommended_next_action": {"const": "select_target_vacancy_and_signal"},
+        "decision_basis_code": {"const": "selection_missing"},
+        "eligible_provider_choices": {"maxItems": 0}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "insufficient_recurrence"},
+        "selected_vacancy_id": {"type": "string", "pattern": "^V-[0-9]{3}$"},
+        "selected_signal": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "selected_provider_option_id": {"type": "null"},
+        "public_vacancy_ordinal": {"type": "string", "pattern": "^V[1-5]$"},
+        "recurrence": {"type": "string", "pattern": "^1/[1-5]$"},
+        "candidate_support_state": {"enum": ["verified_match", "candidate_reported_match", "unknown"]},
+        "candidate_relation": {"enum": ["supported", "proof_gap", "knowledge_gap", "practice_gap", "professional_experience_gap", "terminology_gap", "unknown"]},
+        "recommended_next_action": {"const": "prepare_private_vacancy_packet"},
+        "decision_basis_code": {"const": "recurrence_below_two"},
+        "eligible_provider_choices": {"maxItems": 0}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "insufficient_gap_evidence"},
+        "source_provider_research_snapshot": {"type": "null"},
+        "selected_vacancy_id": {"type": "string"},
+        "selected_signal": {"type": "string"},
+        "selected_provider_option_id": {"type": "null"},
+        "public_vacancy_ordinal": {"type": "string"},
+        "recurrence": {"type": "string", "pattern": "^[2-5]/[1-5]$"},
+        "candidate_support_state": {"enum": ["verified_match", "candidate_reported_match", "unknown"]},
+        "candidate_relation": {"const": "unknown"},
+        "recommended_next_action": {"const": "confirm_gap_relation"},
+        "decision_basis_code": {"const": "gap_unknown"},
+        "eligible_provider_choices": {"maxItems": 0}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "insufficient_gap_evidence"},
+        "source_provider_research_snapshot": {"type": "null"},
+        "selected_vacancy_id": {"type": "string"},
+        "selected_signal": {"type": "string"},
+        "selected_provider_option_id": {"type": "null"},
+        "public_vacancy_ordinal": {"type": "string"},
+        "recurrence": {"type": "string", "pattern": "^[2-5]/[1-5]$"},
+        "candidate_support_state": {"enum": ["verified_match", "candidate_reported_match", "unknown"]},
+        "candidate_relation": {"const": "supported"},
+        "recommended_next_action": {"const": "prepare_private_vacancy_packet"},
+        "decision_basis_code": {"const": "candidate_supported"},
+        "eligible_provider_choices": {"maxItems": 0}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "provider_selection_required"},
+        "source_provider_research_snapshot": {"type": "string"},
+        "selected_vacancy_id": {"type": "string"},
+        "selected_signal": {"type": "string"},
+        "selected_provider_option_id": {"type": "null"},
+        "public_vacancy_ordinal": {"type": "string"},
+        "recurrence": {"type": "string", "pattern": "^[2-5]/[1-5]$"},
+        "candidate_support_state": {"enum": ["verified_match", "candidate_reported_match", "unknown"]},
+        "candidate_relation": {"const": "knowledge_gap"},
+        "recommended_next_action": {"const": "select_provider_option"},
+        "decision_basis_code": {"const": "provider_choice_missing"},
+        "eligible_provider_choices": {"minItems": 1}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "provider_evidence_required"},
+        "selected_vacancy_id": {"type": "string"},
+        "selected_signal": {"type": "string"},
+        "selected_provider_option_id": {"type": "null"},
+        "public_vacancy_ordinal": {"type": "string"},
+        "recurrence": {"type": "string", "pattern": "^[2-5]/[1-5]$"},
+        "candidate_support_state": {"enum": ["verified_match", "candidate_reported_match", "unknown"]},
+        "candidate_relation": {"const": "knowledge_gap"},
+        "recommended_next_action": {"const": "no_learning_yet"},
+        "decision_basis_code": {"const": "provider_evidence_missing"},
+        "eligible_provider_choices": {"maxItems": 0}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "learning_not_applicable"},
+        "source_provider_research_snapshot": {"type": "null"},
+        "selected_vacancy_id": {"type": "string"},
+        "selected_signal": {"type": "string"},
+        "selected_provider_option_id": {"type": "null"},
+        "public_vacancy_ordinal": {"type": "string"},
+        "recurrence": {"type": "string", "pattern": "^[2-5]/[1-5]$"},
+        "candidate_support_state": {"enum": ["verified_match", "candidate_reported_match", "unknown"]},
+        "candidate_relation": {"const": "professional_experience_gap"},
+        "recommended_next_action": {"const": "prepare_private_vacancy_packet"},
+        "decision_basis_code": {"const": "professional_experience_required"},
+        "eligible_provider_choices": {"maxItems": 0}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "eligible"},
+        "source_provider_research_snapshot": {"type": "null"},
+        "selected_vacancy_id": {"type": "string"},
+        "selected_signal": {"type": "string"},
+        "selected_provider_option_id": {"type": "null"},
+        "public_vacancy_ordinal": {"type": "string"},
+        "recurrence": {"type": "string", "pattern": "^[2-5]/[1-5]$"},
+        "candidate_support_state": {"enum": ["verified_match", "candidate_reported_match", "unknown"]},
+        "candidate_relation": {"const": "proof_gap"},
+        "recommended_next_action": {"const": "build_bounded_proof"},
+        "decision_basis_code": {"const": "proof_gap_recurrent"},
+        "eligible_provider_choices": {"maxItems": 0}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "eligible"},
+        "source_provider_research_snapshot": {"type": "null"},
+        "selected_vacancy_id": {"type": "string"},
+        "selected_signal": {"type": "string"},
+        "selected_provider_option_id": {"type": "null"},
+        "public_vacancy_ordinal": {"type": "string"},
+        "recurrence": {"type": "string", "pattern": "^[2-5]/[1-5]$"},
+        "candidate_support_state": {"enum": ["verified_match", "candidate_reported_match", "unknown"]},
+        "candidate_relation": {"const": "practice_gap"},
+        "recommended_next_action": {"const": "run_validation_lab"},
+        "decision_basis_code": {"const": "practice_gap_recurrent"},
+        "eligible_provider_choices": {"maxItems": 0}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "eligible"},
+        "source_provider_research_snapshot": {"type": "null"},
+        "selected_vacancy_id": {"type": "string"},
+        "selected_signal": {"type": "string"},
+        "selected_provider_option_id": {"type": "null"},
+        "public_vacancy_ordinal": {"type": "string"},
+        "recurrence": {"type": "string", "pattern": "^[2-5]/[1-5]$"},
+        "candidate_support_state": {"enum": ["verified_match", "candidate_reported_match", "unknown"]},
+        "candidate_relation": {"const": "terminology_gap"},
+        "recommended_next_action": {"const": "run_role_search_experiment"},
+        "decision_basis_code": {"const": "terminology_gap_recurrent"},
+        "eligible_provider_choices": {"maxItems": 0}
+      }
+    },
+    {
+      "properties": {
+        "state": {"const": "eligible"},
+        "source_provider_research_snapshot": {"type": "string"},
+        "selected_vacancy_id": {"type": "string"},
+        "selected_signal": {"type": "string"},
+        "selected_provider_option_id": {"type": "string", "pattern": "^LP-[0-9]{3}$"},
+        "public_vacancy_ordinal": {"type": "string"},
+        "recurrence": {"type": "string", "pattern": "^[2-5]/[1-5]$"},
+        "candidate_support_state": {"enum": ["verified_match", "candidate_reported_match", "unknown"]},
+        "candidate_relation": {"const": "knowledge_gap"},
+        "recommended_next_action": {"const": "research_provider_option"},
+        "decision_basis_code": {"const": "knowledge_gap_recurrent_provider_selected"},
+        "eligible_provider_choices": {"maxItems": 0}
+      }
+    }
+  ]
+}

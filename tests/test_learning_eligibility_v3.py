@@ -35,6 +35,8 @@ RESPONSE_BUILDER = load_sibling("build_candidate_gap_response_v1.py")
 RESPONSE_VALIDATOR = load_sibling("validate_candidate_gap_response_v1.py")
 ASSESSMENT_BUILDER = load_sibling("build_candidate_gap_assessment_v1.py")
 ASSESSMENT_VALIDATOR = load_sibling("validate_candidate_gap_assessment_v1.py")
+ELIGIBILITY_BUILDER = load_sibling("build_career_next_action_eligibility_v1.py")
+ELIGIBILITY_VALIDATOR = load_sibling("validate_career_next_action_eligibility_v1.py")
 SNAPSHOT = load_sibling("semantic_provenance_snapshot.py")
 MARKET_BUILDER = load_sibling("build_career_market_learning_dossier_v2.py")
 
@@ -84,24 +86,29 @@ def recurrent_sources(*, locale: str = "es", provider: bool = False) -> Sources:
     return Sources(research, dossier, market, provider_value)
 
 
-def unavailable_sources() -> Sources:
-    return Sources(
-        load_json(
-            FIXTURES
-            / "target-vacancy-research"
-            / "unavailable-es.json"
-        ),
-        load_json(
-            FIXTURES
-            / "executive-career-dossier-v2"
-            / "scenario-a-es.json"
-        ),
-        load_json(
-            FIXTURES
-            / "career-market-learning-dossier-v2"
-            / "unavailable-es.json"
-        ),
+def unavailable_sources(*, locale: str = "es") -> Sources:
+    research = load_json(
+        FIXTURES / "target-vacancy-research" / "unavailable-es.json"
     )
+    if locale == "es":
+        return Sources(
+            research,
+            load_json(
+                FIXTURES
+                / "executive-career-dossier-v2"
+                / "scenario-a-es.json"
+            ),
+            load_json(
+                FIXTURES
+                / "career-market-learning-dossier-v2"
+                / "unavailable-es.json"
+            ),
+        )
+    research["locale"] = "en"
+    dossier = load_json(
+        FIXTURES / "executive-career-dossier-v2" / "scenario-c-market-en.json"
+    )
+    return Sources(research, dossier, MARKET_BUILDER.build_market_dossier_v2(research, dossier))
 
 
 def response_payload(
@@ -141,6 +148,158 @@ def build_assessment(
         response,
         sources.provider,
     )
+
+
+@dataclass(frozen=True)
+class EligibilityInputs:
+    sources: Sources
+    response: dict[str, object]
+    assessment: dict[str, object]
+
+
+def response_payload_for_sources(
+    sources: Sources,
+    *,
+    relation: object,
+    provider_ordinal: object = None,
+) -> dict[str, object]:
+    vacancies = sources.market["vacancies"]
+    assert isinstance(vacancies, list)
+    selected_index = next(
+        index
+        for index, vacancy in enumerate(vacancies)
+        if isinstance(vacancy, Mapping) and vacancy.get("vacancy_id") == "V-003"
+    )
+    return {
+        "selected_vacancy_ordinal": f"V{selected_index + 1}",
+        "selected_signal": "terraform",
+        "relation": relation,
+        "selected_provider_ordinal": provider_ordinal,
+    }
+
+
+def single_occurrence_sources(
+    *, locale: str = "es", provider: bool = False, duplicate_requirement: bool = False
+) -> Sources:
+    sources = recurrent_sources(locale=locale, provider=provider)
+    research = copy.deepcopy(sources.research)
+    first_requirement = research["vacancies"][0]["requirements"][0]
+    first_requirement["signal"] = "python"
+    if duplicate_requirement:
+        selected_requirements = research["vacancies"][2]["requirements"]
+        selected_requirements.append(
+            {
+                "requirement_id": "V-003-R-02",
+                "signal": "terraform",
+                "importance": "preferred",
+                "source_paraphrase": "A second exact signal in the same active vacancy.",
+            }
+        )
+    market = MARKET_BUILDER.build_market_dossier_v2(research, sources.dossier)
+    recurrence = next(
+        row for row in market["recurrence_rows"] if row["signal"] == "terraform"
+    )
+    assert recurrence["display_fraction"] == (
+        "1/5" if locale == "es" else "1/4"
+    )
+    return Sources(research, sources.dossier, market, sources.provider)
+
+
+def eligibility_inputs(
+    *,
+    locale: str = "es",
+    relation: str | None = "proof_gap",
+    provider: bool = False,
+    provider_ordinal: str | None = None,
+    unavailable: bool = False,
+    selection_required: bool = False,
+    sources: Sources | None = None,
+) -> EligibilityInputs:
+    selected_sources = sources
+    if selected_sources is None:
+        selected_sources = (
+            unavailable_sources(locale=locale)
+            if unavailable
+            else recurrent_sources(locale=locale, provider=provider)
+        )
+    payload = None
+    if not unavailable and not selection_required:
+        assert relation is not None
+        payload = response_payload_for_sources(
+            selected_sources,
+            relation=relation,
+            provider_ordinal=provider_ordinal,
+        )
+    response = RESPONSE_BUILDER.build_candidate_gap_response_v1(
+        selected_sources.research,
+        selected_sources.market,
+        payload,
+        selected_sources.provider,
+    )
+    assessment = build_assessment(selected_sources, response)
+    return EligibilityInputs(selected_sources, response, assessment)
+
+
+def build_eligibility(inputs: EligibilityInputs) -> dict[str, object]:
+    sources = inputs.sources
+    return ELIGIBILITY_BUILDER.build_career_next_action_eligibility_v1(
+        sources.research,
+        sources.dossier,
+        sources.market,
+        inputs.response,
+        inputs.assessment,
+        sources.provider,
+    )
+
+
+def eligibility_inputs_for_case(
+    name: str, *, locale: str = "es"
+) -> EligibilityInputs:
+    if name == "unavailable":
+        inputs = eligibility_inputs(locale=locale, unavailable=True)
+    elif name == "selection_required":
+        inputs = eligibility_inputs(locale=locale, selection_required=True)
+    elif name == "insufficient_recurrence":
+        inputs = eligibility_inputs(
+            locale=locale,
+            relation="proof_gap",
+            sources=single_occurrence_sources(locale=locale),
+        )
+    elif name == "gap_unknown":
+        inputs = eligibility_inputs(locale=locale, relation="unknown")
+    elif name == "supported":
+        inputs = eligibility_inputs(locale=locale, relation="supported")
+    elif name == "provider_choice":
+        inputs = eligibility_inputs(locale=locale, relation="knowledge_gap", provider=True)
+    elif name == "provider_evidence":
+        inputs = eligibility_inputs(locale=locale, relation="knowledge_gap")
+    elif name == "experience":
+        inputs = eligibility_inputs(
+            locale=locale, relation="professional_experience_gap"
+        )
+    elif name in {"proof", "practice", "terminology"}:
+        inputs = eligibility_inputs(
+            locale=locale,
+            relation={
+                "proof": "proof_gap",
+                "practice": "practice_gap",
+                "terminology": "terminology_gap",
+            }[name],
+        )
+    elif name == "knowledge":
+        inputs = eligibility_inputs(
+            locale=locale,
+            relation="knowledge_gap",
+            provider=True,
+            provider_ordinal="L1",
+        )
+    else:
+        raise AssertionError(f"unknown eligibility case: {name}")
+    return inputs
+
+
+def build_eligibility_case(name: str, *, locale: str = "es") -> dict[str, object]:
+    return build_eligibility(eligibility_inputs_for_case(name, locale=locale))
 
 
 class CandidateGapResponseV1Tests(unittest.TestCase):
@@ -1154,6 +1313,886 @@ class CandidateGapAssessmentV1Tests(unittest.TestCase):
                 fixture = load_json(FIXTURES / "candidate-gap-assessment-v1" / name)
                 self.assertEqual(expected, fixture)
                 self.assert_assessment_valid(fixture, sources, response)
+
+
+class CareerNextActionEligibilityV1Tests(unittest.TestCase):
+    LEARNING_ACTIONS = frozenset(
+        {
+            "build_bounded_proof",
+            "run_validation_lab",
+            "research_provider_option",
+            "run_role_search_experiment",
+        }
+    )
+    CASES = (
+        (
+            "unavailable",
+            "unavailable",
+            "market_unavailable",
+            "no_learning_yet",
+            0,
+        ),
+        (
+            "selection_required",
+            "selection_required",
+            "selection_missing",
+            "select_target_vacancy_and_signal",
+            0,
+        ),
+        (
+            "insufficient_recurrence",
+            "insufficient_recurrence",
+            "recurrence_below_two",
+            "prepare_private_vacancy_packet",
+            0,
+        ),
+        (
+            "gap_unknown",
+            "insufficient_gap_evidence",
+            "gap_unknown",
+            "confirm_gap_relation",
+            0,
+        ),
+        (
+            "supported",
+            "insufficient_gap_evidence",
+            "candidate_supported",
+            "prepare_private_vacancy_packet",
+            0,
+        ),
+        (
+            "provider_choice",
+            "provider_selection_required",
+            "provider_choice_missing",
+            "select_provider_option",
+            0,
+        ),
+        (
+            "provider_evidence",
+            "provider_evidence_required",
+            "provider_evidence_missing",
+            "no_learning_yet",
+            0,
+        ),
+        (
+            "experience",
+            "learning_not_applicable",
+            "professional_experience_required",
+            "prepare_private_vacancy_packet",
+            0,
+        ),
+        (
+            "proof",
+            "eligible",
+            "proof_gap_recurrent",
+            "build_bounded_proof",
+            1,
+        ),
+        (
+            "practice",
+            "eligible",
+            "practice_gap_recurrent",
+            "run_validation_lab",
+            1,
+        ),
+        (
+            "terminology",
+            "eligible",
+            "terminology_gap_recurrent",
+            "run_role_search_experiment",
+            1,
+        ),
+        (
+            "knowledge",
+            "eligible",
+            "knowledge_gap_recurrent_provider_selected",
+            "research_provider_option",
+            1,
+        ),
+    )
+
+    def assert_eligibility_valid(
+        self, value: object, inputs: EligibilityInputs
+    ) -> None:
+        sources = inputs.sources
+        self.assertEqual(
+            [],
+            ELIGIBILITY_VALIDATOR.validate_career_next_action_eligibility_v1(
+                value,
+                sources.research,
+                sources.dossier,
+                sources.market,
+                inputs.response,
+                inputs.assessment,
+                sources.provider,
+            ),
+        )
+
+    def test_eligibility_table_projects_exactly_one_action(self):
+        for fixture_name, state, basis, action, learning_count in self.CASES:
+            with self.subTest(case=fixture_name):
+                result = build_eligibility_case(fixture_name)
+                self.assertEqual(state, result["state"])
+                self.assertEqual(basis, result["decision_basis_code"])
+                self.assertEqual(action, result["recommended_next_action"])
+                self.assertEqual(
+                    learning_count,
+                    int(result["recommended_next_action"] in self.LEARNING_ACTIONS),
+                )
+
+    def test_closed_fields_and_exact_nullability_are_exhaustive(self):
+        expected_fields = {
+            "schema_version",
+            "locale",
+            "as_of_date",
+            "state",
+            "source_research_snapshot",
+            "source_dossier_snapshot",
+            "source_alignment_snapshot",
+            "source_market_snapshot",
+            "source_gap_response_snapshot",
+            "source_gap_assessment_snapshot",
+            "source_provider_research_snapshot",
+            "selected_vacancy_id",
+            "selected_signal",
+            "selected_provider_option_id",
+            "public_vacancy_ordinal",
+            "recurrence",
+            "candidate_support_state",
+            "candidate_relation",
+            "recommended_next_action",
+            "decision_basis_code",
+            "eligible_provider_choices",
+            "private_deliverable",
+            "done_when",
+            "privacy_boundary",
+            "draft_only",
+            "no_external_action",
+            "outcome_boundary",
+        }
+        relation_by_case = {
+            "insufficient_recurrence": "proof_gap",
+            "gap_unknown": "unknown",
+            "supported": "supported",
+            "provider_choice": "knowledge_gap",
+            "provider_evidence": "knowledge_gap",
+            "experience": "professional_experience_gap",
+            "proof": "proof_gap",
+            "practice": "practice_gap",
+            "terminology": "terminology_gap",
+            "knowledge": "knowledge_gap",
+        }
+        for name, state, _basis, action, _count in self.CASES:
+            with self.subTest(case=name):
+                result = build_eligibility_case(name)
+                self.assertEqual(expected_fields, set(result))
+                self.assertEqual("career-next-action-eligibility-v1", result["schema_version"])
+                self.assertEqual(
+                    "identity_free_structured_eligibility_only",
+                    result["privacy_boundary"],
+                )
+                self.assertIs(result["draft_only"], True)
+                self.assertIs(result["no_external_action"], True)
+                self.assertEqual(
+                    "not_an_interview_offer_salary_or_hiring_prediction",
+                    result["outcome_boundary"],
+                )
+                if state in {"unavailable", "selection_required"}:
+                    self.assertEqual(
+                        (None, None, None, None, None, None, None),
+                        (
+                            result["selected_vacancy_id"],
+                            result["selected_signal"],
+                            result["selected_provider_option_id"],
+                            result["public_vacancy_ordinal"],
+                            result["recurrence"],
+                            result["candidate_support_state"],
+                            result["candidate_relation"],
+                        ),
+                    )
+                else:
+                    self.assertEqual("V-003", result["selected_vacancy_id"])
+                    self.assertEqual("terraform", result["selected_signal"])
+                    self.assertRegex(result["public_vacancy_ordinal"], r"^V[1-5]$")
+                    self.assertEqual(
+                        "1/5" if name == "insufficient_recurrence" else "2/5",
+                        result["recurrence"],
+                    )
+                    self.assertEqual(
+                        "candidate_reported_match", result["candidate_support_state"]
+                    )
+                    self.assertEqual(relation_by_case[name], result["candidate_relation"])
+                    self.assertEqual(
+                        "LP-001" if name == "knowledge" else None,
+                        result["selected_provider_option_id"],
+                    )
+                self.assertEqual(
+                    bool(result["eligible_provider_choices"]),
+                    state == "provider_selection_required",
+                )
+                self.assertEqual(action, result["recommended_next_action"])
+
+    def test_copy_tables_are_exact_localized_and_not_persisted_beyond_two_fields(self):
+        expected_state_copy = {
+            "es": {
+                "selection_required": "Elige una pareja válida de vacante y señal (V1–Vn) para decidir el siguiente paso; no se preselecciona ninguna.",
+                "insufficient_recurrence": "La señal aparece en {recurrence}; no alcanza el umbral de dos vacantes activas.",
+                "gap_unknown": "La relación de brecha todavía no está confirmada.",
+                "candidate_supported": "La señal está respaldada; ese respaldo no demuestra una brecha.",
+                "provider_selection_required": "Hay recurrencia y una brecha de conocimiento confirmada; falta elegir una opción oficial verificada.",
+                "provider_evidence_required": "Hay recurrencia y una brecha de conocimiento confirmada, pero no hay una opción oficial verificada para esta señal.",
+                "learning_not_applicable": "La brecha requiere experiencia profesional o de producción; un laboratorio, curso o certificación no la sustituye.",
+                "eligible": "La señal aparece en {recurrence} y la relación {relation_label} fue confirmada por la persona candidata.",
+            },
+            "en": {
+                "selection_required": "Choose one valid vacancy-and-signal pair (V1–Vn) to decide the next step; none is preselected.",
+                "insufficient_recurrence": "The signal appears in {recurrence}; it does not meet the two-active-vacancy threshold.",
+                "gap_unknown": "The gap relation is not confirmed yet.",
+                "candidate_supported": "The signal is supported; that support does not establish a gap.",
+                "provider_selection_required": "Recurrence and a confirmed knowledge gap exist; one verified official option still needs to be selected.",
+                "provider_evidence_required": "Recurrence and a confirmed knowledge gap exist, but no verified official option covers this signal.",
+                "learning_not_applicable": "The gap requires professional or production experience; a lab, course, or certification cannot substitute for it.",
+                "eligible": "The signal appears in {recurrence}, and the {relation_label} relation was candidate-confirmed.",
+            },
+        }
+        expected_relation_copy = {
+            "es": {
+                "proof_gap": "brecha de evidencia práctica",
+                "practice_gap": "brecha de práctica",
+                "terminology_gap": "brecha de terminología",
+                "knowledge_gap": "brecha de conocimiento",
+            },
+            "en": {
+                "proof_gap": "proof gap",
+                "practice_gap": "practice gap",
+                "terminology_gap": "terminology gap",
+                "knowledge_gap": "knowledge gap",
+            },
+        }
+        expected_action_copy = {
+            "es": {
+                "select_target_vacancy_and_signal": (
+                    "Elige vacante y señal",
+                    "Una pareja pública Vn + señal elegida por ti.",
+                    "La vacante y la señal pertenecen a la misma vacante activa.",
+                ),
+                "confirm_gap_relation": (
+                    "Confirma la relación de brecha",
+                    "Una respuesta estructurada, sin prosa libre, para la señal elegida.",
+                    "La relación queda confirmada o marcada como desconocida.",
+                ),
+                "prepare_private_vacancy_packet": (
+                    "Prepara primero el paquete privado de vacante",
+                    "Un borrador privado y verificable para la vacante elegida; no se envía.",
+                    "Cada afirmación está respaldada o marcada para confirmar u omitir.",
+                ),
+                "build_bounded_proof": (
+                    "Construye una prueba acotada",
+                    "Una prueba privada e inspeccionable de la señal elegida.",
+                    "La prueba muestra alcance, acción y resultado sin afirmar producción no demostrada.",
+                ),
+                "run_validation_lab": (
+                    "Ejecuta un laboratorio de práctica",
+                    "Un laboratorio privado y acotado para practicar la señal.",
+                    "El resultado es inspeccionable y no se presenta como experiencia profesional.",
+                ),
+                "select_provider_option": (
+                    "Elige una opción oficial para investigar",
+                    "Una opción pública elegida explícitamente; no es una recomendación de compra.",
+                    "La opción activa cubre la señal exacta y su fuente oficial está fechada.",
+                ),
+                "research_provider_option": (
+                    "Investiga la opción elegida",
+                    "Una revisión privada de costo, tiempo, requisitos y desconocidos.",
+                    "Costo, tiempo, requisitos y mantenimiento están confirmados o marcados como desconocidos.",
+                ),
+                "run_role_search_experiment": (
+                    "Prueba una búsqueda acotada de roles",
+                    "Una búsqueda privada con la terminología elegida; no se postula.",
+                    "La consulta devuelve evidencia fechada o queda registrada como no disponible.",
+                ),
+                "no_learning_yet": (
+                    "No compres aprendizaje todavía",
+                    "Una nota privada de la evidencia de proveedor que falta.",
+                    "Existe una fuente oficial vigente o la decisión permanece aplazada.",
+                ),
+            },
+            "en": {
+                "select_target_vacancy_and_signal": (
+                    "Choose vacancy and signal",
+                    "One public Vn + signal pair chosen by you.",
+                    "The vacancy and signal belong to the same active vacancy.",
+                ),
+                "confirm_gap_relation": (
+                    "Confirm the gap relation",
+                    "One structured response without free-form prose for the selected signal.",
+                    "The relation is confirmed or marked unknown.",
+                ),
+                "prepare_private_vacancy_packet": (
+                    "Prepare the private vacancy packet first",
+                    "One private, verifiable draft for the selected vacancy; it is not sent.",
+                    "Every claim is supported or marked to confirm or omit.",
+                ),
+                "build_bounded_proof": (
+                    "Build one bounded proof",
+                    "One private, inspectable proof for the selected signal.",
+                    "The proof shows scope, action, and result without claiming unsupported production work.",
+                ),
+                "run_validation_lab": (
+                    "Run one practice lab",
+                    "One private, bounded lab for practicing the signal.",
+                    "The result is inspectable and is not presented as professional experience.",
+                ),
+                "select_provider_option": (
+                    "Choose one official option to research",
+                    "One explicitly selected public option; this is not a purchase recommendation.",
+                    "The active option covers the exact signal and has a dated official source.",
+                ),
+                "research_provider_option": (
+                    "Research the selected option",
+                    "One private review of cost, time, prerequisites, and unknowns.",
+                    "Cost, time, prerequisites, and maintenance are confirmed or marked unknown.",
+                ),
+                "run_role_search_experiment": (
+                    "Run one bounded role-search experiment",
+                    "One private search using the selected terminology; no application is submitted.",
+                    "The query returns dated evidence or is recorded as unavailable.",
+                ),
+                "no_learning_yet": (
+                    "Do not buy learning yet",
+                    "One private note of the missing provider evidence.",
+                    "A current official source exists or the decision remains deferred.",
+                ),
+            },
+        }
+        expected_boundary = {
+            "es": "Límite: esta decisión usa evidencia documentada; no predice entrevista, oferta, salario ni contratación y no ejecuta ninguna acción externa.",
+            "en": "Boundary: this decision uses documented evidence; it predicts neither an interview, offer, salary, nor hiring outcome and performs no external action.",
+        }
+        for locale in ("es", "en"):
+            with self.subTest(locale=locale):
+                copy_table = ELIGIBILITY_BUILDER.COPY[locale]
+                self.assertEqual(expected_state_copy[locale], dict(copy_table["states"]))
+                self.assertEqual(expected_relation_copy[locale], dict(copy_table["relations"]))
+                self.assertEqual(
+                    expected_boundary[locale],
+                    copy_table["boundaries"][
+                        "not_an_interview_offer_salary_or_hiring_prediction"
+                    ],
+                )
+                self.assertEqual(
+                    expected_action_copy[locale],
+                    {
+                        action: (
+                            row["label"], row["private_deliverable"], row["done_when"]
+                        )
+                        for action, row in copy_table["actions"].items()
+                    },
+                )
+                for name, _state, _basis, action, _count in self.CASES:
+                    result = build_eligibility_case(name, locale=locale)
+                    copy_row = copy_table["actions"][action]
+                    self.assertEqual(copy_row["private_deliverable"], result["private_deliverable"])
+                    self.assertEqual(copy_row["done_when"], result["done_when"])
+                    self.assertNotIn("state_statement", result)
+                    self.assertNotIn("recommended_next_action_label", result)
+                    self.assertNotIn("boundary_statement", result)
+
+    def test_rules_and_copy_are_deeply_immutable(self):
+        self.assertEqual(12, len(ELIGIBILITY_BUILDER.ELIGIBILITY_RULES))
+        with self.assertRaises(TypeError):
+            ELIGIBILITY_BUILDER.ELIGIBILITY_RULES["proof"] = {}  # type: ignore[index]
+        with self.assertRaises(TypeError):
+            ELIGIBILITY_BUILDER.ELIGIBILITY_RULES["proof"]["state"] = "forged"  # type: ignore[index]
+        with self.assertRaises(TypeError):
+            ELIGIBILITY_BUILDER.COPY["es"]["states"]["eligible"] = "forged"  # type: ignore[index]
+
+    def test_one_of_five_overrides_every_gap_and_provider_state(self):
+        relations = (
+            "unknown",
+            "supported",
+            "proof_gap",
+            "practice_gap",
+            "professional_experience_gap",
+            "terminology_gap",
+        )
+        for relation in relations:
+            with self.subTest(relation=relation):
+                inputs = eligibility_inputs(
+                    relation=relation,
+                    sources=single_occurrence_sources(),
+                )
+                result = build_eligibility(inputs)
+                self.assertEqual("1/5", result["recurrence"])
+                self.assertEqual("insufficient_recurrence", result["state"])
+                self.assertEqual("recurrence_below_two", result["decision_basis_code"])
+                self.assertEqual("prepare_private_vacancy_packet", result["recommended_next_action"])
+                self.assertIsNone(result["selected_provider_option_id"])
+                self.assertEqual([], result["eligible_provider_choices"])
+
+        for provider, provider_ordinal in ((False, None), (True, None), (True, "L1")):
+            with self.subTest(knowledge=True, provider=provider, choice=provider_ordinal):
+                sources = single_occurrence_sources(provider=provider)
+                inputs = eligibility_inputs(
+                    relation="knowledge_gap",
+                    provider_ordinal=provider_ordinal,
+                    sources=sources,
+                )
+                result = build_eligibility(inputs)
+                self.assertEqual("insufficient_recurrence", result["state"])
+                self.assertEqual("recurrence_below_two", result["decision_basis_code"])
+                self.assertIsNone(result["selected_provider_option_id"])
+                self.assertEqual([], result["eligible_provider_choices"])
+
+    def test_recurrence_counts_distinct_active_vacancies_not_requirements(self):
+        with self.assertRaisesRegex(ValueError, r"^market dossier v2 is invalid$"):
+            single_occurrence_sources(duplicate_requirement=True)
+        sources = single_occurrence_sources()
+        result = build_eligibility(
+            eligibility_inputs(relation="proof_gap", sources=sources)
+        )
+        self.assertEqual("1/5", result["recurrence"])
+        self.assertEqual("insufficient_recurrence", result["state"])
+
+    def test_supported_is_not_a_gap_and_experience_is_not_replaceable(self):
+        supported = build_eligibility_case("supported")
+        self.assertEqual("candidate_supported", supported["decision_basis_code"])
+        self.assertNotIn(supported["recommended_next_action"], self.LEARNING_ACTIONS)
+
+        for locale, phrase in (
+            ("es", "un laboratorio, curso o certificación no la sustituye"),
+            ("en", "a lab, course, or certification cannot substitute for it"),
+        ):
+            with self.subTest(locale=locale):
+                result = build_eligibility_case("experience", locale=locale)
+                state_copy = ELIGIBILITY_BUILDER.COPY[locale]["states"]["learning_not_applicable"]
+                self.assertIn(phrase, state_copy)
+                self.assertEqual("prepare_private_vacancy_packet", result["recommended_next_action"])
+                self.assertNotIn(result["recommended_next_action"], self.LEARNING_ACTIONS)
+
+    def test_provider_lifecycle_is_explicit_complete_stable_and_non_ranked(self):
+        absent_inputs = eligibility_inputs(relation="knowledge_gap")
+        absent = build_eligibility(absent_inputs)
+        self.assertEqual("provider_evidence_required", absent["state"])
+        self.assertIsNone(absent["source_provider_research_snapshot"])
+        self.assertEqual([], absent["eligible_provider_choices"])
+
+        zero_sources = recurrent_sources(provider=True)
+        assert zero_sources.provider is not None
+        zero_provider = copy.deepcopy(zero_sources.provider)
+        for option in zero_provider["options"]:
+            option["covered_signals"] = []
+        zero_sources = Sources(
+            zero_sources.research, zero_sources.dossier, zero_sources.market, zero_provider
+        )
+        zero_inputs = eligibility_inputs(relation="knowledge_gap", sources=zero_sources)
+        zero = build_eligibility(zero_inputs)
+        self.assertEqual("provider_evidence_required", zero["state"])
+        self.assertIsNotNone(zero["source_provider_research_snapshot"])
+        self.assertEqual([], zero["eligible_provider_choices"])
+
+        choice_sources = recurrent_sources(provider=True)
+        assert choice_sources.provider is not None
+        choices_provider = copy.deepcopy(choice_sources.provider)
+        choices_provider["options"][0].update(
+            {"option": "Zulu Terraform"}
+        )
+        choices_provider["options"][1].update(
+            {
+                "option": "Alpha Terraform",
+                "covered_signals": ["terraform"],
+            }
+        )
+        choice_sources = Sources(
+            choice_sources.research,
+            choice_sources.dossier,
+            choice_sources.market,
+            choices_provider,
+        )
+        choice_inputs = eligibility_inputs(relation="knowledge_gap", sources=choice_sources)
+        choice = build_eligibility(choice_inputs)
+        self.assertEqual("provider_selection_required", choice["state"])
+        self.assertEqual(
+            [
+                {
+                    "public_provider_ordinal": "L1",
+                    "option_name": "Alpha Terraform",
+                    "provider_or_owner": "Argo Project",
+                },
+                {
+                    "public_provider_ordinal": "L2",
+                    "option_name": "Zulu Terraform",
+                    "provider_or_owner": "HashiCorp",
+                },
+            ],
+            choice["eligible_provider_choices"],
+        )
+        serialized_choices = json.dumps(choice["eligible_provider_choices"], sort_keys=True)
+        self.assertNotIn("LP-", serialized_choices)
+        self.assertNotIn("http://", serialized_choices)
+        self.assertNotIn("https://", serialized_choices)
+        self.assertNotIn("rank", serialized_choices.lower())
+        self.assertIsNone(choice["selected_provider_option_id"])
+
+        selected_response = RESPONSE_BUILDER.build_candidate_gap_response_v1(
+            choice_sources.research,
+            choice_sources.market,
+            response_payload_for_sources(
+                choice_sources, relation="knowledge_gap", provider_ordinal="L1"
+            ),
+            choice_sources.provider,
+        )
+        selected_inputs = EligibilityInputs(
+            choice_sources,
+            selected_response,
+            build_assessment(choice_sources, selected_response),
+        )
+        selected = build_eligibility(selected_inputs)
+        self.assertEqual("eligible", selected["state"])
+        self.assertEqual("LP-002", selected["selected_provider_option_id"])
+        self.assertEqual([], selected["eligible_provider_choices"])
+        self.assertEqual("provider_selection_required", choice["state"])
+        self.assertIsNone(choice["selected_provider_option_id"])
+
+    def test_score_prose_title_and_employer_changes_cannot_change_rules(self):
+        baseline_inputs = eligibility_inputs(relation="proof_gap")
+        baseline = build_eligibility(baseline_inputs)
+        changed_research = copy.deepcopy(baseline_inputs.sources.research)
+        changed_dossier = copy.deepcopy(baseline_inputs.sources.dossier)
+        changed_research["vacancies"][0]["title"] = "Unrelated role title"
+        changed_research["employers"][0]["display_name"] = "Unrelated employer"
+        changed_research["vacancies"][0]["requirements"][0]["importance"] = "preferred"
+        for vacancy in changed_research["vacancies"]:
+            for requirement in vacancy["requirements"]:
+                requirement["source_paraphrase"] = "Changed source prose with no rule authority."
+        changed_dossier["claims"][1]["paraphrase"] = (
+            "Terraform puede mencionarse sólo tras confirmar su alcance."
+        )
+        changed_dossier["evidence"][3]["paraphrase"] = (
+            "Terraform fue informado y necesita un ejemplo verificable."
+        )
+        changed_market = MARKET_BUILDER.build_market_dossier_v2(
+            changed_research, changed_dossier
+        )
+        changed_sources = Sources(changed_research, changed_dossier, changed_market)
+        changed_inputs = eligibility_inputs(relation="proof_gap", sources=changed_sources)
+        changed = build_eligibility(changed_inputs)
+        self.assertNotEqual(
+            [
+                (row["earned_points"], row["maximum_points"], row["alignment_percent"])
+                for row in baseline_inputs.sources.market["vacancies"]
+            ],
+            [
+                (row["earned_points"], row["maximum_points"], row["alignment_percent"])
+                for row in changed_market["vacancies"]
+            ],
+        )
+        decision_fields = (
+            "state",
+            "recurrence",
+            "candidate_support_state",
+            "candidate_relation",
+            "decision_basis_code",
+            "recommended_next_action",
+        )
+        self.assertEqual(
+            tuple(baseline[field] for field in decision_fields),
+            tuple(changed[field] for field in decision_fields),
+        )
+
+    def test_validator_recomputes_every_field_and_rejects_tampering(self):
+        inputs = eligibility_inputs(relation="proof_gap")
+        value = build_eligibility(inputs)
+        self.assert_eligibility_valid(value, inputs)
+        cases: list[tuple[str, dict[str, object]]] = []
+        replacements = (
+            ("state", "learning_not_applicable"),
+            ("recommended_next_action", "run_validation_lab"),
+            ("decision_basis_code", "practice_gap_recurrent"),
+            ("private_deliverable", "private-sentinel-forged-copy"),
+            ("done_when", "private-sentinel-forged-copy"),
+            ("recurrence", "5/5"),
+            ("candidate_support_state", "verified_match"),
+            ("public_vacancy_ordinal", "V1"),
+        )
+        for field, replacement in replacements:
+            malformed = copy.deepcopy(value)
+            malformed[field] = replacement
+            cases.append((field, malformed))
+        for field in (
+            "source_research_snapshot",
+            "source_dossier_snapshot",
+            "source_alignment_snapshot",
+            "source_market_snapshot",
+            "source_gap_response_snapshot",
+            "source_gap_assessment_snapshot",
+        ):
+            malformed = copy.deepcopy(value)
+            prefix = malformed[field].rsplit("-", 1)[0]
+            malformed[field] = prefix + "-" + "0" * 64
+            cases.append((field, malformed))
+        extra = copy.deepcopy(value)
+        extra["state_statement"] = "private-sentinel-forged-copy"
+        cases.append(("extra", extra))
+        for name, malformed in cases:
+            with self.subTest(field=name):
+                errors = ELIGIBILITY_VALIDATOR.validate_career_next_action_eligibility_v1(
+                    malformed,
+                    inputs.sources.research,
+                    inputs.sources.dossier,
+                    inputs.sources.market,
+                    inputs.response,
+                    inputs.assessment,
+                )
+                self.assertEqual(
+                    ["career next-action eligibility does not match validated sources"],
+                    errors,
+                )
+                self.assertNotIn("private-sentinel", str(errors))
+
+        crossed = eligibility_inputs(locale="en", relation="proof_gap")
+        self.assertEqual(
+            ["career next-action eligibility does not match validated sources"],
+            ELIGIBILITY_VALIDATOR.validate_career_next_action_eligibility_v1(
+                value,
+                crossed.sources.research,
+                crossed.sources.dossier,
+                crossed.sources.market,
+                crossed.response,
+                crossed.assessment,
+            ),
+        )
+
+    def test_builder_and_validator_are_total_bounded_and_no_echo(self):
+        inputs = eligibility_inputs(relation="proof_gap")
+        value = build_eligibility(inputs)
+        sentinel = "eligibility-private-sentinel"
+        cycle: dict[str, object] = {}
+        cycle["cycle"] = cycle
+        depth: object = None
+        for _ in range(34):
+            depth = {"child": depth}
+        hostile_values: tuple[object, ...] = (
+            cycle,
+            depth,
+            {"rows": [[0 for _ in range(99)] for _ in range(101)]},
+            {"items": list(range(151))},
+            {"text": "x" * 4097 + sentinel},
+            {"text": chr(0xD800) + sentinel},
+            {"float": 1.5},
+        )
+        for hostile in hostile_values:
+            with self.subTest(kind=next(iter(hostile))):
+                with self.assertRaisesRegex(
+                    ValueError, r"^career next-action eligibility is invalid$"
+                ) as raised:
+                    ELIGIBILITY_BUILDER.build_career_next_action_eligibility_v1(
+                        inputs.sources.research,
+                        inputs.sources.dossier,
+                        inputs.sources.market,
+                        inputs.response,
+                        hostile,
+                    )
+                self.assertIsNone(raised.exception.__cause__)
+                self.assertNotIn(sentinel, str(raised.exception))
+                errors = ELIGIBILITY_VALIDATOR.validate_career_next_action_eligibility_v1(
+                    hostile,
+                    inputs.sources.research,
+                    inputs.sources.dossier,
+                    inputs.sources.market,
+                    inputs.response,
+                    inputs.assessment,
+                )
+                self.assertEqual(
+                    ["career next-action eligibility does not match validated sources"],
+                    errors,
+                )
+                self.assertNotIn(sentinel, str(errors))
+
+        class RaisingMapping(Mapping[str, object]):
+            def __getitem__(self, key: str) -> object:
+                raise RuntimeError(sentinel)
+
+            def __iter__(self) -> Iterator[str]:
+                raise RuntimeError(sentinel)
+
+            def __len__(self) -> int:
+                return 1
+
+        with self.assertRaisesRegex(
+            ValueError, r"^career next-action eligibility is invalid$"
+        ) as raised:
+            ELIGIBILITY_BUILDER.build_career_next_action_eligibility_v1(
+                RaisingMapping(),
+                inputs.sources.dossier,
+                inputs.sources.market,
+                inputs.response,
+                inputs.assessment,
+            )
+        self.assertIsNone(raised.exception.__cause__)
+        self.assertNotIn(sentinel, str(raised.exception))
+        self.assertEqual(
+            ["career next-action eligibility does not match validated sources"],
+            ELIGIBILITY_VALIDATOR.validate_career_next_action_eligibility_v1(
+                value,
+                RaisingMapping(),
+                inputs.sources.dossier,
+                inputs.sources.market,
+                inputs.response,
+                inputs.assessment,
+            ),
+        )
+
+    def test_builder_and_validator_capture_once_and_use_frozen_task_contracts(self):
+        inputs = eligibility_inputs(relation="proof_gap")
+        sentinel = "eligibility-toctou-sentinel"
+
+        class OnePassMapping(Mapping[str, object]):
+            def __init__(self, safe: dict[str, object]):
+                self.safe = safe
+                self.exhausted = False
+
+            def __getitem__(self, key: str) -> object:
+                if self.exhausted:
+                    return sentinel
+                return self.safe[key]
+
+            def __iter__(self) -> Iterator[str]:
+                if self.exhausted:
+                    return iter((sentinel,))
+                return iter(self.safe)
+
+            def __len__(self) -> int:
+                return len(self.safe)
+
+            def items(self):
+                if self.exhausted:
+                    return iter(((sentinel, sentinel),))
+
+                def captured():
+                    try:
+                        yield from self.safe.items()
+                    finally:
+                        self.exhausted = True
+
+                return captured()
+
+        originals = [
+            OnePassMapping(inputs.sources.research),
+            OnePassMapping(inputs.sources.dossier),
+            OnePassMapping(inputs.sources.market),
+            OnePassMapping(inputs.response),
+            OnePassMapping(inputs.assessment),
+        ]
+        public_response = ELIGIBILITY_BUILDER._response_validator.validate_candidate_gap_response_v1
+        public_assessment = ELIGIBILITY_BUILDER._assessment_validator.validate_candidate_gap_assessment_v1
+        ELIGIBILITY_BUILDER._response_validator.validate_candidate_gap_response_v1 = (
+            lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError(sentinel))
+        )
+        ELIGIBILITY_BUILDER._assessment_validator.validate_candidate_gap_assessment_v1 = (
+            lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError(sentinel))
+        )
+        try:
+            value = ELIGIBILITY_BUILDER.build_career_next_action_eligibility_v1(
+                *originals
+            )
+        finally:
+            ELIGIBILITY_BUILDER._response_validator.validate_candidate_gap_response_v1 = public_response
+            ELIGIBILITY_BUILDER._assessment_validator.validate_candidate_gap_assessment_v1 = public_assessment
+        self.assertTrue(all(original.exhausted for original in originals))
+        self.assertNotIn(sentinel, json.dumps(value, sort_keys=True))
+
+        validator_originals = [
+            OnePassMapping(value),
+            OnePassMapping(inputs.sources.research),
+            OnePassMapping(inputs.sources.dossier),
+            OnePassMapping(inputs.sources.market),
+            OnePassMapping(inputs.response),
+            OnePassMapping(inputs.assessment),
+        ]
+        self.assertEqual(
+            [],
+            ELIGIBILITY_VALIDATOR.validate_career_next_action_eligibility_v1(
+                *validator_originals
+            ),
+        )
+        self.assertTrue(all(original.exhausted for original in validator_originals))
+
+    def test_snapshot_and_bounded_loader_use_closed_contract(self):
+        inputs = eligibility_inputs(relation="proof_gap")
+        value = build_eligibility(inputs)
+        self.assertRegex(
+            ELIGIBILITY_VALIDATOR.snapshot_for_career_next_action_eligibility_v1(value),
+            r"^snap-next-action-eligibility-v1-sha256-[0-9a-f]{64}$",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "eligibility.json"
+            path.write_text(json.dumps(value), encoding="utf-8")
+            self.assertEqual(
+                value,
+                ELIGIBILITY_VALIDATOR.load_career_next_action_eligibility_v1(path),
+            )
+            invalid = Path(directory) / "invalid.json"
+            invalid.write_text("[]", encoding="utf-8")
+            with self.assertRaisesRegex(
+                ELIGIBILITY_VALIDATOR.CareerNextActionEligibilityLoadError,
+                r"^cannot load career next-action eligibility$",
+            ) as raised:
+                ELIGIBILITY_VALIDATOR.load_career_next_action_eligibility_v1(invalid)
+            self.assertIsNone(raised.exception.__cause__)
+
+    def test_all_checked_in_fixtures_are_self_contained_and_builder_canonical(self):
+        fixture_root = FIXTURES / "career-next-action-eligibility-v1"
+        expected_directories = {
+            f"{name}-{locale}"
+            for name, _state, _basis, _action, _count in self.CASES
+            for locale in ("es", "en")
+        }
+        self.assertEqual(
+            expected_directories,
+            {path.name for path in fixture_root.iterdir() if path.is_dir()},
+        )
+        for directory_name in sorted(expected_directories):
+            with self.subTest(directory=directory_name):
+                directory = fixture_root / directory_name
+                self.assertEqual(
+                    {"sources.json", "eligibility.json"},
+                    {path.name for path in directory.iterdir() if path.is_file()},
+                )
+                source_group = load_json(directory / "sources.json")
+                self.assertEqual(
+                    {
+                        "research",
+                        "executive_dossier",
+                        "market_dossier",
+                        "gap_response",
+                        "gap_assessment",
+                        "provider_research",
+                    },
+                    set(source_group),
+                )
+                value = load_json(directory / "eligibility.json")
+                expected = ELIGIBILITY_BUILDER.build_career_next_action_eligibility_v1(
+                    source_group["research"],
+                    source_group["executive_dossier"],
+                    source_group["market_dossier"],
+                    source_group["gap_response"],
+                    source_group["gap_assessment"],
+                    source_group["provider_research"],
+                )
+                self.assertEqual(expected, value)
+                self.assertEqual(
+                    [],
+                    ELIGIBILITY_VALIDATOR.validate_career_next_action_eligibility_v1(
+                        value,
+                        source_group["research"],
+                        source_group["executive_dossier"],
+                        source_group["market_dossier"],
+                        source_group["gap_response"],
+                        source_group["gap_assessment"],
+                        source_group["provider_research"],
+                    ),
+                )
 
 
 if __name__ == "__main__":
