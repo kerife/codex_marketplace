@@ -23,6 +23,13 @@ RELEASE_REQUIREMENTS_PATH = REPO_ROOT / "requirements" / "release-validation.txt
 RELEASE_BOOTSTRAP_PATH = REPO_ROOT / "scripts" / "bootstrap_release_validation.sh"
 RELEASE_RUNNER_PATH = REPO_ROOT / "scripts" / "run_release_validation.sh"
 RELEASE_DOCUMENTATION_PATH = REPO_ROOT / "docs" / "release-validation.md"
+INSTALLED_RELEASE_HELPER_PATH = REPO_ROOT / "scripts" / "verify_installed_plugin_release.py"
+INSTALLED_SMOKE_HELPER_PATH = (
+    REPO_ROOT / "scripts" / "run_installed_learning_eligibility_v3_smokes.py"
+)
+INSTALLED_SMOKE_SOURCES_PATH = (
+    PLUGIN_ROOT / "tests" / "fixtures" / "vacancy-first-smoke" / "sources.json"
+)
 GITIGNORE_PATH = REPO_ROOT / ".gitignore"
 MARKETPLACE_PATH = REPO_ROOT / ".agents" / "plugins" / "marketplace.json"
 STATIC_CHECKER_PATH = PLUGIN_ROOT / "tests" / "run_static_checks.py"
@@ -81,7 +88,251 @@ def load_static_checker():
     return module
 
 
+def load_repo_script(path: Path, name: str):
+    specification = importlib.util.spec_from_file_location(name, path)
+    if specification is None or specification.loader is None:
+        raise RuntimeError(f"cannot load repository script: {path.name}")
+    module = importlib.util.module_from_spec(specification)
+    specification.loader.exec_module(module)
+    return module
+
+
 class JobSearchCoachPluginStructureTests(unittest.TestCase):
+    def test_exact_installed_cache_resolver_accepts_only_one_enabled_matching_row(self) -> None:
+        helper = load_repo_script(INSTALLED_RELEASE_HELPER_PATH, "installed_release_helper")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            cache_family = Path(temporary_directory) / "cache-family"
+            expected = cache_family / "professional-growth-coach" / "0.2.0+codex.20260822000000"
+            expected.mkdir(parents=True)
+            row = {
+                "pluginId": "professional-growth-coach@codex-marketplace-public",
+                "name": "professional-growth-coach",
+                "marketplaceName": "codex-marketplace-public",
+                "version": "0.2.0+codex.20260822000000",
+                "installed": True,
+                "enabled": True,
+            }
+            resolved = helper.resolve_exact_installed_cache(
+                {"installed": [row], "available": []},
+                "professional-growth-coach",
+                "codex-marketplace-public",
+                "0.2.0+codex.20260822000000",
+                cache_family,
+            )
+        self.assertEqual(expected, resolved)
+
+    def test_exact_installed_cache_resolver_rejects_ambiguous_or_unsafe_input(self) -> None:
+        helper = load_repo_script(INSTALLED_RELEASE_HELPER_PATH, "installed_release_helper_bad")
+        good = {
+            "pluginId": "professional-growth-coach@codex-marketplace-public",
+            "name": "professional-growth-coach",
+            "marketplaceName": "codex-marketplace-public",
+            "version": "0.2.0+codex.20260822000000",
+            "installed": True,
+            "enabled": True,
+        }
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            cache_family = Path(temporary_directory) / "cache-family"
+            (cache_family / good["name"] / good["version"]).mkdir(parents=True)
+            cases = (
+                ("zero", {"installed": []}, good["name"], good["version"]),
+                ("multiple", {"installed": [good, dict(good)]}, good["name"], good["version"]),
+                ("disabled", {"installed": [{**good, "enabled": False}]}, good["name"], good["version"]),
+                ("not-installed", {"installed": [{**good, "installed": False}]}, good["name"], good["version"]),
+                ("wrong-version", {"installed": [good]}, good["name"], "0.2.0+codex.20260822000001"),
+                ("plugin-traversal", {"installed": [good]}, "../professional-growth-coach", good["version"]),
+                ("version-traversal", {"installed": [good]}, good["name"], "../latest"),
+            )
+            for label, plugin_list, plugin, version in cases:
+                with self.subTest(case=label):
+                    with self.assertRaisesRegex(
+                        helper.ReleaseVerificationError,
+                        "installed plugin resolution failed",
+                    ) as caught:
+                        helper.resolve_exact_installed_cache(
+                            plugin_list,
+                            plugin,
+                            "codex-marketplace-public",
+                            version,
+                            cache_family,
+                        )
+                    self.assertNotIn(str(temporary_directory), str(caught.exception))
+
+    def test_release_inventory_and_digest_are_sorted_exact_and_adversarial(self) -> None:
+        helper = load_repo_script(INSTALLED_RELEASE_HELPER_PATH, "installed_release_inventory")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory) / "release"
+            root.mkdir()
+            (root / "z.txt").write_bytes(b"z")
+            (root / "a.txt").write_bytes(b"a")
+            inventory = helper.release_inventory(root)
+            a_digest = hashlib.sha256(b"a").hexdigest()
+            z_digest = hashlib.sha256(b"z").hexdigest()
+            self.assertEqual((('a.txt', a_digest), ('z.txt', z_digest)), inventory)
+            expected = hashlib.sha256(
+                b"a.txt\0" + a_digest.encode("ascii") + b"\n"
+                + b"z.txt\0" + z_digest.encode("ascii") + b"\n"
+            ).hexdigest()
+            self.assertEqual(expected, helper.aggregate_release_digest(root))
+
+            bytecode = root / "scripts" / "__pycache__"
+            bytecode.mkdir(parents=True)
+            (bytecode / "bad.pyc").write_bytes(b"bytecode")
+            with self.assertRaisesRegex(
+                helper.ReleaseVerificationError, "release inventory is invalid"
+            ):
+                helper.release_inventory(root)
+
+            shutil.rmtree(bytecode)
+            (root / "metadata.bin").write_bytes(
+                b"/" + b"Users/synthetic-user/projects/job_search_coach/private.txt"
+            )
+            with self.assertRaisesRegex(
+                helper.ReleaseVerificationError, "release inventory is invalid"
+            ):
+                helper.release_inventory(root)
+
+    def test_release_parity_rejects_inventory_and_per_file_mismatch(self) -> None:
+        helper = load_repo_script(INSTALLED_RELEASE_HELPER_PATH, "installed_release_parity")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source"
+            cache = root / "cache"
+            source.mkdir()
+            cache.mkdir()
+            (source / "same.txt").write_text("same", encoding="utf-8")
+            (cache / "same.txt").write_text("same", encoding="utf-8")
+            result = helper.verify_release_parity(source, cache)
+            self.assertEqual(1, result["file_count"])
+            self.assertEqual(result["source_aggregate_sha256"], result["cache_aggregate_sha256"])
+
+            (cache / "extra.txt").write_text("extra", encoding="utf-8")
+            with self.assertRaisesRegex(helper.ReleaseVerificationError, "release parity failed"):
+                helper.verify_release_parity(source, cache)
+            (cache / "extra.txt").unlink()
+            (cache / "same.txt").write_text("different", encoding="utf-8")
+            with self.assertRaisesRegex(helper.ReleaseVerificationError, "release parity failed"):
+                helper.verify_release_parity(source, cache)
+
+    def test_installed_smoke_loader_rejects_product_modules_outside_plugin_root(self) -> None:
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_smoke_helper")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            plugin = root / "plugin"
+            scripts = plugin / "scripts"
+            scripts.mkdir(parents=True)
+            (scripts / "inside.py").write_text("VALUE = 'inside'\n", encoding="utf-8")
+            modules = smoke.load_installed_product_modules(plugin, ("inside",))
+            self.assertEqual("inside", modules["inside"].VALUE)
+            self.assertTrue(
+                Path(modules["inside"].__file__).resolve().is_relative_to(plugin.resolve())
+            )
+
+            outside = root / "outside.py"
+            outside.write_text("VALUE = 'outside'\n", encoding="utf-8")
+            (scripts / "escape.py").symlink_to(outside)
+            with self.assertRaisesRegex(
+                smoke.InstalledSmokeError, "installed smoke import boundary failed"
+            ) as caught:
+                smoke.load_installed_product_modules(plugin, ("escape",))
+            self.assertNotIn(str(temporary_directory), str(caught.exception))
+
+    def test_installed_smoke_fixture_is_closed_hashed_and_complete(self) -> None:
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_smoke_sources")
+        checker = load_static_checker()
+        self.assertIn(
+            "tests/fixtures/vacancy-first-smoke/sources.json",
+            checker.MARKET_DOSSIER_PACKAGE_PATHS,
+        )
+        sources = smoke.load_installed_smoke_sources(PLUGIN_ROOT)
+        self.assertEqual(
+            {"schema_version", "sources", "source_sha256", "aggregate_sha256"},
+            set(sources),
+        )
+        self.assertEqual({"research", "dossier", "provider"}, set(sources["sources"]))
+        self.assertEqual({"research", "dossier", "provider"}, set(sources["source_sha256"]))
+        self.assertTrue(INSTALLED_SMOKE_SOURCES_PATH.is_file())
+
+    def test_installed_smoke_runs_complete_semantic_matrix_from_installed_root(self) -> None:
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_smoke_matrix")
+        modules = smoke.load_installed_product_modules(PLUGIN_ROOT)
+        receipt = smoke.run_installed_semantic_matrix(PLUGIN_ROOT, modules)
+        self.assertEqual("vacancy-first-installed-smoke-v1", receipt["matrix_version"])
+        self.assertEqual(39, receipt["accepted"])
+        self.assertEqual(9, receipt["rejected"])
+        self.assertEqual(
+            (
+                "response_mapping",
+                "recurrence_routes",
+                "nonlearning_routes",
+                "provider_lifecycle",
+                "action_matrix_es",
+                "action_matrix_en",
+                "exact_unions_snapshots",
+                "dom_aria",
+                "historical_bytes",
+            ),
+            tuple(receipt["accepted_groups"]),
+        )
+        self.assertEqual(
+            (
+                "provider_displacement",
+                "private_disclosure",
+                "forged_sources",
+                "crossed_sources",
+                "mutable_sources",
+                "oversized_sources",
+                "exceptional_sources",
+                "writer_output",
+                "cli_output",
+            ),
+            tuple(receipt["rejected_groups"]),
+        )
+
+    def test_installed_smoke_recomputes_pinned_historical_render_bytes(self) -> None:
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_smoke_history")
+        modules = smoke.load_installed_product_modules(PLUGIN_ROOT)
+        sources = smoke.load_installed_smoke_sources(PLUGIN_ROOT)["sources"]
+        self.assertEqual(
+            {
+                "v1": {
+                    "bytes": 97805,
+                    "sha256": "4dbb6be8e1a95cdcc8f3e937dcca600fb26f9dc53d7ef519027048c73b12316f",
+                },
+                "v2": {
+                    "bytes": 101282,
+                    "sha256": "0232f7d71de6e85f1b18d7407703b7af944c936c9c905b55fd9a3592067d6167",
+                },
+                "no_market": {
+                    "bytes": 48801,
+                    "sha256": "19d85f8a4061ca5eb44746801a2f0094a9109d9d5764e80d515d84bafdfd79d6",
+                },
+            },
+            smoke.installed_historical_render_snapshots(sources, modules),
+        )
+
+    def test_installed_smoke_receipt_preserves_semantic_matrix_and_parity(self) -> None:
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_smoke_receipt")
+        semantic = {
+            "matrix_version": "vacancy-first-installed-smoke-v1",
+            "accepted": 39,
+            "rejected": 9,
+            "accepted_groups": ("accepted-group",),
+            "rejected_groups": ("rejected-group",),
+        }
+        receipt = smoke.compose_installed_smoke_receipt(
+            {"file_count": 17, "source_aggregate_sha256": "a" * 64}, semantic
+        )
+        self.assertEqual(39, receipt["accepted"])
+        self.assertEqual(9, receipt["rejected"])
+        self.assertEqual("vacancy-first-installed-smoke-v1", receipt["matrix_version"])
+        self.assertEqual(("accepted-group",), receipt["accepted_groups"])
+        self.assertEqual(("rejected-group",), receipt["rejected_groups"])
+        self.assertEqual(17, receipt["file_count"])
+        self.assertEqual("a" * 64, receipt["aggregate_sha256"])
+        self.assertEqual("exact_cache_root_only", receipt["import_boundary"])
+        self.assertEqual("not_bundled_not_claimed", receipt["repository_conformance"])
+
     def test_release_inventory_rejects_bytecode_artifacts(self) -> None:
         checker = load_static_checker()
         self.assertTrue(

@@ -281,6 +281,8 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "scripts/build_career_next_action_eligibility_v1.py",
     "scripts/validate_career_next_action_eligibility_v1.py",
     "assets/career-market-learning-dossier-v1.css",
+    "assets/career-learning-eligibility-v1.css",
+    "tests/fixtures/vacancy-first-smoke/sources.json",
     "tests/test_learning_eligibility_v3.py",
     "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
     "tests/evals/with-skill/fixtures/target-vacancy-research/limited-four-en.json",
@@ -812,8 +814,10 @@ def _load_market_package_modules(plugin_root: Path) -> dict[str, object]:
     if str(scripts_root) not in sys.path:
         sys.path.insert(0, str(scripts_root))
     modules: dict[str, object] = {}
+    loaded_names: list[str] = []
     try:
         for name in (
+            "semantic_provenance_snapshot",
             "validate_target_vacancy_research",
             "build_career_market_learning_dossier",
             "build_career_market_learning_dossier_v2",
@@ -832,6 +836,8 @@ def _load_market_package_modules(plugin_root: Path) -> dict[str, object]:
             "validate_candidate_gap_response_v1",
             "build_candidate_gap_assessment_v1",
             "validate_candidate_gap_assessment_v1",
+            "build_career_next_action_eligibility_v1",
+            "validate_career_next_action_eligibility_v1",
             "render_executive_career_dossier_v2",
         ):
             path = scripts_root / f"{name}.py"
@@ -841,10 +847,14 @@ def _load_market_package_modules(plugin_root: Path) -> dict[str, object]:
             if specification is None or specification.loader is None:
                 raise RuntimeError("market runtime module is unavailable")
             module = importlib.util.module_from_spec(specification)
+            sys.modules[specification.name] = module
+            loaded_names.append(specification.name)
             specification.loader.exec_module(module)
             modules[name] = module
     finally:
         sys.path[:] = previous_path
+        for name in loaded_names:
+            sys.modules.pop(name, None)
     return modules
 
 
@@ -889,17 +899,19 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
 
     errors: list[str] = []
     safe_paths: set[str] = set()
+    fixture_root = repo_root / "tests/evals/with-skill/fixtures"
+    repository_fixtures = fixture_root.is_dir()
     for relative_path in MARKET_DOSSIER_PACKAGE_PATHS:
-        root = repo_root if relative_path.startswith("tests/") else plugin_root
+        plugin_local_test = relative_path == "tests/fixtures/vacancy-first-smoke/sources.json"
+        if relative_path.startswith("tests/") and not plugin_local_test and not repository_fixtures:
+            continue
+        root = repo_root if relative_path.startswith("tests/") and not plugin_local_test else plugin_root
         if _package_path_traverses_symlink(root, relative_path):
             errors.append(f"{relative_path}: market package path cannot traverse a symlink")
         elif not (root / relative_path).is_file():
             errors.append(f"{relative_path}: market path must be a regular package file")
         else:
             safe_paths.add(relative_path)
-    if len(safe_paths) != len(MARKET_DOSSIER_PACKAGE_PATHS):
-        return sorted(set(errors))
-
     schema_requirements = {
         "schemas/candidate-market-alignment-v1.schema.json": "research_snapshot",
         "schemas/candidate-market-alignment-v2.schema.json": "research_snapshot",
@@ -914,6 +926,8 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         "schemas/career-next-action-eligibility-v1.schema.json": "source_gap_assessment_snapshot",
     }
     for relative_path, required_field in schema_requirements.items():
+        if relative_path not in safe_paths:
+            continue
         try:
             schema = json.loads((plugin_root / relative_path).read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError):
@@ -930,16 +944,21 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         ):
             errors.append(f"{relative_path}: invalid closed market schema")
 
-    css_relative = "assets/career-market-learning-dossier-v1.css"
-    try:
-        css = (plugin_root / css_relative).read_text(encoding="utf-8").casefold()
-    except (OSError, UnicodeError):
-        errors.append(f"{css_relative}: market asset is not readable UTF-8")
-    else:
-        if any(token in css for token in EXECUTIVE_DOSSIER_OFFLINE_TOKENS):
-            errors.append(f"{css_relative}: remote or network token in market asset")
-        if re.search(r"</?(?:style|script)\b", css, re.I):
-            errors.append(f"{css_relative}: unsafe inline asset boundary")
+    for css_relative in (
+        "assets/career-market-learning-dossier-v1.css",
+        "assets/career-learning-eligibility-v1.css",
+    ):
+        if css_relative not in safe_paths:
+            continue
+        try:
+            css = (plugin_root / css_relative).read_text(encoding="utf-8").casefold()
+        except (OSError, UnicodeError):
+            errors.append(f"{css_relative}: market asset is not readable UTF-8")
+        else:
+            if any(token in css for token in EXECUTIVE_DOSSIER_OFFLINE_TOKENS):
+                errors.append(f"{css_relative}: remote or network token in market asset")
+            if re.search(r"</?(?:style|script)\b", css, re.I):
+                errors.append(f"{css_relative}: unsafe inline asset boundary")
 
     try:
         modules = _load_market_package_modules(plugin_root)
@@ -947,6 +966,10 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         errors.append("market runtime package import failed")
         return sorted(set(errors))
     required_interfaces = {
+        "semantic_provenance_snapshot": (
+            "bounded_plain_snapshot",
+            "bounded_tree",
+        ),
         "validate_target_vacancy_research": (
             "validate_research",
             "snapshot_for_market_dossier",
@@ -1013,18 +1036,43 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             "load_candidate_gap_assessment_v1",
             "_validate_candidate_gap_assessment_from_frozen",
         ),
+        "build_career_next_action_eligibility_v1": (
+            "build_career_next_action_eligibility_v1",
+            "_project_eligibility_from_frozen",
+        ),
+        "validate_career_next_action_eligibility_v1": (
+            "validate_career_next_action_eligibility_v1",
+            "snapshot_for_career_next_action_eligibility_v1",
+            "load_career_next_action_eligibility_v1",
+        ),
         "render_executive_career_dossier_v2": ("render_dossier_html",),
     }
+    runtime_interfaces_ready = True
     for module_name, interfaces in required_interfaces.items():
         module = modules.get(module_name)
         if any(
             not callable(getattr(module, interface, None))
             for interface in interfaces
         ):
+            runtime_interfaces_ready = False
             errors.append(
                 f"scripts/{module_name}.py: missing required market runtime interface"
             )
-    if errors:
+    if not runtime_interfaces_ready:
+        return sorted(set(errors))
+    renderer_cli = subprocess.run(
+        [sys.executable, "-B", str(plugin_root / "scripts/render_executive_career_dossier_v2.py"), "--help"],
+        cwd=plugin_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if renderer_cli.returncode != 0 or any(
+        flag not in renderer_cli.stdout
+        for flag in ("--gap-response", "--gap-assessment", "--next-action-eligibility")
+    ):
+        errors.append("scripts/render_executive_career_dossier_v2.py: missing v3 CLI group")
+    if not repository_fixtures:
         return sorted(set(errors))
     research_validator = modules["validate_target_vacancy_research"]
     builder = modules["build_career_market_learning_dossier"]
@@ -1040,7 +1088,6 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
     provider_validator = modules["validate_career_learning_provider_research"]
     renderer = modules["render_executive_career_dossier_v2"]
 
-    fixture_root = repo_root / "tests/evals/with-skill/fixtures"
     for provider_name in ("complete-es.json", "limited-en.json", "unavailable-es.json"):
         try:
             provider = json.loads(
@@ -17235,9 +17282,12 @@ def main() -> int:
         errors.extend(
             validate_executive_dossier_package(PLUGIN_ROOT, PLUGIN_ROOT.parents[1])
         )
-        errors.extend(
-            validate_market_dossier_package(PLUGIN_ROOT, PLUGIN_ROOT.parents[1])
+    errors.extend(
+        validate_market_dossier_package(
+            PLUGIN_ROOT,
+            PLUGIN_ROOT.parents[1] if repository_context else PLUGIN_ROOT,
         )
+    )
     errors.extend(validate_renderer_asset_paths())
     errors.extend(validate_design_token_palette())
     manifest_path = PLUGIN_ROOT / ".codex-plugin" / "plugin.json"

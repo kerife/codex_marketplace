@@ -89,3 +89,33 @@ plugin or modify its cache or Codex configuration.
 Any interpreter, wheel, requirements hash, or official-validator digest change
 requires an explicit lock and evidence update. Do not satisfy this release gate
 from a global Python installation or a mutable developer dependency cache.
+
+## Vacancy-first v3 release evidence
+
+Before any manifest cachebuster, validate the all-or-none renderer CLI group:
+`--gap-response`, `--gap-assessment`, and `--next-action-eligibility`. The
+source gates must cover the four closed schemas, shared bounded snapshot,
+builders/validators, v3 projector, isolated CSS, canonical fixtures, routing,
+privacy inventory, and historical v1/v2 bytes.
+
+Installation is a later, separately authorized release step. Resolve the cache
+from exactly one installed and enabled plugin-list row whose name, marketplace,
+and version match. Use only `cache family / plugin / exact enabled reported version`;
+never use an alias, glob, `latest`, lexicographic selection, cache
+deletion, or manual configuration mutation.
+
+Compare the immutable Git archive and installed cache using identical non-zero
+sorted POSIX relative paths and per-file SHA-256 digests. The aggregate digest
+records each path as UTF-8, then NUL, then its lowercase file digest, then LF.
+Reject symlinks, unreadable/non-regular files, personal metadata, `.pyc`,
+`.pyo`, and `__pycache__` on both sides. Diagnostics expose only relative paths
+or fixed generic failures.
+
+Run the installed smoke harness with only the exact installed `scripts`
+directory on the product import boundary. Every imported semantic module must
+resolve below that installed plugin root; mutable checkout imports fail closed.
+Installed static checks must state `repository conformance not bundled` rather
+than turning absent repository fixtures into a full-suite pass. The final
+attestation records archive/cache counts and aggregate digests, accepted and
+rejected smokes, no-echo/atomicity, repository-only scope, external actions not
+executed, and `visual QA not run` unless empirical browser evidence exists.

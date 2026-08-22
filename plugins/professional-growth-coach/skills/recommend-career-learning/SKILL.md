@@ -7,6 +7,19 @@ description: Use when recommending courses, certifications, labs, portfolio proj
 
 Prioritize learning only when it is likely to create a stronger hiring signal than applying, rewriting assets, networking, or building proof from existing work. Read [learning-roi.md](references/learning-roi.md) before recommending paid or time-intensive learning. Read [evidence-projects.md](references/evidence-projects.md) when a project, lab, portfolio artifact, or work sample may prove the gap better than a course or certification.
 
+## Vacancy-first eligibility gate
+
+Before producing a new learning recommendation, require one user-selected
+public vacancy-and-signal pair, recurrence in at least two distinct active
+vacancies, and one explicit closed candidate gap response. Candidate support
+is not a gap. Project exactly one weekly action and consider learning only when
+the recomputed eligibility state is `eligible`; otherwise prepare private
+vacancy evidence or confirm the missing relation first. Provider choice is
+user-selected, never inferred from stable ordering. Professional experience
+cannot be replaced by learning. Market scores are evidence coverage, never
+hiring probability. The artifact is draft-only and performs no external
+action, purchase, enrollment, profile edit, message, or application.
+
 ## Evidence rules
 
 Every material claim starts with exactly one canonical prefix: `verified:`, `candidate-reported:`, `inferred:`, or `unknown:`. Optional qualifiers after the colon are allowed. Do not use slash compounds. Use stable IDs for target requirements, candidate facts, vacancy observations, and learning options.

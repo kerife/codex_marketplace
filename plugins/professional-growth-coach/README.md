@@ -37,6 +37,23 @@ public term label, localized support, public vacancy ordinals, recurrence,
 source-recomputed basis, and localized decision. It does not render source
 links, snapshots, source prose, raw enums, or internal provenance identifiers.
 
+The vacancy-first v3 composition adds the independently persisted gap response,
+source-resolved assessment, recomputed next-action eligibility, and zero-or-one
+learning decision as one all-or-none group. The user first selects one public
+vacancy-and-signal pair. The gate then requires recurrence in at least two
+distinct active vacancies plus an explicit candidate gap relation, and projects
+exactly one private weekly action. Candidate support is not a gap; market scores
+are evidence coverage, never hiring probability; provider choice is
+user-selected; and professional experience cannot be replaced by learning.
+When the gate is not eligible, prepare private vacancy evidence or confirm the
+missing relation first. No external action is performed.
+
+The v3 renderer CLI requires `--gap-response`, `--gap-assessment`, and
+`--next-action-eligibility` together with the coherent v3 market/research/
+learning group. Partial or crossed groups fail before output. These flags read
+local identity-free artifacts only; they do not apply, edit a profile, message,
+purchase, enroll, schedule, or publish.
+
 ### Installed test scope
 
 An extracted marketplace cache contains the package-local validators, renderers,

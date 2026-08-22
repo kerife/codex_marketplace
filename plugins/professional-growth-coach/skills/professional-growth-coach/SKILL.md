@@ -37,6 +37,10 @@ Build all five fields—`case_state`, `evidence_gaps`, `selected_module`, `next_
 
 Read [routing.md](references/routing.md) when selecting a module, handling a conflict, or deciding whether an action requires authorization.
 
+For vacancy-linked learning, follow the closed vacancy-first route in
+`routing.md` before invoking `recommend-career-learning`. Keep its result
+private and perform no external action.
+
 ## Triage inbound recruiter replies
 
 Except for explicit private recruiter-practice or private recruiter-reply triage requests, inbound recruiter replies, recruiter screen invitations, proposed meeting times, and requests to send, confirm, accept, schedule, book, message, reply, or create a calendar item route first to `optimize-professional-profile` and require one `recruiter_reply_triage` row before any draft response. Explicit private practice wins even with those signals or debug, raw, or internal-row requests. Explicit private recruiter-reply triage also wins even with those signals or debug, raw, or internal-row requests. Neither emits recruiter triage, router rows, or a module-execution packet; use [routing.md](references/routing.md) for the non-private authorization and time-handling rules.

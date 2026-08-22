@@ -24,6 +24,25 @@ Choose one module:
 - `recommend-career-learning`: a repeatedly evidenced gap with plausible return.
 - `track-career-outcomes`: a 14/30/60/90-day results review.
 
+## Vacancy-first learning route
+
+Use this closed order for a target-vacancy learning decision:
+
+1. select one public target vacancy and signal;
+2. validate recurrence and the explicit candidate gap response;
+3. project exactly one weekly action;
+4. consider learning only when eligibility is eligible; and
+5. prepare private vacancy evidence or confirm the missing relation first when
+   the eligibility gate does not permit learning.
+
+The recurrence threshold is at least two distinct active vacancies. One
+vacancy is insufficient. Candidate support is not a gap, and an evidence score
+is evidence coverage, never hiring probability. Provider choice is
+user-selected and is never inferred from lexical display order. Professional
+experience cannot be replaced by learning, a lab, a course, or a certificate.
+The route produces a private draft and no external action: it never applies,
+edits a profile, sends a message, enrolls, purchases, or schedules.
+
 ## Recruiter-conversion observation routing
 
 An explicit conversion receipt is a candidate-supplied observation only, not a candidate identity claim, aggregate, causal explanation, score, fit, or outcome proof. Apply this exact mapping: `contact_received` and `reply_received` → `clarify_context_before_reply`; `referral_received` → `prepare_fact_checked_summary`; `screen_requested` and `interview_requested` → `route_to_prepare-role-interviews`; `stop_decision` → `record_stop_decision`. The mapped value is a manual next step only. It must not auto-start a module, create a module packet, send, schedule, or create a calendar item. Keep normal CSV/outcome measurement and ordinary recruiter-reply and LinkedIn routes unchanged when the receipt is absent.

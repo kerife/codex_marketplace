@@ -28,6 +28,7 @@ from tests.synthetic_semantic_fixtures import (
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_ROOT = REPO_ROOT / "plugins" / "professional-growth-coach"
 SKILLS_ROOT = PLUGIN_ROOT / "skills"
+RELEASE_DOCUMENTATION_PATH = REPO_ROOT / "docs" / "release-validation.md"
 LINKEDIN_REPORT_FIXTURE_ROOT = (
     REPO_ROOT / "tests" / "evals" / "with-skill" / "fixtures" / "linkedin-report-v2"
 )
@@ -167,7 +168,143 @@ def build_release_attestation(source_root: Path, cache_root: Path) -> dict[str, 
     }
 
 
+VACANCY_FIRST_ATTESTATION_FIELDS = frozenset(
+    {
+        "attestation_state", "plugin_identity", "source_commit", "source_tree",
+        "installed_cache_family", "installed_cache_version",
+        "installed_cache_resolution", "source_file_count", "installed_file_count",
+        "sorted_relative_inventory_equal", "per_file_sha256_equal",
+        "source_aggregate_sha256", "cache_aggregate_sha256",
+        "source_bytecode_count", "installed_bytecode_count",
+        "source_pycache_directory_count", "installed_pycache_directory_count",
+        "source_verification_matrix", "installed_package_static_scope",
+        "installed_semantic_accepted_smokes", "installed_semantic_rejected_smokes",
+        "installed_import_boundary", "installed_output_atomicity",
+        "visual_browser_assistive_technology_QA",
+        "repository_conformance_from_installed_cache", "external_action_state",
+    }
+)
+
+
+def parse_vacancy_first_attestation(text: str) -> dict[str, str]:
+    parsed: dict[str, str] = {}
+    for line in text.splitlines():
+        match = re.fullmatch(r"([a-z][A-Za-z0-9_]*): `([^`]+)`", line)
+        if match is None:
+            continue
+        key, value = match.groups()
+        if key in parsed:
+            raise AssertionError("release attestation contains duplicate fields")
+        parsed[key] = value
+    return parsed
+
+
+def validate_vacancy_first_attestation(text: str, *, expected_version: str) -> list[str]:
+    try:
+        parsed = parse_vacancy_first_attestation(text)
+    except AssertionError:
+        return ["release attestation contract is invalid"]
+    if set(parsed) != VACANCY_FIRST_ATTESTATION_FIELDS:
+        return ["release attestation contract is invalid"]
+    try:
+        source_count = int(parsed["source_file_count"])
+        cache_count = int(parsed["installed_file_count"])
+        accepted_count, accepted_total = (
+            int(part) for part in parsed["installed_semantic_accepted_smokes"].split("/")
+        )
+        rejected_count, rejected_total = (
+            int(part) for part in parsed["installed_semantic_rejected_smokes"].split("/")
+        )
+    except (TypeError, ValueError):
+        return ["release attestation contract is invalid"]
+    zero_fields = (
+        "source_bytecode_count", "installed_bytecode_count",
+        "source_pycache_directory_count", "installed_pycache_directory_count",
+    )
+    valid = (
+        parsed["attestation_state"] == "vacancy_first_installed_green"
+        and parsed["plugin_identity"] == "professional-growth-coach@codex-marketplace-public"
+        and re.fullmatch(r"[0-9a-f]{40}", parsed["source_commit"]) is not None
+        and re.fullmatch(r"[0-9a-f]{40}", parsed["source_tree"]) is not None
+        and re.fullmatch(r"0\.2\.0\+codex\.\d{14}", parsed["installed_cache_version"])
+        is not None
+        and parsed["installed_cache_version"] == expected_version
+        and parsed["installed_cache_family"] == "codex-marketplace-public/professional-growth-coach"
+        and parsed["installed_cache_resolution"]
+        == "exact_enabled_reported_version_not_alias_or_glob"
+        and source_count == cache_count and source_count > 0
+        and parsed["sorted_relative_inventory_equal"] == "true"
+        and parsed["per_file_sha256_equal"] == "true"
+        and re.fullmatch(r"[0-9a-f]{64}", parsed["source_aggregate_sha256"])
+        is not None
+        and parsed["source_aggregate_sha256"] == parsed["cache_aggregate_sha256"]
+        and all(parsed[field] == "0" for field in zero_fields)
+        and parsed["source_verification_matrix"] == "passed"
+        and parsed["installed_package_static_scope"]
+        == "passed_repository_conformance_not_bundled"
+        and accepted_count == accepted_total and accepted_count > 0
+        and rejected_count == rejected_total and rejected_count > 0
+        and parsed["installed_import_boundary"] == "exact_cache_root_only"
+        and parsed["installed_output_atomicity"] == "passed_generic_no_echo"
+        and parsed["visual_browser_assistive_technology_QA"] == "not_run_not_claimed"
+        and parsed["repository_conformance_from_installed_cache"]
+        == "not_bundled_not_claimed"
+        and parsed["external_action_state"] == "not_executed"
+    )
+    return [] if valid else ["release attestation contract is invalid"]
+
+
 class FullPluginIntegrationTests(unittest.TestCase):
+    def test_vacancy_first_attestation_parser_requires_complete_fresh_task_7_evidence(self) -> None:
+        version = "0.2.0+codex.20260822000000"
+        values = {
+            "attestation_state": "vacancy_first_installed_green",
+            "plugin_identity": "professional-growth-coach@codex-marketplace-public",
+            "source_commit": "a" * 40, "source_tree": "b" * 40,
+            "installed_cache_family": "codex-marketplace-public/professional-growth-coach",
+            "installed_cache_version": version,
+            "installed_cache_resolution": "exact_enabled_reported_version_not_alias_or_glob",
+            "source_file_count": "147", "installed_file_count": "147",
+            "sorted_relative_inventory_equal": "true", "per_file_sha256_equal": "true",
+            "source_aggregate_sha256": "c" * 64, "cache_aggregate_sha256": "c" * 64,
+            "source_bytecode_count": "0", "installed_bytecode_count": "0",
+            "source_pycache_directory_count": "0", "installed_pycache_directory_count": "0",
+            "source_verification_matrix": "passed",
+            "installed_package_static_scope": "passed_repository_conformance_not_bundled",
+            "installed_semantic_accepted_smokes": "24/24",
+            "installed_semantic_rejected_smokes": "31/31",
+            "installed_import_boundary": "exact_cache_root_only",
+            "installed_output_atomicity": "passed_generic_no_echo",
+            "visual_browser_assistive_technology_QA": "not_run_not_claimed",
+            "repository_conformance_from_installed_cache": "not_bundled_not_claimed",
+            "external_action_state": "not_executed",
+        }
+
+        def render(fields: dict[str, str]) -> str:
+            return "\n".join(f"{key}: `{value}`" for key, value in fields.items())
+
+        valid = render(values)
+        self.assertEqual([], validate_vacancy_first_attestation(valid, expected_version=version))
+        cases = {
+            "missing": {key: value for key, value in values.items() if key != "source_tree"},
+            "stale-version": {**values, "installed_cache_version": "0.2.0+codex.20260821000000"},
+            "count-mismatch": {**values, "installed_file_count": "146"},
+            "digest-mismatch": {**values, "cache_aggregate_sha256": "d" * 64},
+            "zero-smokes": {**values, "installed_semantic_accepted_smokes": "0/0"},
+            "claimed-visual": {**values, "visual_browser_assistive_technology_QA": "passed"},
+        }
+        for label, fields in cases.items():
+            with self.subTest(case=label):
+                self.assertEqual(
+                    ["release attestation contract is invalid"],
+                    validate_vacancy_first_attestation(render(fields), expected_version=version),
+                )
+        duplicate = valid + f"\nsource_tree: `{'e' * 40}`"
+        self.assertEqual(
+            ["release attestation contract is invalid"],
+            validate_vacancy_first_attestation(duplicate, expected_version=version),
+        )
+
     def test_release_attestation_rejects_missing_or_empty_roots(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -413,6 +550,52 @@ class FullPluginIntegrationTests(unittest.TestCase):
             self.assertEqual(4, categories[category]["max_score"])
             self.assertGreaterEqual(len(categories[category]["anchors"]), 3)
 
+    def test_vacancy_first_learning_route_and_release_scope_are_closed(self) -> None:
+        root_skill = (SKILLS_ROOT / "professional-growth-coach" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        routing = (
+            SKILLS_ROOT / "professional-growth-coach" / "references" / "routing.md"
+        ).read_text(encoding="utf-8")
+        learning_skill = (
+            SKILLS_ROOT / "recommend-career-learning" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        learning_roi = (
+            SKILLS_ROOT / "recommend-career-learning" / "references" / "learning-roi.md"
+        ).read_text(encoding="utf-8")
+        readme = (PLUGIN_ROOT / "README.md").read_text(encoding="utf-8")
+        release_docs = RELEASE_DOCUMENTATION_PATH.read_text(encoding="utf-8")
+        combined = "\n".join((root_skill, routing, learning_skill, learning_roi, readme)).lower()
+
+        ordered_route = (
+            "select one public target vacancy and signal",
+            "validate recurrence and the explicit candidate gap response",
+            "project exactly one weekly action",
+            "consider learning only when eligibility is eligible",
+            "prepare private vacancy evidence or confirm the missing relation first",
+        )
+        route_positions = tuple(routing.index(step) for step in ordered_route)
+        self.assertEqual(tuple(sorted(route_positions)), route_positions)
+        for boundary in (
+            "at least two distinct active vacancies",
+            "candidate support is not a gap",
+            "provider choice is user-selected",
+            "professional experience cannot be replaced by learning",
+            "evidence coverage, never hiring probability",
+            "no external action",
+        ):
+            with self.subTest(boundary=boundary):
+                self.assertIn(boundary, combined)
+
+        for flag in (
+            "--gap-response", "--gap-assessment", "--next-action-eligibility"
+        ):
+            self.assertIn(flag, readme)
+            self.assertIn(flag, release_docs)
+        self.assertIn("exact enabled reported version", release_docs)
+        self.assertIn("sorted POSIX relative paths", release_docs)
+        self.assertIn("repository conformance not bundled", release_docs)
+
     def test_artifact_failure_cannot_be_claimed_as_success(self) -> None:
         reference_path = (
             SKILLS_ROOT
@@ -575,6 +758,8 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "scripts/build_career_next_action_eligibility_v1.py",
                 "scripts/validate_career_next_action_eligibility_v1.py",
                 "assets/career-market-learning-dossier-v1.css",
+                "assets/career-learning-eligibility-v1.css",
+                "tests/fixtures/vacancy-first-smoke/sources.json",
                 "tests/test_learning_eligibility_v3.py",
                 "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
                 "tests/evals/with-skill/fixtures/target-vacancy-research/limited-four-en.json",

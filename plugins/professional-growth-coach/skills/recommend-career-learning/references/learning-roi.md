@@ -1,5 +1,15 @@
 # Learning ROI
 
+## Vacancy-first decision boundary
+
+New recommendations follow one closed chain: user-selected public vacancy and
+signal, recurrence across at least two distinct active vacancies, explicit
+candidate gap response, exactly one weekly action, and optional learning only
+when eligibility is `eligible`. A single vacancy is insufficient, candidate
+support is not a gap, and provider choice is user-selected. Professional
+experience cannot be replaced by learning. Treat every score as evidence
+coverage, never hiring probability, and perform no external action.
+
 Use learning recommendations as an investment decision, not a shopping list. Do not recommend certificate collecting.
 
 ## Required evidence
