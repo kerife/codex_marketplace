@@ -101,6 +101,28 @@ CANONICAL_PROFILE_SECTIONS = (
     "analytics", "job_preferences",
 )
 
+V2_ROUTE_SUPPORT_LABELS = {
+    "es": {
+        "verified_match": "Evidencia directa",
+        "candidate_reported_match": "Reportado por cliente",
+    },
+    "en": {
+        "verified_match": "Direct evidence",
+        "candidate_reported_match": "Candidate reported",
+    },
+}
+
+V2_SOURCE_MUTATION_CASES = (
+    ("private name", "dossier_private_name", "Private Candidate Name"),
+    ("contact", "research_contact", "private.person@example.test"),
+    ("local path", "provider_local_path", "/Users/private-person/source.json"),
+    ("url", "provider_url", "https://example.test/private-source"),
+    ("snapshot", "market_snapshot", "snap-private-sha256-" + "a" * 64),
+    ("internal id", "learning_internal_id", "E-999"),
+    ("control", "provider_control", "private\u202esource"),
+    ("source prose", "research_source_prose", "Arbitrary private source prose sentinel."),
+)
+
 
 def _contrast_ratio(foreground: str, background: str) -> float:
     def relative_luminance(value: str) -> float:
@@ -517,6 +539,122 @@ class DossierDOMAudit(HTMLParser):
             self.classes.extend(classes.split())
 
 
+class LearningRouteDOMParser(HTMLParser):
+    """Collect each public route row within its rendered decision group."""
+
+    _VOID_TAGS = frozenset({
+        "area", "base", "br", "col", "embed", "hr", "img", "input", "link",
+        "meta", "param", "source", "track", "wbr",
+    })
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.groups: list[tuple[int, list[tuple[str, str, str, str]]]] = []
+        self._stack: list[str] = []
+        self._card_rank: int | None = None
+        self._card_depth: int | None = None
+        self._group_rows: list[tuple[str, str, str, str]] | None = None
+        self._group_depth: int | None = None
+        self._row: dict[str, object] | None = None
+        self._row_depth: int | None = None
+        self._strong_depth: int | None = None
+        self._paragraph_depth: int | None = None
+        self._label_depth: int | None = None
+
+    @staticmethod
+    def _classes(values: dict[str, str | None]) -> set[str]:
+        return set((values.get("class") or "").split())
+
+    @staticmethod
+    def _text(parts: object) -> str:
+        assert isinstance(parts, list)
+        return " ".join("".join(str(part) for part in parts).split())
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag not in self._VOID_TAGS:
+            self._stack.append(tag)
+        depth = len(self._stack)
+        values = dict(attrs)
+        classes = self._classes(values)
+        if tag == "article" and "learning-decision-card" in classes:
+            match = re.fullmatch(
+                r"learning-decision-card-title-(\d+)",
+                values.get("aria-labelledby") or "",
+            )
+            if match is None:
+                raise AssertionError("learning decision card has no canonical rank label")
+            self._card_rank = int(match.group(1))
+            self._card_depth = depth
+        elif tag == "div" and "learning-signal-route" in classes:
+            if self._card_rank is None:
+                raise AssertionError("learning route is outside a decision card")
+            self._group_rows = []
+            self.groups.append((self._card_rank, self._group_rows))
+            self._group_depth = depth
+        elif tag == "div" and "learning-signal-route-row" in classes:
+            if self._group_rows is None:
+                raise AssertionError("learning route row is outside a route group")
+            self._row = {"label": [], "facts": [], "paragraph": None}
+            self._row_depth = depth
+        elif self._row is not None and tag == "strong":
+            self._strong_depth = depth
+        elif self._row is not None and tag == "p":
+            self._row["paragraph"] = []
+            self._paragraph_depth = depth
+        elif (
+            self._row is not None
+            and self._paragraph_depth is not None
+            and tag == "span"
+            and "label" in classes
+        ):
+            self._label_depth = depth
+
+    def handle_data(self, data: str) -> None:
+        if self._row is None:
+            return
+        if self._strong_depth is not None:
+            label = self._row["label"]
+            assert isinstance(label, list)
+            label.append(data)
+        elif self._paragraph_depth is not None and self._label_depth is None:
+            paragraph = self._row["paragraph"]
+            assert isinstance(paragraph, list)
+            paragraph.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        depth = len(self._stack)
+        if tag == "span" and self._label_depth == depth:
+            self._label_depth = None
+        elif tag == "strong" and self._strong_depth == depth:
+            self._strong_depth = None
+        elif tag == "p" and self._paragraph_depth == depth:
+            assert self._row is not None
+            facts = self._row["facts"]
+            assert isinstance(facts, list)
+            facts.append(self._text(self._row["paragraph"]))
+            self._row["paragraph"] = None
+            self._paragraph_depth = None
+        elif tag == "div" and self._row_depth == depth:
+            assert self._row is not None and self._group_rows is not None
+            facts = self._row["facts"]
+            assert isinstance(facts, list)
+            if len(facts) != 3:
+                raise AssertionError("learning route row must contain three public facts")
+            self._group_rows.append((self._text(self._row["label"]), *facts))
+            self._row = None
+            self._row_depth = None
+        elif tag == "div" and self._group_depth == depth:
+            self._group_rows = None
+            self._group_depth = None
+        elif tag == "article" and self._card_depth == depth:
+            self._card_rank = None
+            self._card_depth = None
+        if tag not in self._VOID_TAGS:
+            if not self._stack or self._stack[-1] != tag:
+                raise AssertionError(f"unexpected closing tag: {tag}")
+            self._stack.pop()
+
+
 class ExecutiveCareerDossierV2Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -861,6 +999,81 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             "provider_research": provider,
         }
 
+    def v2_multi_signal_render_sources(self) -> dict[str, object]:
+        sources = copy.deepcopy(self.v2_render_sources())
+        dossier = sources["dossier"]
+        research = sources["market_research"]
+        provider = sources["provider_research"]
+        assert isinstance(dossier, dict)
+        assert isinstance(research, dict)
+        assert isinstance(provider, dict)
+        dossier["requested_technology_terms"].append(
+            {"term": "Python", "claim_ids": ["C-001"]}
+        )
+        dossier["claims"][0]["paraphrase"] = (
+            "Python supports a concrete professional proposition."
+        )
+        dossier["evidence"][0]["paraphrase"] = (
+            "Python is present in the supplied material."
+        )
+        dossier["evidence"][1]["paraphrase"] = (
+            "Python scope is available for bounded review."
+        )
+        scripts = str(SCRIPTS)
+        if scripts not in sys.path:
+            sys.path.insert(0, scripts)
+        from build_career_learning_decision_v2 import build_learning_bundle_v2
+        from build_career_market_learning_dossier_v2 import build_market_dossier_v2
+
+        market = build_market_dossier_v2(research, dossier)
+        learning = build_learning_bundle_v2(
+            research,
+            market,
+            dossier,
+            provider,
+            [{
+                "decision_rank": 1,
+                "decision_code": "build_bounded_proof",
+                "source_signals": ["python", "terraform"],
+                "provider_option_id": None,
+            }],
+        )
+        sources["market_dossier"] = market
+        sources["learning_decision"] = learning
+        return sources
+
+    def mutated_v2_render_sources(self, mutation: str, sentinel: str) -> dict[str, object]:
+        sources = copy.deepcopy(self.v2_render_sources())
+        if mutation == "dossier_private_name":
+            sources["dossier"]["claims"][0]["paraphrase"] = sentinel
+        elif mutation == "research_contact":
+            sources["market_research"]["vacancies"][0]["title"] = sentinel
+        elif mutation == "provider_local_path":
+            sources["provider_research"]["options"][0]["unknowns"] = sentinel
+        elif mutation == "provider_url":
+            sources["provider_research"]["options"][0]["url"] = sentinel
+        elif mutation == "market_snapshot":
+            sources["market_dossier"]["source_alignment_snapshot"] = sentinel
+        elif mutation == "learning_internal_id":
+            sources["learning_decision"]["decisions"][0]["claim_ids"] = [sentinel]
+        elif mutation == "provider_control":
+            sources["provider_research"]["options"][0]["source_title"] = sentinel
+        elif mutation == "research_source_prose":
+            sources["market_research"]["vacancies"][0]["requirements"][0][
+                "source_paraphrase"
+            ] = sentinel
+        else:
+            raise AssertionError(f"unknown source mutation: {mutation}")
+        return sources
+
+    @staticmethod
+    def expected_v2_mutation_errors(mutation: str) -> tuple[str, ...]:
+        if mutation in {"provider_url", "provider_control"}:
+            return ("provider research is invalid",)
+        if mutation in {"learning_internal_id", "provider_local_path"}:
+            return ("learning decision does not match validated sources",)
+        return ("market dossier does not match validated sources",)
+
     def test_renderer_accepts_only_coherent_market_learning_versions(self) -> None:
         v1 = self.v1_render_sources()
         v2 = self.v2_render_sources()
@@ -903,10 +1116,18 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                         "market-context", self.renderer.render_dossier_html(**arguments)
                     )
                 else:
-                    with self.assertRaisesRegex(
-                        ValueError, "market and learning versions are incompatible"
-                    ):
+                    with self.assertRaises(
+                        self.renderer.MarketCompositionVersionError
+                    ) as raised:
                         self.renderer.render_dossier_html(**arguments)
+                    self.assertIs(
+                        type(raised.exception),
+                        self.renderer.MarketCompositionVersionError,
+                    )
+                    self.assertEqual(
+                        "market and learning versions are incompatible",
+                        str(raised.exception),
+                    )
 
     def test_learning_v2_route_omits_internal_and_source_values(self) -> None:
         sources = self.v2_render_sources()
@@ -932,19 +1153,13 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         self.assertIn("V3", html_output)
 
     def test_learning_v2_routes_are_localized_resolved_and_complete(self) -> None:
-        support_labels = {
-            "es": {
-                "verified_match": "Evidencia directa",
-                "candidate_reported_match": "Reportado por cliente",
-            },
-            "en": {
-                "verified_match": "Direct evidence",
-                "candidate_reported_match": "Candidate reported",
-            },
-        }
-        for state in ("complete", "limited"):
+        cases = (
+            ("complete", self.v2_render_sources("complete")),
+            ("limited", self.v2_render_sources("limited")),
+            ("multi-signal", self.v2_multi_signal_render_sources()),
+        )
+        for state, sources in cases:
             with self.subTest(state=state):
-                sources = self.v2_render_sources(state)
                 learning = sources["learning_decision"]
                 assert isinstance(learning, dict)
                 decisions = learning["decisions"]
@@ -960,20 +1175,37 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     rendered.count('class="learning-signal-route-row"'),
                 )
                 locale = str(learning["locale"])
+                expected_groups: list[
+                    tuple[int, list[tuple[str, str, str, str]]]
+                ] = []
                 for decision in decisions:
+                    expected_routes: list[tuple[str, str, str, str]] = []
                     for route in decision["signal_routes"]:
-                        self.assertIn(html.escape(route["term_label"]), rendered)
-                        self.assertIn(route["recurrence"], rendered)
-                        for ordinal in route["vacancy_ordinals"]:
-                            self.assertIn(ordinal, rendered)
-                        self.assertIn(
-                            support_labels[locale][route["support_state"]], rendered
+                        expected_routes.append(
+                            (
+                                route["term_label"],
+                                V2_ROUTE_SUPPORT_LABELS[locale][route["support_state"]],
+                                ", ".join(route["vacancy_ordinals"]),
+                                route["recurrence"],
+                            )
                         )
                         self.assertNotIn(route["support_state"], rendered)
+                    expected_groups.append(
+                        (decision["decision_rank"], expected_routes)
+                    )
                     self.assertIn(
                         html.escape(decision["decision_basis"], quote=True), rendered
                     )
                     self.assertNotIn(decision["decision"], rendered)
+                route_parser = LearningRouteDOMParser()
+                route_parser.feed(rendered)
+                self.assertEqual(expected_groups, route_parser.groups)
+                if state == "multi-signal":
+                    self.assertEqual(
+                        [("Python", "Evidencia directa", "V1", "1/5"),
+                         ("Terraform", "Reportado por cliente", "V3", "1/5")],
+                        route_parser.groups[0][1],
+                    )
                 audit = DossierDOMAudit()
                 audit.feed(rendered)
                 self.assertEqual(len(audit.ids), len(set(audit.ids)))
@@ -983,27 +1215,61 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         v1 = self.v1_render_sources()
         v2 = self.v2_render_sources()
         omissions = (
-            ("v1 alignment", dict(v1, market_alignment=None)),
-            ("v2 research", dict(v2, market_research=None)),
-            ("v2 provider", dict(v2, provider_research=None)),
+            (
+                "market root",
+                dict(v2, market_dossier=None),
+                ("market composition inputs must be supplied together",),
+            ),
+            (
+                "v1 alignment",
+                dict(v1, market_alignment=None),
+                ("v1 market composition requires alignment",),
+            ),
+            (
+                "v2 research",
+                dict(v2, market_research=None),
+                ("market composition inputs must be supplied together",),
+            ),
+            (
+                "v2 provider",
+                dict(v2, provider_research=None),
+                ("v2 learning and provider research must be supplied together",),
+            ),
             (
                 "provider without learning",
                 dict(v2, learning_decision=None),
+                ("v2 learning and provider research must be supplied together",),
             ),
-            ("v2 with alignment", dict(v2, market_alignment=v1["market_alignment"])),
-            ("v1 with provider", dict(v1, provider_research=v2["provider_research"])),
+            (
+                "v2 with alignment",
+                dict(v2, market_alignment=v1["market_alignment"]),
+                ("v2 market composition recomputes alignment",),
+            ),
+            (
+                "v1 with provider",
+                dict(v1, provider_research=v2["provider_research"]),
+                ("v1 market composition excludes provider research",),
+            ),
         )
-        for label, arguments in omissions:
+        for label, arguments, expected_errors in omissions:
             with self.subTest(group=label):
-                with self.assertRaises(ValueError):
+                with self.assertRaises(self.renderer.DossierValidationError) as raised:
                     self.renderer.render_dossier_html(**arguments)
+                self.assertIs(type(raised.exception), self.renderer.DossierValidationError)
+                self.assertEqual(expected_errors, raised.exception.errors)
+                self.assertEqual("dossier validation failed", str(raised.exception))
 
         malformed_version = copy.deepcopy(v2)
         malformed_version["market_dossier"]["schema_version"] = [
             "career-market-learning-dossier-v2"
         ]
-        with self.assertRaises(self.renderer.DossierValidationError):
+        with self.assertRaises(self.renderer.DossierValidationError) as raised:
             self.renderer.render_dossier_html(**malformed_version)
+        self.assertIs(type(raised.exception), self.renderer.DossierValidationError)
+        self.assertEqual(
+            ("market composition inputs have malformed structure",),
+            raised.exception.errors,
+        )
 
         unavailable = self.renderer.render_dossier_html(
             **self.v2_render_sources("unavailable")
@@ -1025,97 +1291,92 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 )
 
     def test_v2_private_source_mutations_fail_before_render_without_echo(self) -> None:
-        sentinels = (
-            ("private name", "Private Candidate Name"),
-            ("contact", "private.person@example.test"),
-            ("local path", "/Users/private-person/source.json"),
-            ("url", "https://example.test/private-source"),
-            ("snapshot", "snap-private-sha256-" + "a" * 64),
-            ("internal id", "E-999"),
-            ("control", "private\u202esource"),
-            ("source prose", "Arbitrary private source prose sentinel."),
-        )
-        for index, (label, sentinel) in enumerate(sentinels):
+        for label, mutation, sentinel in V2_SOURCE_MUTATION_CASES:
             with self.subTest(mutation=label):
-                sources = copy.deepcopy(self.v2_render_sources())
-                if index == 0:
-                    sources["dossier"]["claims"][0]["paraphrase"] = sentinel
-                elif index == 1:
-                    sources["market_research"]["vacancies"][0]["title"] = sentinel
-                elif index == 2:
-                    sources["provider_research"]["options"][0]["unknowns"] = sentinel
-                elif index == 3:
-                    sources["provider_research"]["options"][0]["url"] = sentinel
-                elif index == 4:
-                    sources["market_dossier"]["source_alignment_snapshot"] = sentinel
-                elif index == 5:
-                    sources["learning_decision"]["decisions"][0]["claim_ids"] = [sentinel]
-                elif index == 6:
-                    sources["provider_research"]["options"][0]["source_title"] = sentinel
-                else:
-                    sources["market_research"]["vacancies"][0]["requirements"][0][
-                        "source_paraphrase"
-                    ] = sentinel
-                with self.assertRaises(ValueError) as raised:
+                sources = self.mutated_v2_render_sources(mutation, sentinel)
+                with self.assertRaises(self.renderer.DossierValidationError) as raised:
                     self.renderer.render_dossier_html(**sources)
+                self.assertIs(type(raised.exception), self.renderer.DossierValidationError)
+                self.assertEqual(
+                    self.expected_v2_mutation_errors(mutation),
+                    raised.exception.errors,
+                )
+                self.assertEqual("dossier validation failed", str(raised.exception))
                 self.assertNotIn(sentinel, str(raised.exception))
-                errors = getattr(raised.exception, "errors", ())
-                self.assertNotIn(sentinel, "\n".join(errors))
+                self.assertNotIn(sentinel, "\n".join(raised.exception.errors))
 
     def test_v2_private_source_mutations_leave_no_writer_or_cli_output(self) -> None:
-        sources = copy.deepcopy(self.v2_render_sources())
-        sentinel = "private.person@example.test"
-        sources["provider_research"]["options"][0]["unknowns"] = sentinel
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            paths: dict[str, Path] = {}
-            for name, value in sources.items():
-                if value is None:
-                    continue
-                path = root / f"{name}.json"
-                path.write_text(json.dumps(value), encoding="utf-8")
-                paths[name] = path
-            writer_output = root / "writer.html"
-            with self.assertRaises(ValueError) as raised:
-                self.renderer.write_dossier_html(
-                    paths["dossier"],
-                    writer_output,
-                    market_dossier_path=paths["market_dossier"],
-                    market_research_path=paths["market_research"],
-                    learning_decision_path=paths["learning_decision"],
-                    provider_research_path=paths["provider_research"],
+        for label, mutation, sentinel in V2_SOURCE_MUTATION_CASES:
+            with self.subTest(mutation=label), tempfile.TemporaryDirectory() as directory:
+                sources = self.mutated_v2_render_sources(mutation, sentinel)
+                root = Path(directory)
+                paths: dict[str, Path] = {}
+                for name, value in sources.items():
+                    if value is None:
+                        continue
+                    path = root / f"{name}.json"
+                    path.write_text(json.dumps(value), encoding="utf-8")
+                    paths[name] = path
+                expected_errors = self.expected_v2_mutation_errors(mutation)
+                provider_load_failure = mutation in {"provider_url", "provider_control"}
+                expected_writer_type = (
+                    self.renderer.MarketInputLoadError
+                    if provider_load_failure
+                    else self.renderer.DossierValidationError
                 )
-            self.assertNotIn(sentinel, str(raised.exception))
-            self.assertFalse(writer_output.exists())
+                writer_output = root / "writer.html"
+                with self.assertRaises(expected_writer_type) as raised:
+                    self.renderer.write_dossier_html(
+                        paths["dossier"],
+                        writer_output,
+                        market_dossier_path=paths["market_dossier"],
+                        market_research_path=paths["market_research"],
+                        learning_decision_path=paths["learning_decision"],
+                        provider_research_path=paths["provider_research"],
+                    )
+                self.assertIs(type(raised.exception), expected_writer_type)
+                if provider_load_failure:
+                    self.assertEqual(
+                        "cannot load provider research input", str(raised.exception)
+                    )
+                    expected_stderr = "cannot load provider research input\n"
+                else:
+                    self.assertEqual(expected_errors, raised.exception.errors)
+                    self.assertEqual("dossier validation failed", str(raised.exception))
+                    expected_stderr = "\n".join(expected_errors) + "\n"
+                self.assertNotIn(sentinel, str(raised.exception))
+                self.assertFalse(writer_output.exists())
 
-            cli_output = root / "cli.html"
-            result = subprocess.run(
-                [
-                    sys.executable,
-                    "-B",
-                    str(RENDERER_PATH),
-                    str(paths["dossier"]),
-                    "--market-dossier",
-                    str(paths["market_dossier"]),
-                    "--market-research",
-                    str(paths["market_research"]),
-                    "--learning-decision",
-                    str(paths["learning_decision"]),
-                    "--provider-research",
-                    str(paths["provider_research"]),
-                    "--output",
-                    str(cli_output),
-                ],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=20,
-            )
-            self.assertEqual(2, result.returncode)
-            self.assertNotIn(sentinel, result.stderr)
-            self.assertNotIn("Traceback", result.stderr)
-            self.assertFalse(cli_output.exists())
+                cli_output = root / "cli.html"
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        "-B",
+                        str(RENDERER_PATH),
+                        str(paths["dossier"]),
+                        "--market-dossier",
+                        str(paths["market_dossier"]),
+                        "--market-research",
+                        str(paths["market_research"]),
+                        "--learning-decision",
+                        str(paths["learning_decision"]),
+                        "--provider-research",
+                        str(paths["provider_research"]),
+                        "--output",
+                        str(cli_output),
+                    ],
+                    cwd=REPO_ROOT,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=20,
+                )
+                self.assertEqual(2, result.returncode)
+                self.assertEqual("", result.stdout)
+                self.assertEqual(expected_stderr, result.stderr)
+                self.assertNotIn(sentinel, result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
+                self.assertFalse(cli_output.exists())
 
     def test_localized_ledger_has_one_named_region_and_exact_semantic_rows(self) -> None:
         expected_labels = {
