@@ -1318,13 +1318,34 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                         "</section>", region.index(marker)
                     )
                 ]
+                relation_list = re.search(r"<ul>(.*?)</ul>", relation_group, re.DOTALL)
+                self.assertIsNotNone(relation_list)
+                assert relation_list is not None
+                empty_list_with_siblings = relation_group.replace(
+                    f"<ul>{relation_list.group(1)}</ul>",
+                    f"<ul></ul>{relation_list.group(1)}",
+                    1,
+                )
+                empty_list = re.search(
+                    r"<ul>(.*?)</ul>", empty_list_with_siblings, re.DOTALL
+                )
+                self.assertIsNotNone(empty_list)
+                assert empty_list is not None
+                self.assertEqual(
+                    [],
+                    re.findall(
+                        r'<li class="weekly-decision-relation">(.*?)</li>',
+                        empty_list.group(1),
+                        re.DOTALL,
+                    ),
+                )
                 self.assertEqual(
                     list(labels),
                     [
                         html.unescape(text)
                         for text in re.findall(
                             r'<li class="weekly-decision-relation">(.*?)</li>',
-                            relation_group,
+                            relation_list.group(1),
                             re.DOTALL,
                         )
                     ],
