@@ -323,6 +323,9 @@ class FullPluginIntegrationTests(unittest.TestCase):
             "stale-plugin-tree": {**values, "source_tree": "e" * 40},
             "stale-version": {**values, "installed_cache_version": "0.2.0+codex.20260821000000"},
             "count-mismatch": {**values, "installed_file_count": "146"},
+            "stale-import-boundary": {
+                **values, "installed_import_boundary": "exact_cache_root_only"
+            },
             "digest-mismatch": {**values, "cache_aggregate_sha256": "d" * 64},
             "wrong-equal-aggregates": {
                 **values,

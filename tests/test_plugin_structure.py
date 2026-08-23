@@ -227,6 +227,12 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
             self.assertNotIn(str(source), str(caught.exception))
 
             (source / "escape.txt").unlink()
+            os.mkfifo(source / "pipe")
+            with self.assertRaisesRegex(smoke.InstalledSmokeError, "installed smoke failed") as caught:
+                with smoke.capture_verified_private_snapshots(source, cache):
+                    pass
+            self.assertNotIn(str(source), str(caught.exception))
+            (source / "pipe").unlink()
             original_inventory = smoke._snapshot_inventory
 
             def drifting_inventory(plugin: Path):
@@ -243,6 +249,21 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
             finally:
                 smoke._snapshot_inventory = original_inventory
             self.assertNotIn(str(source), str(caught.exception))
+
+    def test_installed_module_syntax_error_is_generic(self) -> None:
+        """Break caught: product SyntaxError escapes the generic import boundary."""
+
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_syntax_generic")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            plugin = Path(temporary_directory) / "private-plugin"
+            scripts = plugin / "scripts"
+            scripts.mkdir(parents=True)
+            (scripts / "broken.py").write_text("def broken(:\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                smoke.InstalledSmokeError, "installed smoke import boundary failed"
+            ) as caught:
+                smoke.load_installed_product_modules(plugin, ("broken",))
+        self.assertNotIn(str(plugin), str(caught.exception))
 
     def test_run_smokes_routes_imports_reads_and_static_subprocess_to_snapshot(self) -> None:
         """Break caught: semantic execution reopening a mutable supplied cache root."""

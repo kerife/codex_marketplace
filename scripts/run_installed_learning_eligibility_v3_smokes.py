@@ -424,7 +424,7 @@ def load_installed_product_modules(
                 ):
                     raise InstalledSmokeError
         return loaded
-    except (ImportError, OSError, RuntimeError, TypeError, ValueError):
+    except Exception:
         raise InstalledSmokeError("installed smoke import boundary failed") from None
     finally:
         sys.path[:] = previous_path
@@ -1266,6 +1266,7 @@ def run_installed_semantic_matrix(
             result = subprocess.run(
                 [
                     sys.executable,
+                    "-I",
                     "-B",
                     str(plugin_root / "scripts/render_executive_career_dossier_v2.py"),
                     str(paths["dossier"]),
@@ -1285,7 +1286,7 @@ def run_installed_semantic_matrix(
                 text=True,
                 check=False,
                 timeout=60,
-                env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+                env={"PATH": os.defpath, "PYTHONDONTWRITEBYTECODE": "1"},
             )
             cli_output_rejected = (
                 result.returncode == 2
@@ -1375,7 +1376,7 @@ def run_installed_semantic_matrix(
             ("cli_output", "invalid_group_leaves_no_output", cli_output_rejected),
         )
         return _semantic_matrix_receipt(accepted_matrix, rejected_matrix)
-    except (InstalledSmokeError, OSError, RuntimeError, TypeError, ValueError, subprocess.TimeoutExpired):
+    except Exception:
         raise InstalledSmokeError("installed semantic smoke matrix failed") from None
 
 
@@ -1468,8 +1469,7 @@ def run_smokes(plugin_root: Path, source_archive: Path) -> dict[str, object]:
                 if schema.get("type") != "object" or schema.get("additionalProperties") is not False:
                     raise InstalledSmokeError
 
-            environment = dict(os.environ)
-            environment["PYTHONDONTWRITEBYTECODE"] = "1"
+            environment = {"PATH": os.defpath, "PYTHONDONTWRITEBYTECODE": "1"}
             static = subprocess.run(
                 [sys.executable, "-B", str(plugin_snapshot / "tests" / "run_static_checks.py")],
                 cwd=plugin_snapshot,
@@ -1485,7 +1485,7 @@ def run_smokes(plugin_root: Path, source_archive: Path) -> dict[str, object]:
                 raise InstalledSmokeError
             semantic = run_installed_semantic_matrix(plugin_snapshot, modules)
             return compose_installed_smoke_receipt(parity, semantic)
-    except (InstalledSmokeError, OSError, RuntimeError, TypeError, ValueError, json.JSONDecodeError):
+    except Exception:
         raise InstalledSmokeError("installed smoke failed") from None
 
 
