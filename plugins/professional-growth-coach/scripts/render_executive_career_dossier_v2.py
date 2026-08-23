@@ -1325,7 +1325,7 @@ def _render_weekly_decision_card(
             '<p id="weekly-decision-selection-help" '
             'class="weekly-decision-selection-help">'
             f'{help_intro}<a href="#market-vacancy-key-title">{vacancy_key}</a>'
-            f'{help_join}<a href="#market-matrix-title">{signal_matrix}.</a></p>'
+            f'{help_join}<a href="#market-matrix-title">{signal_matrix}</a>.</p>'
         )
         described_by = (
             "weekly-decision-evidence weekly-decision-selection-help "

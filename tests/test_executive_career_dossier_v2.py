@@ -1278,6 +1278,42 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
     def test_v3_selection_required_links_one_localized_help_to_market_choices(
         self,
     ) -> None:
+        class SelectionHelpLinkParser(HTMLParser):
+            def __init__(self) -> None:
+                super().__init__()
+                self.links: list[tuple[str, str]] = []
+                self.text: list[str] = []
+                self._in_help = False
+                self._href: str | None = None
+                self._text: list[str] = []
+
+            def handle_starttag(
+                self, tag: str, attrs: list[tuple[str, str | None]]
+            ) -> None:
+                values = dict(attrs)
+                if tag == "p" and values.get("id") == "weekly-decision-selection-help":
+                    self._in_help = True
+                elif self._in_help and tag == "a":
+                    href = values.get("href")
+                    if href is None:
+                        raise AssertionError("selection help link must have an href")
+                    self._href = href
+                    self._text = []
+
+            def handle_data(self, data: str) -> None:
+                if self._in_help:
+                    self.text.append(data)
+                if self._href is not None:
+                    self._text.append(data)
+
+            def handle_endtag(self, tag: str) -> None:
+                if tag == "a" and self._href is not None:
+                    self.links.append(("".join(self._text).strip(), self._href))
+                    self._href = None
+                    self._text = []
+                elif tag == "p" and self._in_help:
+                    self._in_help = False
+
         expected_help = {
             "es": (
                 "Formato de selección: Vn + señal.",
@@ -1286,6 +1322,16 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
             "en": (
                 "Selection format: Vn + signal.",
                 "Review the vacancy key and signal matrix.",
+            ),
+        }
+        expected_links = {
+            "es": (
+                ("clave de vacantes", "#market-vacancy-key-title"),
+                ("matriz de señales", "#market-matrix-title"),
+            ),
+            "en": (
+                ("vacancy key", "#market-vacancy-key-title"),
+                ("signal matrix", "#market-matrix-title"),
             ),
         }
         for locale in ("es", "en"):
@@ -1300,9 +1346,12 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                         continue
 
                     region = weekly_decision_region(rendered)
-                    text = visible_text(region)
+                    links = SelectionHelpLinkParser()
+                    links.feed(region)
+                    help_text = " ".join("".join(links.text).split())
                     for expected in expected_help[locale]:
-                        self.assertIn(expected, text)
+                        self.assertIn(expected, help_text)
+                    self.assertEqual(expected_links[locale], tuple(links.links))
                     self.assertIn(
                         'aria-describedby="weekly-decision-evidence '
                         'weekly-decision-selection-help weekly-decision-boundary"',
