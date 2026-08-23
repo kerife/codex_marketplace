@@ -52,6 +52,6 @@
 
 - Source: `plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py` and `plugins/professional-growth-coach/assets/career-learning-eligibility-v1.css`.
 - Category: composed v3 subcomponent.
-- Description: one full-width, non-interactive weekly decision after the condensed market summary. It presents a public vacancy/signal, exact evidence statement, one action, one deliverable, one done-when, and the fixed outcome/no-action boundary.
+- Description: one full-width, non-interactive weekly decision after the condensed market summary. It presents a public vacancy/signal, exact evidence statement, one action, one deliverable, one done-when, and the fixed outcome/no-action boundary. The `gap_unknown` variant inserts the fixed localized relation list after evidence and before the action.
 - Extractable props: validated eligibility public projection, validated public market vacancies, and locale; provider-selection state includes the complete non-ranked L1–Ln choice list.
-- Hardcoded: unavailable renders no card; no forms, buttons, external links, internal IDs, snapshots, URLs, source prose, raw enums, or caller-authored recommendation text. Only `selection_required` renders exactly two internal navigation links, to the vacancy key and signal matrix.
+- Hardcoded: unavailable renders no card; no forms, buttons, external links, internal IDs, snapshots, URLs, source prose, raw enums, or caller-authored recommendation text. The relation list is rendered only for `insufficient_gap_evidence` + `unknown` + `confirm_gap_relation`, is labelled by its own stable heading, and is not card description text. Only `selection_required` renders exactly two internal navigation links, to the vacancy key and signal matrix.

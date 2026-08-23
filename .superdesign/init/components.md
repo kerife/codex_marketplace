@@ -41,6 +41,6 @@ The exact HTML templates and CSS implementation are included in `layouts.md` and
 ## WeeklyDecision
 
 - Sources: `plugins/professional-growth-coach/schemas/career-next-action-eligibility-v1.schema.json`, `plugins/professional-growth-coach/schemas/career-learning-decision-v3.schema.json`, `plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py`, and `plugins/professional-growth-coach/assets/career-learning-eligibility-v1.css`.
-- Description: the sole primary weekly imperative inside Decide now, after the market summary and before the later detailed learning surface. The read-only inspection authorization remains a separate visibly secondary card.
+- Description: the sole primary weekly imperative inside Decide now, after the market summary and before the later detailed learning surface. The read-only inspection authorization remains a separate visibly secondary card. The `gap_unknown` variant adds a localized, non-interactive seven-relation unordered group after evidence and before that existing action.
 - Inputs: one source-recomputed eligibility artifact plus validated public market projection; v3 response, assessment, eligibility, and learning are all-or-none.
-- Privacy boundary: only public Vn/Ln ordinals and escaped public labels render. No internal ID, snapshot, URL, source prose, raw enum, control, or external link is exposed.
+- Privacy boundary: only public Vn/Ln ordinals and escaped public labels render. No internal ID, snapshot, URL, source prose, raw enum, control, or external link is exposed; the relation group is fixed localized copy rather than a response control.

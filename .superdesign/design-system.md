@@ -114,4 +114,8 @@ vacancy key and signal matrix; the card has no external links or controls.
 Provider-selection state renders the complete non-ranked L1–Ln list. The card
 uses stable labelled/described relationships, one-column mobile wrapping,
 atomic print rules, dark tokens, forced system colors, and reduced-motion-safe
-static content. visual QA not run; deterministic DOM/CSS contract only.
+static content. For `insufficient_gap_evidence` with the `unknown` relation and
+the `confirm_gap_relation` action only, a non-interactive unordered relation
+group follows the evidence statement and precedes the existing action. Its
+localized heading is the group's stable accessible label; it is not added to
+the card description. visual QA not run; deterministic DOM/CSS contract only.

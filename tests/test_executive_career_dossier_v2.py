@@ -1249,6 +1249,120 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
         ):
             self.assertIn(public_value, complete_region)
 
+    def test_v3_gap_unknown_lists_the_closed_relation_choices_only(self) -> None:
+        """Break caught: omitting, reordering, or exposing a raw relation choice."""
+        expected = {
+            "es": (
+                "Elige una relación",
+                (
+                    "Ya puedo respaldarla con evidencia",
+                    "Me falta evidencia práctica",
+                    "Me falta conocimiento",
+                    "Me falta práctica",
+                    "Me falta experiencia profesional o de producción",
+                    "Sólo me falta la terminología",
+                    "Todavía no puedo evaluarlo",
+                ),
+            ),
+            "en": (
+                "Choose one relation",
+                (
+                    "I can already support it with evidence",
+                    "I lack practical proof",
+                    "I lack knowledge",
+                    "I lack practice",
+                    "I lack professional or production experience",
+                    "I only lack the terminology",
+                    "I cannot assess it yet",
+                ),
+            ),
+        }
+        raw_relations = (
+            "supported",
+            "proof_gap",
+            "knowledge_gap",
+            "practice_gap",
+            "professional_experience_gap",
+            "terminology_gap",
+            "unknown",
+        )
+        marker = 'class="weekly-decision-relations"'
+        for locale, (heading, labels) in expected.items():
+            with self.subTest(locale=locale, condition="gap_unknown"):
+                sources, eligibility = eligibility_v3_case("gap_unknown", locale)
+                region = self.renderer._render_weekly_decision_card(
+                    eligibility, sources["market_dossier"], locale
+                )
+                self.assertIn(
+                    '<section class="weekly-decision-relations" '
+                    'aria-labelledby="weekly-decision-relations-title">',
+                    region,
+                )
+                self.assertIn(
+                    f'<h4 id="weekly-decision-relations-title">{heading}</h4>',
+                    region,
+                )
+                self.assertEqual(7, region.count('class="weekly-decision-relation"'))
+                self.assertLess(
+                    region.index('id="weekly-decision-evidence"'),
+                    region.index(marker),
+                )
+                self.assertLess(
+                    region.index(marker),
+                    region.index('class="weekly-decision-action"'),
+                )
+                relation_group = region[
+                    region.index(marker) : region.index(
+                        "</section>", region.index(marker)
+                    )
+                ]
+                for label in labels:
+                    self.assertIn(label, visible_text(region))
+                self.assertEqual(
+                    list(labels),
+                    sorted(labels, key=region.index),
+                )
+                self.assertEqual(1, region.count('class="weekly-decision-action"'))
+                self.assertIn(
+                    'aria-describedby="weekly-decision-evidence '
+                    'weekly-decision-boundary"',
+                    region,
+                )
+                for forbidden in raw_relations:
+                    self.assertNotIn(forbidden, relation_group)
+                for forbidden in (
+                    "<a ",
+                    "<button",
+                    "<form",
+                    "<input",
+                    "<select",
+                    "<textarea",
+                ):
+                    self.assertNotIn(forbidden, region)
+
+            for condition in ELIGIBILITY_V3_CASES:
+                if condition == "gap_unknown":
+                    continue
+                with self.subTest(locale=locale, condition=condition):
+                    sources, eligibility = eligibility_v3_case(condition, locale)
+                    region = self.renderer._render_weekly_decision_card(
+                        eligibility, sources["market_dossier"], locale
+                    )
+                    self.assertNotIn(marker, region)
+                    if condition == "selection_required":
+                        self.assertIn(
+                            'aria-describedby="weekly-decision-evidence '
+                            'weekly-decision-selection-help '
+                            'weekly-decision-boundary"',
+                            region,
+                        )
+                        self.assertEqual(
+                            1, region.count('href="#market-vacancy-key-title"')
+                        )
+                        self.assertEqual(
+                            1, region.count('href="#market-matrix-title"')
+                        )
+
     def test_v3_every_state_has_exact_es_en_copy_and_one_primary_action(self) -> None:
         for locale in ("es", "en"):
             for condition in ELIGIBILITY_V3_CASES:

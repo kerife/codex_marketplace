@@ -368,6 +368,16 @@ WEEKLY_COPY = {
         "signal": "Señal",
         "recurrence": "Recurrencia",
         "choices": "Opciones oficiales verificadas (orden estable, no es una clasificación)",
+        "relations_heading": "Elige una relación",
+        "relations": (
+            "Ya puedo respaldarla con evidencia",
+            "Me falta evidencia práctica",
+            "Me falta conocimiento",
+            "Me falta práctica",
+            "Me falta experiencia profesional o de producción",
+            "Sólo me falta la terminología",
+            "Todavía no puedo evaluarlo",
+        ),
         "action": "Siguiente acción",
         "deliverable": "Entregable privado",
         "done_when": "Listo cuando",
@@ -384,6 +394,16 @@ WEEKLY_COPY = {
         "signal": "Signal",
         "recurrence": "Recurrence",
         "choices": "Verified official choices (stable order, not ranked)",
+        "relations_heading": "Choose one relation",
+        "relations": (
+            "I can already support it with evidence",
+            "I lack practical proof",
+            "I lack knowledge",
+            "I lack practice",
+            "I lack professional or production experience",
+            "I only lack the terminology",
+            "I cannot assess it yet",
+        ),
         "action": "Next action",
         "deliverable": "Private deliverable",
         "done_when": "Done when",
@@ -1331,6 +1351,22 @@ def _render_weekly_decision_card(
             "weekly-decision-evidence weekly-decision-selection-help "
             "weekly-decision-boundary"
         )
+    relations_markup = ""
+    if (
+        eligibility.get("state") == "insufficient_gap_evidence"
+        and eligibility.get("candidate_relation") == "unknown"
+        and action == "confirm_gap_relation"
+    ):
+        relation_items = "".join(
+            f'<li class="weekly-decision-relation">{relation}</li>'
+            for relation in labels["relations"]
+        )
+        relations_markup = (
+            '<section class="weekly-decision-relations" '
+            'aria-labelledby="weekly-decision-relations-title">'
+            f'<h4 id="weekly-decision-relations-title">'
+            f'{labels["relations_heading"]}</h4><ul>{relation_items}</ul></section>'
+        )
     boundary = ELIGIBILITY_BUILDER.COPY[locale]["boundaries"][
         "not_an_interview_offer_salary_or_hiring_prediction"
     ]
@@ -1341,6 +1377,7 @@ def _render_weekly_decision_card(
           {choices_markup}
           <p id="weekly-decision-evidence" class="weekly-decision-evidence">{statement}</p>
           {selection_help_markup}
+          {relations_markup}
           <div class="weekly-decision-action">
             <p><span class="weekly-decision-label">{labels['action']}</span><strong>{html.escape(str(action_copy['label']), quote=True)}</strong></p>
             <p><span class="weekly-decision-label">{labels['deliverable']}</span>{html.escape(str(eligibility['private_deliverable']), quote=True)}</p>
