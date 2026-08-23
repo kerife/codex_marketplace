@@ -1318,11 +1318,16 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                         "</section>", region.index(marker)
                     )
                 ]
-                for label in labels:
-                    self.assertIn(label, visible_text(region))
                 self.assertEqual(
                     list(labels),
-                    sorted(labels, key=region.index),
+                    [
+                        html.unescape(text)
+                        for text in re.findall(
+                            r'<li class="weekly-decision-relation">(.*?)</li>',
+                            relation_group,
+                            re.DOTALL,
+                        )
+                    ],
                 )
                 self.assertEqual(1, region.count('class="weekly-decision-action"'))
                 self.assertIn(
@@ -1332,6 +1337,18 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 )
                 for forbidden in raw_relations:
                     self.assertNotIn(forbidden, relation_group)
+                private_values = (
+                    str(eligibility["selected_vacancy_id"]),
+                    str(eligibility["source_alignment_snapshot"]),
+                    str(sources["research"]["vacancies"][1]["source_url"]),
+                    str(
+                        sources["research"]["vacancies"][1]["requirements"][0][
+                            "source_paraphrase"
+                        ]
+                    ),
+                )
+                for private_value in private_values:
+                    self.assertNotIn(private_value, region)
                 for forbidden in (
                     "<a ",
                     "<button",
