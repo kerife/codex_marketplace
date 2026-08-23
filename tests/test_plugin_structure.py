@@ -265,6 +265,219 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
                 smoke.load_installed_product_modules(plugin, ("broken",))
         self.assertNotIn(str(plugin), str(caught.exception))
 
+    def test_installed_import_boundary_rejects_prior_path_preload_and_namespace_escape(self) -> None:
+        """Break caught: controller import state supplies non-snapshot dependencies."""
+
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_import_escape")
+        previous_path = list(sys.path)
+        previous_modules = dict(sys.modules)
+        try:
+            with tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                plugin = root / "plugin"
+                scripts = plugin / "scripts"
+                external = root / "external"
+                scripts.mkdir(parents=True)
+                external.mkdir()
+                (external / "path_dependency.py").write_text(
+                    "VALUE = 'outside-path'\n", encoding="utf-8"
+                )
+                (scripts / "path_escape.py").write_text(
+                    "from path_dependency import VALUE\n", encoding="utf-8"
+                )
+                (scripts / "preloaded_escape.py").write_text(
+                    "from external import VALUE\n", encoding="utf-8"
+                )
+                (scripts / "namespace_escape.py").write_text(
+                    "import importlib.machinery\n"
+                    "import sys\n"
+                    "import types\n"
+                    "namespace = types.ModuleType('external_namespace')\n"
+                    f"namespace.__path__ = [{str(external)!r}]\n"
+                    "namespace.__spec__ = importlib.machinery.ModuleSpec(\n"
+                    "    'external_namespace', loader=None, is_package=True\n"
+                    ")\n"
+                    f"namespace.__spec__.submodule_search_locations = [{str(external)!r}]\n"
+                    "sys.modules['external_namespace'] = namespace\n",
+                    encoding="utf-8",
+                )
+                sys.path.insert(0, str(external))
+                preloaded = type(sys)("external")
+                preloaded.VALUE = "outside-preload"
+                preloaded.__file__ = str(external / "external.py")
+                sys.modules["external"] = preloaded
+
+                for module_name in (
+                    "path_escape",
+                    "preloaded_escape",
+                    "namespace_escape",
+                ):
+                    with self.subTest(module=module_name):
+                        with self.assertRaisesRegex(
+                            smoke.InstalledSmokeError,
+                            "installed smoke import boundary failed",
+                        ) as caught:
+                            smoke.load_installed_product_modules(
+                                plugin, (module_name,)
+                            )
+                        self.assertNotIn(str(root), str(caught.exception))
+        finally:
+            sys.path[:] = previous_path
+            sys.modules.clear()
+            sys.modules.update(previous_modules)
+
+    def test_installed_import_boundary_allows_stdlib_and_locked_site_packages(self) -> None:
+        """Break caught: isolation drops stdlib or the locked environment's site path."""
+
+        if importlib.util.find_spec("yaml") is None:
+            self.skipTest("locked PyYAML is unavailable in this interpreter")
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_import_runtime")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            plugin = Path(temporary_directory) / "plugin"
+            scripts = plugin / "scripts"
+            scripts.mkdir(parents=True)
+            (scripts / "runtime_dependency.py").write_text(
+                "import json\n"
+                "import yaml\n"
+                "VALUE = json.loads('{\"answer\": 42}')[\"answer\"]\n"
+                "YAML_VALUE = yaml.safe_load('answer: 42')[\"answer\"]\n",
+                encoding="utf-8",
+            )
+            module = smoke.load_installed_product_modules(
+                plugin, ("runtime_dependency",)
+            )["runtime_dependency"]
+
+        self.assertEqual(42, module.VALUE)
+        self.assertEqual(42, module.YAML_VALUE)
+
+    def test_installed_loader_restores_controller_import_state_after_success_and_error(self) -> None:
+        """Break caught: a direct loader call leaks or replaces controller import state."""
+
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_import_restore")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            plugin = Path(temporary_directory) / "plugin"
+            scripts = plugin / "scripts"
+            scripts.mkdir(parents=True)
+            (scripts / "success.py").write_text(
+                "import fractions\nVALUE = fractions.Fraction(1, 2)\n",
+                encoding="utf-8",
+            )
+            (scripts / "failure.py").write_text(
+                "import unavailable_snapshot_dependency\n", encoding="utf-8"
+            )
+            for module_name, fails in (("success", False), ("failure", True)):
+                with self.subTest(module=module_name):
+                    previous_path = list(sys.path)
+                    previous_modules = tuple(sys.modules.items())
+                    if fails:
+                        with self.assertRaisesRegex(
+                            smoke.InstalledSmokeError,
+                            "installed smoke import boundary failed",
+                        ):
+                            smoke.load_installed_product_modules(
+                                plugin, (module_name,)
+                            )
+                    else:
+                        loaded = smoke.load_installed_product_modules(
+                            plugin, (module_name,)
+                        )
+                        self.assertEqual("1/2", str(loaded[module_name].VALUE))
+                    self.assertEqual(previous_path, sys.path)
+                    current_modules = tuple(sys.modules.items())
+                    self.assertEqual(
+                        tuple(name for name, _ in previous_modules),
+                        tuple(name for name, _ in current_modules),
+                    )
+                    self.assertTrue(
+                        all(
+                            previous is current
+                            for (_, previous), (_, current) in zip(
+                                previous_modules, current_modules, strict=True
+                            )
+                        )
+                    )
+
+    def test_run_smokes_keeps_lazy_import_isolated_and_restores_controller_state(self) -> None:
+        """Break caught: a post-load lazy import escapes during semantic execution."""
+
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_lazy_import")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source"
+            cache = root / "cache"
+            external = root / "external"
+            external.mkdir()
+            (external / "external.py").write_text(
+                "VALUE = 'outside-lazy'\n", encoding="utf-8"
+            )
+            for plugin in (source, cache):
+                shutil.copytree(
+                    PLUGIN_ROOT,
+                    plugin,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+                )
+                with (plugin / "scripts" / "semantic_provenance_snapshot.py").open(
+                    "a", encoding="utf-8"
+                ) as stream:
+                    stream.write(
+                        "\ndef load_external_value():\n"
+                        "    from external import VALUE\n"
+                        "    return VALUE\n"
+                    )
+
+            original_matrix = smoke.run_installed_semantic_matrix
+            original_subprocess = smoke.subprocess.run
+            previous_path = list(sys.path)
+            previous_modules = tuple(sys.modules.items())
+
+            def semantic(snapshot_root: Path, modules: dict[str, object]):
+                modules["semantic_provenance_snapshot"].load_external_value()
+                return {
+                    "matrix_version": "vacancy-first-installed-smoke-v1",
+                    "accepted": 39,
+                    "rejected": 9,
+                    "accepted_cases": tuple(),
+                    "rejected_cases": tuple(),
+                    "accepted_groups": tuple(),
+                    "rejected_groups": tuple(),
+                }
+
+            def static_subprocess(*args, **kwargs):
+                return subprocess.CompletedProcess(
+                    args[0], 0, stdout="repository conformance not bundled\n", stderr=""
+                )
+
+            sys.path.insert(0, str(external))
+            expected_path = list(sys.path)
+            expected_modules = tuple(sys.modules.items())
+            smoke.run_installed_semantic_matrix = semantic
+            smoke.subprocess.run = static_subprocess
+            try:
+                with self.assertRaisesRegex(
+                    smoke.InstalledSmokeError, "installed smoke failed"
+                ):
+                    smoke.run_smokes(cache, source)
+                self.assertEqual(expected_path, sys.path)
+                current_modules = tuple(sys.modules.items())
+                self.assertEqual(
+                    tuple(name for name, _ in expected_modules),
+                    tuple(name for name, _ in current_modules),
+                )
+                self.assertTrue(
+                    all(
+                        previous is current
+                        for (_, previous), (_, current) in zip(
+                            expected_modules, current_modules, strict=True
+                        )
+                    )
+                )
+            finally:
+                smoke.run_installed_semantic_matrix = original_matrix
+                smoke.subprocess.run = original_subprocess
+                sys.path[:] = previous_path
+                sys.modules.clear()
+                sys.modules.update(dict(previous_modules))
+
     def test_run_smokes_routes_imports_reads_and_static_subprocess_to_snapshot(self) -> None:
         """Break caught: semantic execution reopening a mutable supplied cache root."""
 
@@ -279,6 +492,8 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
             original_matrix = smoke.run_installed_semantic_matrix
             original_subprocess = smoke.subprocess.run
             observed: dict[str, object] = {}
+            previous_path = list(sys.path)
+            previous_modules = tuple(sys.modules.items())
 
             @contextmanager
             def mutate_after_capture(source_root: Path, cache_root: Path):
@@ -312,6 +527,8 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
 
             def static_subprocess(*args, **kwargs):
                 observed["static_cwd"] = kwargs["cwd"]
+                observed["static_command"] = args[0]
+                observed["static_environment"] = kwargs["env"]
                 return original_subprocess(*args, **kwargs)
 
             smoke.capture_verified_private_snapshots = mutate_after_capture
@@ -327,6 +544,27 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
         self.assertEqual(39, receipt["accepted"])
         self.assertEqual("vacancy-first-smoke-sources-v1", observed["source_schema"])
         self.assertEqual(observed["semantic_root"], observed["static_cwd"])
+        self.assertEqual(sys.executable, observed["static_command"][0])
+        self.assertEqual(["-I", "-B"], observed["static_command"][1:3])
+        self.assertEqual(
+            {"PATH": os.defpath, "PYTHONDONTWRITEBYTECODE": "1"},
+            observed["static_environment"],
+        )
+        self.assertNotIn("PYTHONPATH", observed["static_environment"])
+        self.assertEqual(previous_path, sys.path)
+        current_modules = tuple(sys.modules.items())
+        self.assertEqual(
+            tuple(name for name, _ in previous_modules),
+            tuple(name for name, _ in current_modules),
+        )
+        self.assertTrue(
+            all(
+                previous is current
+                for (_, previous), (_, current) in zip(
+                    previous_modules, current_modules, strict=True
+                )
+            )
+        )
 
     def test_exact_installed_cache_resolver_accepts_only_one_enabled_matching_row(self) -> None:
         helper = load_repo_script(INSTALLED_RELEASE_HELPER_PATH, "installed_release_helper")
@@ -486,7 +724,18 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
     def test_installed_smoke_runs_complete_semantic_matrix_from_installed_root(self) -> None:
         smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_smoke_matrix")
         modules = smoke.load_installed_product_modules(PLUGIN_ROOT)
-        receipt = smoke.run_installed_semantic_matrix(PLUGIN_ROOT, modules)
+        original_subprocess = smoke.subprocess.run
+        renderer_calls: list[tuple[list[str], dict[str, str]]] = []
+
+        def renderer_subprocess(*args, **kwargs):
+            renderer_calls.append((args[0], kwargs["env"]))
+            return original_subprocess(*args, **kwargs)
+
+        smoke.subprocess.run = renderer_subprocess
+        try:
+            receipt = smoke.run_installed_semantic_matrix(PLUGIN_ROOT, modules)
+        finally:
+            smoke.subprocess.run = original_subprocess
         self.assertEqual("vacancy-first-installed-smoke-v1", receipt["matrix_version"])
         self.assertEqual(39, receipt["accepted"])
         self.assertEqual(9, receipt["rejected"])
@@ -530,6 +779,15 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
             ),
             tuple(receipt["rejected_groups"]),
         )
+        self.assertEqual(1, len(renderer_calls))
+        renderer_command, renderer_environment = renderer_calls[0]
+        self.assertEqual(sys.executable, renderer_command[0])
+        self.assertEqual(["-I", "-B"], renderer_command[1:3])
+        self.assertEqual(
+            {"PATH": os.defpath, "PYTHONDONTWRITEBYTECODE": "1"},
+            renderer_environment,
+        )
+        self.assertNotIn("PYTHONPATH", renderer_environment)
 
     def test_installed_smoke_recomputes_pinned_historical_render_bytes(self) -> None:
         smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_smoke_history")

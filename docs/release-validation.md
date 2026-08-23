@@ -119,9 +119,15 @@ directories are private and copied files are not hardlinked. This protects the
 release evidence against ordinary concurrent cache updates; it does not claim
 isolation from an active malicious process running under the same UID. Every
 imported semantic module must resolve below that snapshot root; mutable
-checkout imports fail closed. Installed static checks must state `repository
-conformance not bundled` rather than turning absent repository fixtures into a
-full-suite pass. The final attestation records archive/cache counts and
-aggregate digests, accepted and rejected smokes, no-echo/atomicity,
-repository-only scope, external actions not executed, and `visual QA not run`
-unless empirical browser evidence exists.
+checkout imports fail closed. During module loading and the complete semantic
+run, controller import paths are limited to the snapshot scripts plus the
+interpreter's resolved standard-library and locked site-package roots;
+untrusted preloaded modules and namespace search locations fail closed, and the
+prior controller import state is restored. Static and renderer children use
+isolated interpreter mode with a minimal environment that does not carry
+`PYTHONPATH`. Installed static checks must state `repository conformance not
+bundled` rather than turning absent repository fixtures into a full-suite pass.
+The final attestation records archive/cache counts and aggregate digests,
+accepted and rejected smokes, no-echo/atomicity, repository-only scope,
+external actions not executed, and `visual QA not run` unless empirical browser
+evidence exists.

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import importlib.machinery
 import importlib.util
 import json
 import os
@@ -13,6 +14,7 @@ import re
 import stat
 import subprocess
 import sys
+import sysconfig
 import tempfile
 from collections.abc import Mapping
 from contextlib import contextmanager
@@ -353,15 +355,164 @@ def _descendant(path: object, root: Path) -> bool:
         return False
 
 
+_RUNTIME_PATH_KEYS = ("stdlib", "platstdlib", "purelib", "platlib")
+_SPECIAL_MODULE_ORIGINS = frozenset({"built-in", "frozen"})
+_CYTHON_RUNTIME_MODULE_PATTERN = re.compile(
+    r"(?:cython_runtime|_cython_[0-9]+_[0-9]+_[0-9]+)"
+)
+
+
+def _resolved_runtime_roots() -> tuple[Path, ...]:
+    roots: list[Path] = []
+    for key in _RUNTIME_PATH_KEYS:
+        value = sysconfig.get_paths().get(key)
+        try:
+            root = Path(value).resolve(strict=True)
+        except (OSError, TypeError, ValueError):
+            continue
+        if root.is_dir() and root not in roots:
+            roots.append(root)
+    if not roots:
+        raise InstalledSmokeError("installed smoke import boundary failed")
+    return tuple(roots)
+
+
+def _trusted_import_path(value: object, roots: tuple[Path, ...]) -> bool:
+    try:
+        path = Path(os.fspath(value)).resolve(strict=True)
+        return any(path.is_relative_to(root) for root in roots)
+    except (OSError, TypeError, ValueError):
+        return False
+
+
+def _trusted_module(
+    module: object, snapshot_root: Path, runtime_roots: tuple[Path, ...]
+) -> bool:
+    if module is None:
+        return True
+    if not isinstance(module, ModuleType):
+        return False
+    trusted_roots = (snapshot_root, *runtime_roots)
+    specification = getattr(module, "__spec__", None)
+    origin = getattr(specification, "origin", None)
+    special_origin = origin in _SPECIAL_MODULE_ORIGINS
+    concrete_origins = []
+    for value in (getattr(module, "__file__", None), origin):
+        if value is not None and value not in _SPECIAL_MODULE_ORIGINS:
+            concrete_origins.append(value)
+    if concrete_origins and not all(
+        _trusted_import_path(value, trusted_roots) for value in concrete_origins
+    ):
+        return False
+
+    location_groups = (
+        getattr(module, "__path__", None),
+        getattr(specification, "submodule_search_locations", None),
+    )
+    has_locations = False
+    try:
+        for locations in location_groups:
+            if locations is None:
+                continue
+            has_locations = True
+            if not all(
+                _trusted_import_path(location, trusted_roots)
+                for location in locations
+            ):
+                return False
+    except (RuntimeError, TypeError, ValueError):
+        return False
+    return special_origin or bool(concrete_origins) or has_locations
+
+
+def _trusted_extension_module(
+    module: object, snapshot_root: Path, runtime_roots: tuple[Path, ...]
+) -> bool:
+    specification = getattr(module, "__spec__", None)
+    origin = getattr(specification, "origin", None)
+    return (
+        isinstance(origin, str)
+        and any(
+            origin.endswith(suffix)
+            for suffix in importlib.machinery.EXTENSION_SUFFIXES
+        )
+        and _trusted_import_path(origin, (snapshot_root, *runtime_roots))
+    )
+
+
+@contextmanager
+def isolated_snapshot_imports(plugin_root: Path):
+    """Restrict controller imports to one snapshot and its locked runtime."""
+
+    root = plugin_root.resolve(strict=True)
+    scripts = (root / "scripts").resolve(strict=True)
+    if not (
+        root.is_dir()
+        and scripts.is_dir()
+        and scripts.is_relative_to(root)
+        and not plugin_root.is_symlink()
+        and not (root / "scripts").is_symlink()
+    ):
+        raise InstalledSmokeError("installed smoke import boundary failed")
+    runtime_roots = _resolved_runtime_roots()
+    previous_path = list(sys.path)
+    previous_modules = dict(sys.modules)
+    try:
+        sys.path[:] = [str(scripts)] + [
+            entry
+            for entry in previous_path
+            if _trusted_import_path(entry, runtime_roots)
+        ]
+        for name, module in tuple(sys.modules.items()):
+            if not _trusted_module(module, root, runtime_roots):
+                sys.modules.pop(name, None)
+        trusted_baseline = dict(sys.modules)
+        yield
+        changed_modules = {
+            name: module
+            for name, module in sys.modules.items()
+            if trusted_baseline.get(name) is not module
+        }
+        trusted_extension_loaded = any(
+            _trusted_extension_module(module, root, runtime_roots)
+            for module in changed_modules.values()
+        )
+        typing_module = changed_modules.get("typing")
+        trusted_typing_loaded = (
+            typing_module is not None
+            and _trusted_module(typing_module, root, runtime_roots)
+        )
+        for name, module in changed_modules.items():
+            if (
+                not _trusted_module(module, root, runtime_roots)
+                and not (
+                    trusted_extension_loaded
+                    and isinstance(module, ModuleType)
+                    and _CYTHON_RUNTIME_MODULE_PATTERN.fullmatch(name) is not None
+                    and getattr(module, "__file__", None) is None
+                    and getattr(module, "__spec__", None) is None
+                    and getattr(module, "__path__", None) is None
+                )
+                and not (
+                    trusted_typing_loaded
+                    and name in {"typing.io", "typing.re"}
+                    and module
+                    is getattr(typing_module, name.removeprefix("typing."), None)
+                )
+            ):
+                raise InstalledSmokeError("installed smoke import boundary failed")
+    finally:
+        sys.path[:] = previous_path
+        sys.modules.clear()
+        sys.modules.update(previous_modules)
+
+
 def load_installed_product_modules(
     plugin_root: Path, module_names: tuple[str, ...] = DEFAULT_MODULES
 ) -> dict[str, ModuleType]:
     """Load product modules only from the exact supplied installed scripts root."""
 
     loaded: dict[str, ModuleType] = {}
-    unique_names: list[str] = []
-    saved_modules: dict[str, ModuleType] = {}
-    previous_path = list(sys.path)
     try:
         root = plugin_root.resolve(strict=True)
         scripts = (root / "scripts").resolve(strict=True)
@@ -391,49 +542,25 @@ def load_installed_product_modules(
                 or not path.resolve(strict=True).is_relative_to(scripts)
             ):
                 raise InstalledSmokeError
-        for name in installed_stems:
-            existing = sys.modules.pop(name, None)
-            if isinstance(existing, ModuleType):
-                saved_modules[name] = existing
-        sys.path.insert(0, str(scripts))
-        for index, name in enumerate(module_names):
-            path = scripts / f"{name}.py"
-            unique_name = f"_pgc_installed_smoke_{index}_{name}"
-            specification = importlib.util.spec_from_file_location(unique_name, path)
-            if specification is None or specification.loader is None:
-                raise InstalledSmokeError
-            module = importlib.util.module_from_spec(specification)
-            sys.modules[unique_name] = module
-            unique_names.append(unique_name)
-            specification.loader.exec_module(module)
-            loaded[name] = module
-
-        audited_names = installed_stems | set(unique_names)
-        for name in audited_names:
-            module = sys.modules.get(name)
-            if module is not None and not _descendant(getattr(module, "__file__", None), root):
-                raise InstalledSmokeError
-        for module in loaded.values():
-            if not _descendant(getattr(module, "__file__", None), root):
-                raise InstalledSmokeError
-            for value in vars(module).values():
-                if (
-                    isinstance(value, ModuleType)
-                    and getattr(value, "__name__", "") in installed_stems
-                    and not _descendant(getattr(value, "__file__", None), root)
-                ):
+        with isolated_snapshot_imports(root):
+            for name in installed_stems:
+                sys.modules.pop(name, None)
+            for index, name in enumerate(module_names):
+                path = scripts / f"{name}.py"
+                unique_name = f"_pgc_installed_smoke_{index}_{name}"
+                specification = importlib.util.spec_from_file_location(unique_name, path)
+                if specification is None or specification.loader is None:
+                    raise InstalledSmokeError
+                module = importlib.util.module_from_spec(specification)
+                sys.modules[unique_name] = module
+                specification.loader.exec_module(module)
+                loaded[name] = module
+            for module in loaded.values():
+                if not _descendant(getattr(module, "__file__", None), root):
                     raise InstalledSmokeError
         return loaded
     except Exception:
         raise InstalledSmokeError("installed smoke import boundary failed") from None
-    finally:
-        sys.path[:] = previous_path
-        for name in unique_names:
-            sys.modules.pop(name, None)
-        for name in tuple(sys.modules):
-            if name not in saved_modules and name in locals().get("installed_stems", set()):
-                sys.modules.pop(name, None)
-        sys.modules.update(saved_modules)
 
 
 def _source_group(
@@ -1411,6 +1538,8 @@ def compose_installed_smoke_receipt(
 
 
 def run_smokes(plugin_root: Path, source_archive: Path) -> dict[str, object]:
+    previous_path = list(sys.path)
+    previous_modules = dict(sys.modules)
     try:
         with capture_verified_private_snapshots(source_archive, plugin_root) as (
             source_snapshot,
@@ -1418,75 +1547,85 @@ def run_smokes(plugin_root: Path, source_archive: Path) -> dict[str, object]:
         ):
             release_helper = _load_release_helper()
             parity = release_helper.verify_release_parity(source_snapshot, plugin_snapshot)
-            modules = load_installed_product_modules(plugin_snapshot)
-            required = {
-                "build_candidate_gap_response_v1": "build_candidate_gap_response_v1",
-                "validate_candidate_gap_response_v1": "validate_candidate_gap_response_v1",
-                "build_candidate_gap_assessment_v1": "build_candidate_gap_assessment_v1",
-                "validate_candidate_gap_assessment_v1": "validate_candidate_gap_assessment_v1",
-                "build_career_next_action_eligibility_v1": "build_career_next_action_eligibility_v1",
-                "validate_career_next_action_eligibility_v1": "validate_career_next_action_eligibility_v1",
-                "project_career_learning_decision_v3": "project_career_learning_decision_v3",
-                "build_career_learning_decision_v3": "build_career_learning_decision_v3",
-                "validate_career_learning_decision_v3": "validate_career_learning_decision_v3",
-                "render_executive_career_dossier_v2": "render_dossier_html",
-            }
-            for module_name, interface in required.items():
-                if not callable(getattr(modules[module_name], interface, None)):
-                    raise InstalledSmokeError
-
-            snapshot = modules["semantic_provenance_snapshot"]
-            safe_group = {"signal": "terraform", "recurrence": [2, True, None]}
-            if snapshot.bounded_plain_snapshot(safe_group) != safe_group:
-                raise InstalledSmokeError
-            rejected = 0
-            hostile_values: list[object] = []
-            cycle: list[object] = []
-            cycle.append(cycle)
-            hostile_values.append({"cycle": cycle})
-            hostile_values.append({"oversized": "x" * 4097})
-            hostile_values.append({"too_many": list(range(151))})
-            for value in hostile_values:
-                try:
-                    snapshot.bounded_plain_snapshot(value)
-                except ValueError as error:
-                    if str(error) != "semantic input group is invalid":
+            with isolated_snapshot_imports(plugin_snapshot):
+                modules = load_installed_product_modules(plugin_snapshot)
+                required = {
+                    "build_candidate_gap_response_v1": "build_candidate_gap_response_v1",
+                    "validate_candidate_gap_response_v1": "validate_candidate_gap_response_v1",
+                    "build_candidate_gap_assessment_v1": "build_candidate_gap_assessment_v1",
+                    "validate_candidate_gap_assessment_v1": "validate_candidate_gap_assessment_v1",
+                    "build_career_next_action_eligibility_v1": "build_career_next_action_eligibility_v1",
+                    "validate_career_next_action_eligibility_v1": "validate_career_next_action_eligibility_v1",
+                    "project_career_learning_decision_v3": "project_career_learning_decision_v3",
+                    "build_career_learning_decision_v3": "build_career_learning_decision_v3",
+                    "validate_career_learning_decision_v3": "validate_career_learning_decision_v3",
+                    "render_executive_career_dossier_v2": "render_dossier_html",
+                }
+                for module_name, interface in required.items():
+                    if not callable(getattr(modules[module_name], interface, None)):
                         raise InstalledSmokeError
-                    rejected += 1
-                else:
-                    raise InstalledSmokeError
 
-            schema_names = (
-                "candidate-gap-response-v1.schema.json",
-                "candidate-gap-assessment-v1.schema.json",
-                "career-next-action-eligibility-v1.schema.json",
-                "career-learning-decision-v3.schema.json",
-            )
-            for name in schema_names:
-                schema = json.loads(
-                    (plugin_snapshot / "schemas" / name).read_text(encoding="utf-8")
+                snapshot = modules["semantic_provenance_snapshot"]
+                safe_group = {"signal": "terraform", "recurrence": [2, True, None]}
+                if snapshot.bounded_plain_snapshot(safe_group) != safe_group:
+                    raise InstalledSmokeError
+                rejected = 0
+                hostile_values: list[object] = []
+                cycle: list[object] = []
+                cycle.append(cycle)
+                hostile_values.append({"cycle": cycle})
+                hostile_values.append({"oversized": "x" * 4097})
+                hostile_values.append({"too_many": list(range(151))})
+                for value in hostile_values:
+                    try:
+                        snapshot.bounded_plain_snapshot(value)
+                    except ValueError as error:
+                        if str(error) != "semantic input group is invalid":
+                            raise InstalledSmokeError
+                        rejected += 1
+                    else:
+                        raise InstalledSmokeError
+
+                schema_names = (
+                    "candidate-gap-response-v1.schema.json",
+                    "candidate-gap-assessment-v1.schema.json",
+                    "career-next-action-eligibility-v1.schema.json",
+                    "career-learning-decision-v3.schema.json",
                 )
-                if schema.get("type") != "object" or schema.get("additionalProperties") is not False:
-                    raise InstalledSmokeError
+                for name in schema_names:
+                    schema = json.loads(
+                        (plugin_snapshot / "schemas" / name).read_text(encoding="utf-8")
+                    )
+                    if schema.get("type") != "object" or schema.get("additionalProperties") is not False:
+                        raise InstalledSmokeError
 
-            environment = {"PATH": os.defpath, "PYTHONDONTWRITEBYTECODE": "1"}
-            static = subprocess.run(
-                [sys.executable, "-B", str(plugin_snapshot / "tests" / "run_static_checks.py")],
-                cwd=plugin_snapshot,
-                env=environment,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=1800,
-            )
-            if static.returncode != 0 or "repository conformance not bundled" not in static.stdout:
-                raise InstalledSmokeError
-            if rejected != len(hostile_values):
-                raise InstalledSmokeError
-            semantic = run_installed_semantic_matrix(plugin_snapshot, modules)
-            return compose_installed_smoke_receipt(parity, semantic)
+                environment = {"PATH": os.defpath, "PYTHONDONTWRITEBYTECODE": "1"}
+                static = subprocess.run(
+                    [
+                        sys.executable,
+                        "-I",
+                        "-B",
+                        str(plugin_snapshot / "tests" / "run_static_checks.py"),
+                    ],
+                    cwd=plugin_snapshot,
+                    env=environment,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=1800,
+                )
+                if static.returncode != 0 or "repository conformance not bundled" not in static.stdout:
+                    raise InstalledSmokeError
+                if rejected != len(hostile_values):
+                    raise InstalledSmokeError
+                semantic = run_installed_semantic_matrix(plugin_snapshot, modules)
+                return compose_installed_smoke_receipt(parity, semantic)
     except Exception:
         raise InstalledSmokeError("installed smoke failed") from None
+    finally:
+        sys.path[:] = previous_path
+        sys.modules.clear()
+        sys.modules.update(previous_modules)
 
 
 def main(argv: list[str] | None = None) -> int:
