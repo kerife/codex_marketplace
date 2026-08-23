@@ -1275,6 +1275,69 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                         ),
                     )
 
+    def test_v3_selection_required_links_one_localized_help_to_market_choices(
+        self,
+    ) -> None:
+        expected_help = {
+            "es": (
+                "Formato de selección: Vn + señal.",
+                "Revisa la clave de vacantes y la matriz de señales.",
+            ),
+            "en": (
+                "Selection format: Vn + signal.",
+                "Review the vacancy key and signal matrix.",
+            ),
+        }
+        for locale in ("es", "en"):
+            for condition in ELIGIBILITY_V3_CASES:
+                with self.subTest(locale=locale, condition=condition):
+                    rendered = self.renderer.render_dossier_html(
+                        **semantic_v3_case(condition, locale)
+                    )
+                    marker = 'id="weekly-decision-selection-help"'
+                    if condition != "selection_required":
+                        self.assertNotIn(marker, rendered)
+                        continue
+
+                    region = weekly_decision_region(rendered)
+                    text = visible_text(region)
+                    for expected in expected_help[locale]:
+                        self.assertIn(expected, text)
+                    self.assertIn(
+                        'aria-describedby="weekly-decision-evidence '
+                        'weekly-decision-selection-help weekly-decision-boundary"',
+                        region,
+                    )
+                    self.assertEqual(1, region.count(marker))
+                    self.assertEqual(
+                        1,
+                        region.count('href="#market-vacancy-key-title"'),
+                    )
+                    self.assertEqual(
+                        1,
+                        region.count('href="#market-matrix-title"'),
+                    )
+                    self.assertEqual(
+                        1,
+                        rendered.count('id="market-vacancy-key-title"'),
+                    )
+                    self.assertEqual(
+                        1,
+                        rendered.count('id="market-matrix-title"'),
+                    )
+                    self.assertNotIn('id="weekly-decision-vacancy"', region)
+                    self.assertNotIn('class="weekly-decision-signal"', region)
+                    self.assertNotIn('class="weekly-decision-recurrence"', region)
+                    self.assertNotIn("<button", region)
+                    self.assertNotIn("<form", region)
+                    self.assertNotIn("https://", region)
+                    self.assertEqual(1, region.count('class="weekly-decision-action"'))
+
+                    audit = DossierDOMAudit()
+                    audit.feed(rendered)
+                    self.assertEqual(len(audit.ids), len(set(audit.ids)))
+                    self.assertFalse(set(audit.references) - set(audit.ids))
+
     def test_v3_unavailable_preserves_one_existing_safe_step_only(self) -> None:
         for locale in ("es", "en"):
             with self.subTest(locale=locale):
@@ -1528,6 +1591,7 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                 inline_css = re.search(r"<style>(.*?)</style>", rendered, re.DOTALL)
                 self.assertIsNotNone(inline_css)
                 self.assertNotIn(".weekly-decision", inline_css.group(1))
+                self.assertNotIn('id="weekly-decision-selection-help"', rendered)
 
     def v2_multi_signal_render_sources(self) -> dict[str, object]:
         sources = copy.deepcopy(self.v2_render_sources())

@@ -371,6 +371,12 @@ WEEKLY_COPY = {
         "action": "Siguiente acción",
         "deliverable": "Entregable privado",
         "done_when": "Listo cuando",
+        "selection_help": (
+            "Formato de selección: Vn + señal. Revisa la ",
+            "clave de vacantes",
+            " y la ",
+            "matriz de señales",
+        ),
     },
     "en": {
         "title": "This week's decision",
@@ -381,6 +387,12 @@ WEEKLY_COPY = {
         "action": "Next action",
         "deliverable": "Private deliverable",
         "done_when": "Done when",
+        "selection_help": (
+            "Selection format: Vn + signal. Review the ",
+            "vacancy key",
+            " and ",
+            "signal matrix",
+        ),
     },
 }
 
@@ -1305,15 +1317,30 @@ def _render_weekly_decision_card(
             f'<div class="weekly-decision-choices"><h4>{labels["choices"]}</h4>'
             f'<ol>{"".join(items)}</ol></div>'
         )
+    selection_help_markup = ""
+    described_by = "weekly-decision-evidence weekly-decision-boundary"
+    if eligibility.get("state") == "selection_required":
+        help_intro, vacancy_key, help_join, signal_matrix = labels["selection_help"]
+        selection_help_markup = (
+            '<p id="weekly-decision-selection-help" '
+            'class="weekly-decision-selection-help">'
+            f'{help_intro}<a href="#market-vacancy-key-title">{vacancy_key}</a>'
+            f'{help_join}<a href="#market-matrix-title">{signal_matrix}.</a></p>'
+        )
+        described_by = (
+            "weekly-decision-evidence weekly-decision-selection-help "
+            "weekly-decision-boundary"
+        )
     boundary = ELIGIBILITY_BUILDER.COPY[locale]["boundaries"][
         "not_an_interview_offer_salary_or_hiring_prediction"
     ]
-    return f'''<article class="card span-12 weekly-decision" aria-labelledby="{labelled_by}" aria-describedby="weekly-decision-evidence weekly-decision-boundary">
+    return f'''<article class="card span-12 weekly-decision" aria-labelledby="{labelled_by}" aria-describedby="{described_by}">
           <h3 id="weekly-decision-title">{labels['title']}</h3>
           {vacancy_markup}
           <div class="weekly-decision-facts">{signal_markup}</div>
           {choices_markup}
           <p id="weekly-decision-evidence" class="weekly-decision-evidence">{statement}</p>
+          {selection_help_markup}
           <div class="weekly-decision-action">
             <p><span class="weekly-decision-label">{labels['action']}</span><strong>{html.escape(str(action_copy['label']), quote=True)}</strong></p>
             <p><span class="weekly-decision-label">{labels['deliverable']}</span>{html.escape(str(eligibility['private_deliverable']), quote=True)}</p>

@@ -2,5 +2,6 @@
 .release-validation-venv/
 .professional-growth-coach-artifacts/
 .superpowers/
+.superdesign/tmp/
 __pycache__/
 *.py[cod]

@@ -109,6 +109,8 @@ bytes retain their historical composition.
 WeeklyDecision exposes only a public Vn plus title/employer, selected signal,
 exact recurrence, closed localized evidence copy, one action, private
 deliverable, done-when, and the visible no-outcome/no-external-action boundary.
+Only `selection_required` adds exactly two internal navigation links, to the
+vacancy key and signal matrix; the card has no external links or controls.
 Provider-selection state renders the complete non-ranked L1–Ln list. The card
 uses stable labelled/described relationships, one-column mobile wrapping,
 atomic print rules, dark tokens, forced system colors, and reduced-motion-safe

@@ -17,22 +17,22 @@
         "plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py:559:1540"
       ],
       "fingerprints": {
-        ".superdesign/design-system.md": "ca5603be128384277dc400fbec7d3c4b126ee23e106f9ced46577fc8990c302b",
+        ".superdesign/design-system.md": "f6c3338412e3777087d54e6cc50335befb927775d8dbbb2b4e6637354f04afd4",
         "plugins/professional-growth-coach/assets/executive-career-dossier-v1.html": "5edfadb7cd83fc7566c781a4e797126996069cf96d5077f01a4169ae5cb6e7de",
         "plugins/professional-growth-coach/assets/executive-career-dossier-v1.css": "27f74cc8640dd3ff58c2b2940dfbd8a75ccf41fb94f011b77e5bb894da5a6be1",
         "plugins/professional-growth-coach/assets/executive-career-dossier-v2.css": "d59e61afceed5d4be6420d8704124a3a283d0400461bd31db9c06f230517f96f",
         "plugins/professional-growth-coach/assets/career-market-learning-dossier-v1.css": "a107319a972bc030b13122713d69ee511e895edd266ca08b1045c592dcc6d573",
-        "plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py": "04474841be26a2620d3f1adaa02902f728a0da2a2865bd8c35e0a2c02501b37b"
+        "plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py": "cc2021217b09d1fd5f367c688887c2ff9643de19e05487989ac9ecf1db757b64"
       },
       "components": [],
       "drafts": {
         "6ba34e92-a1b9-4202-bd21-687b6b67ff07": {
           "title": "Executive Career Dossier - Weekly Decision Integration",
           "visualDirection": "source-faithful complete-market dossier with one full-width vacancy-first weekly decision card",
-          "currentVersion": 4
+          "currentVersion": 5
         }
       },
-      "updatedAt": "2026-08-22T11:28:31Z"
+      "updatedAt": "2026-08-23T04:25:50Z"
     }
   }
 }

@@ -54,4 +54,4 @@
 - Category: composed v3 subcomponent.
 - Description: one full-width, non-interactive weekly decision after the condensed market summary. It presents a public vacancy/signal, exact evidence statement, one action, one deliverable, one done-when, and the fixed outcome/no-action boundary.
 - Extractable props: validated eligibility public projection, validated public market vacancies, and locale; provider-selection state includes the complete non-ranked L1–Ln choice list.
-- Hardcoded: unavailable renders no card; no forms, buttons, links, internal IDs, snapshots, URLs, source prose, raw enums, or caller-authored recommendation text.
+- Hardcoded: unavailable renders no card; no forms, buttons, external links, internal IDs, snapshots, URLs, source prose, raw enums, or caller-authored recommendation text. Only `selection_required` renders exactly two internal navigation links, to the vacancy key and signal matrix.
