@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `0605646d8550d8dba8b98744a45ae6c3dff5900a`
+source_commit: `337158c188919d281f7fac9d00c7ebed9faa4a6b`
 
-source_tree: `fded7bd0271da4d8201cdfc50f0711ad33e2857a`
+source_tree: `2acb4f4aa6a4e0639836174324702790f1e1a59b`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260823103807`
+installed_cache_version: `0.2.0+codex.20260823154005`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `885a8c5895fdc19fea8995a44d2159c94255c54349f454038d201349144475ba`
+source_aggregate_sha256: `367c1ed33d56d537b7fe4fd26a2b61acd06b69a197f312ad590c5ee0c9ae0f95`
 
-cache_aggregate_sha256: `885a8c5895fdc19fea8995a44d2159c94255c54349f454038d201349144475ba`
+cache_aggregate_sha256: `367c1ed33d56d537b7fe4fd26a2b61acd06b69a197f312ad590c5ee0c9ae0f95`
 
 source_bytecode_count: `0`
 
@@ -50,7 +50,7 @@ installed_semantic_accepted_smokes: `39/39`
 
 installed_semantic_rejected_smokes: `9/9`
 
-installed_import_boundary: `exact_cache_root_only`
+installed_import_boundary: `verified_private_snapshot_only`
 
 installed_output_atomicity: `passed_generic_no_echo`
 
@@ -62,8 +62,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster timestamp: 2026-08-23T10:38:07Z.
-- Installed validation timestamp: 2026-08-23T11:13:22Z.
+- Cachebuster timestamp: 2026-08-23T15:40:05Z.
 - Commit A changed only the plugin manifest, was pushed to remote `main`, and
   was verified by fetch plus a live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -75,16 +74,14 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- The official source release runner completed successfully with exit 0.
-- Plugin package discovery: 223/223 tests passed in 142.387 seconds.
-- Repository root discovery: 1396/1396 tests passed in 3357.516 seconds.
+- The official source release runner completed successfully with exit 0;
+  skill and plugin validation both passed.
+- Plugin package discovery: 223/223 tests passed in 141.601 seconds.
+- Repository root discovery: 1407/1407 tests passed in 3379.513 seconds.
 - Static validation passed private-schema, dossier-handoff, and package checks.
 - Repository privacy passed without findings or sensitive-value echo.
-- The official locked release runner passed skill/plugin validators, static,
-  package discovery 223/223, root discovery 1395/1395, and privacy.
-- Post-cachebuster structure/full-plugin verification passed 258/258 tests in
-  1279.998 seconds;
-  post-cachebuster static validation also passed.
+- Post-cachebuster structure/full-plugin verification passed 269/269 tests in
+  1308.034 seconds; post-cachebuster static validation also passed.
 - A fresh validation-environment bootstrap was blocked by the established
   persistent-install sandbox policy. Every gate used the documented, verified
   locked CPython 3.11.15 arm64 environment with PyYAML 6.0.3.
@@ -98,9 +95,13 @@ external_action_state: `not_executed`
   over `path + NUL + file hash + LF` matched on both sides.
 - `diff -qr` was silent. Source and cache contained no `.pyc`, `.pyo`,
   `__pycache__`, symlink, or rejected private metadata artifact.
-- Installed discovery loaded the required closed schemas and product
-  interfaces from the exact cache root. Installed package static checks passed;
-  repository-only conformance was correctly not bundled and not claimed.
+- After parity capture, installed discovery loaded the required closed schemas,
+  fixtures, and product interfaces from an independent private snapshot of the
+  exact cache bytes. Installed package static checks passed; repository-only
+  conformance was correctly not bundled and not claimed.
+- Snapshot directories were private and copied files were independent. This
+  binds validation against ordinary concurrent cache updates; it does not claim
+  isolation from an active same-user process.
 
 ## Installed semantic evidence
 
@@ -118,8 +119,11 @@ external_action_state: `not_executed`
   writer output, and CLI output.
 - All 9 rejected cases failed closed with generic diagnostics and no echo.
   Invalid writer and CLI groups left no partial output.
-- Every imported product module resolved below the exact installed cache root;
-  no product import came from the mutable checkout.
+- Every imported product module resolved below the verified cache snapshot;
+  no product module or dependency resolved from the mutable checkout or an
+  untrusted prior module-search path. Only the snapshot and resolved locked
+  runtime/site roots remained eligible. Controller import state was restored
+  after the run.
 
 ## Historical compatibility
 
