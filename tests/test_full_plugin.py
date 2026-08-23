@@ -261,7 +261,7 @@ def validate_vacancy_first_attestation(
         == "passed_repository_conformance_not_bundled"
         and accepted_count == accepted_total == 39
         and rejected_count == rejected_total == 9
-        and parsed["installed_import_boundary"] == "exact_cache_root_only"
+        and parsed["installed_import_boundary"] == "verified_private_snapshot_only"
         and parsed["installed_output_atomicity"] == "passed_generic_no_echo"
         and parsed["visual_browser_assistive_technology_QA"] == "not_run_not_claimed"
         and parsed["repository_conformance_from_installed_cache"]
@@ -296,7 +296,7 @@ class FullPluginIntegrationTests(unittest.TestCase):
             "installed_package_static_scope": "passed_repository_conformance_not_bundled",
             "installed_semantic_accepted_smokes": "39/39",
             "installed_semantic_rejected_smokes": "9/9",
-            "installed_import_boundary": "exact_cache_root_only",
+            "installed_import_boundary": "verified_private_snapshot_only",
             "installed_output_atomicity": "passed_generic_no_echo",
             "visual_browser_assistive_technology_QA": "not_run_not_claimed",
             "repository_conformance_from_installed_cache": "not_bundled_not_claimed",

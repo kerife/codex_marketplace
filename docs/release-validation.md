@@ -111,11 +111,17 @@ Reject symlinks, unreadable/non-regular files, personal metadata, `.pyc`,
 `.pyo`, and `__pycache__` on both sides. Diagnostics expose only relative paths
 or fixed generic failures.
 
-Run the installed smoke harness with only the exact installed `scripts`
-directory on the product import boundary. Every imported semantic module must
-resolve below that installed plugin root; mutable checkout imports fail closed.
-Installed static checks must state `repository conformance not bundled` rather
-than turning absent repository fixtures into a full-suite pass. The final
-attestation records archive/cache counts and aggregate digests, accepted and
-rejected smokes, no-echo/atomicity, repository-only scope, external actions not
-executed, and `visual QA not run` unless empirical browser evidence exists.
+Before semantic execution, the installed smoke harness captures the validated
+archive and installed cache into separate private snapshots, verifies snapshot
+parity, and then uses only the cache snapshot for imports, schemas, fixtures,
+static checks, renderer/CLI subprocesses, and the semantic matrix. Snapshot
+directories are private and copied files are not hardlinked. This protects the
+release evidence against ordinary concurrent cache updates; it does not claim
+isolation from an active malicious process running under the same UID. Every
+imported semantic module must resolve below that snapshot root; mutable
+checkout imports fail closed. Installed static checks must state `repository
+conformance not bundled` rather than turning absent repository fixtures into a
+full-suite pass. The final attestation records archive/cache counts and
+aggregate digests, accepted and rejected smokes, no-echo/atomicity,
+repository-only scope, external actions not executed, and `visual QA not run`
+unless empirical browser evidence exists.

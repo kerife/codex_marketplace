@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 
 
@@ -98,6 +99,214 @@ def load_repo_script(path: Path, name: str):
 
 
 class JobSearchCoachPluginStructureTests(unittest.TestCase):
+    def test_private_snapshot_keeps_real_copied_bytes_after_originals_change(self) -> None:
+        """Break caught: reopening either supplied root after capture changes imports."""
+
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_private_snapshot")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source"
+            cache = root / "cache"
+            for plugin in (source, cache):
+                (plugin / "scripts").mkdir(parents=True)
+                (plugin / "scripts" / "sample.py").write_text(
+                    "VALUE = 'captured'\n", encoding="utf-8"
+                )
+
+            with smoke.capture_verified_private_snapshots(source, cache) as (
+                snapshot_source,
+                snapshot_cache,
+            ):
+                (source / "scripts" / "sample.py").write_text(
+                    "VALUE = 'changed-source'\n", encoding="utf-8"
+                )
+                (cache / "scripts" / "sample.py").write_text(
+                    "VALUE = 'changed-cache'\n", encoding="utf-8"
+                )
+                module = smoke.load_installed_product_modules(
+                    snapshot_cache, ("sample",)
+                )["sample"]
+                self.assertEqual("captured", module.VALUE)
+                self.assertEqual(
+                    b"VALUE = 'captured'\n",
+                    (snapshot_source / "scripts" / "sample.py").read_bytes(),
+                )
+
+    def test_private_snapshot_uses_private_modes_and_independent_files(self) -> None:
+        """Break caught: snapshots exposing or hardlinking supplied-release files."""
+
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_private_modes")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source"
+            cache = root / "cache"
+            for plugin in (source, cache):
+                target = plugin / "nested" / "artifact.txt"
+                target.parent.mkdir(parents=True)
+                target.write_bytes(b"captured bytes")
+
+            with smoke.capture_verified_private_snapshots(source, cache) as (
+                snapshot_source,
+                snapshot_cache,
+            ):
+                for directory in (
+                    snapshot_source.parent,
+                    snapshot_source,
+                    snapshot_source / "nested",
+                    snapshot_cache,
+                    snapshot_cache / "nested",
+                ):
+                    self.assertEqual(0o700, directory.stat().st_mode & 0o777)
+                for original, captured in (
+                    (source / "nested" / "artifact.txt", snapshot_source / "nested" / "artifact.txt"),
+                    (cache / "nested" / "artifact.txt", snapshot_cache / "nested" / "artifact.txt"),
+                ):
+                    self.assertEqual(0o600, captured.stat().st_mode & 0o777)
+                    self.assertNotEqual(original.stat().st_ino, captured.stat().st_ino)
+
+    def test_private_snapshot_captures_every_file_in_a_shared_directory(self) -> None:
+        """Break caught: a later inventory entry cannot reuse its private parent."""
+
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_private_shared_parent")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source"
+            cache = root / "cache"
+            for plugin in (source, cache):
+                (plugin / "scripts").mkdir(parents=True)
+                (plugin / "scripts" / "first.py").write_bytes(b"first")
+                (plugin / "scripts" / "second.py").write_bytes(b"second")
+
+            with smoke.capture_verified_private_snapshots(source, cache) as snapshots:
+                self.assertEqual(
+                    b"first", (snapshots[1] / "scripts" / "first.py").read_bytes()
+                )
+                self.assertEqual(
+                    b"second", (snapshots[1] / "scripts" / "second.py").read_bytes()
+                )
+
+    def test_private_snapshot_removes_temporary_root_on_success_and_error(self) -> None:
+        """Break caught: snapshot directories surviving either context-manager path."""
+
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_private_cleanup")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source"
+            cache = root / "cache"
+            for plugin in (source, cache):
+                plugin.mkdir()
+                (plugin / "artifact.txt").write_bytes(b"same")
+
+            with smoke.capture_verified_private_snapshots(source, cache) as snapshots:
+                successful_root = snapshots[0].parent
+                self.assertTrue(successful_root.is_dir())
+            self.assertFalse(successful_root.exists())
+
+            with self.assertRaisesRegex(RuntimeError, "injected"):
+                with smoke.capture_verified_private_snapshots(source, cache) as snapshots:
+                    error_root = snapshots[0].parent
+                    raise RuntimeError("injected")
+            self.assertFalse(error_root.exists())
+
+    def test_private_snapshot_rejects_unsafe_inputs_and_byte_drift_without_echo(self) -> None:
+        """Break caught: unsafe or changed original bytes entering a private snapshot."""
+
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_private_rejection")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source"
+            cache = root / "cache"
+            source.mkdir()
+            cache.mkdir()
+            (source / "artifact.txt").write_bytes(b"same")
+            (cache / "artifact.txt").write_bytes(b"same")
+            (source / "escape.txt").symlink_to(root / "outside.txt")
+            with self.assertRaisesRegex(smoke.InstalledSmokeError, "installed smoke failed") as caught:
+                with smoke.capture_verified_private_snapshots(source, cache):
+                    pass
+            self.assertNotIn(str(source), str(caught.exception))
+
+            (source / "escape.txt").unlink()
+            original_inventory = smoke._snapshot_inventory
+
+            def drifting_inventory(plugin: Path):
+                inventory = original_inventory(plugin)
+                if plugin == source:
+                    (source / "artifact.txt").write_bytes(b"drift")
+                return inventory
+
+            smoke._snapshot_inventory = drifting_inventory
+            try:
+                with self.assertRaisesRegex(smoke.InstalledSmokeError, "installed smoke failed") as caught:
+                    with smoke.capture_verified_private_snapshots(source, cache):
+                        pass
+            finally:
+                smoke._snapshot_inventory = original_inventory
+            self.assertNotIn(str(source), str(caught.exception))
+
+    def test_run_smokes_routes_imports_reads_and_static_subprocess_to_snapshot(self) -> None:
+        """Break caught: semantic execution reopening a mutable supplied cache root."""
+
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_private_routing")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source"
+            cache = root / "cache"
+            shutil.copytree(PLUGIN_ROOT, source, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+            shutil.copytree(PLUGIN_ROOT, cache, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+            original_capture = smoke.capture_verified_private_snapshots
+            original_matrix = smoke.run_installed_semantic_matrix
+            original_subprocess = smoke.subprocess.run
+            observed: dict[str, object] = {}
+
+            @contextmanager
+            def mutate_after_capture(source_root: Path, cache_root: Path):
+                with original_capture(source_root, cache_root) as snapshots:
+                    for plugin in (source, cache):
+                        (plugin / "schemas" / "candidate-gap-response-v1.schema.json").write_text(
+                            "{}", encoding="utf-8"
+                        )
+                        (plugin / "tests" / "fixtures" / "vacancy-first-smoke" / "sources.json").write_text(
+                            "{}", encoding="utf-8"
+                        )
+                    yield snapshots
+
+            def semantic(snapshot_root: Path, modules: dict[str, object]) -> dict[str, object]:
+                observed["semantic_root"] = snapshot_root
+                observed["source_schema"] = smoke.load_installed_smoke_sources(snapshot_root)["schema_version"]
+                self.assertTrue(
+                    Path(modules["semantic_provenance_snapshot"].__file__).resolve().is_relative_to(
+                        snapshot_root.resolve()
+                    )
+                )
+                return {
+                    "matrix_version": "vacancy-first-installed-smoke-v1",
+                    "accepted": 39,
+                    "rejected": 9,
+                    "accepted_cases": tuple(),
+                    "rejected_cases": tuple(),
+                    "accepted_groups": tuple(),
+                    "rejected_groups": tuple(),
+                }
+
+            def static_subprocess(*args, **kwargs):
+                observed["static_cwd"] = kwargs["cwd"]
+                return original_subprocess(*args, **kwargs)
+
+            smoke.capture_verified_private_snapshots = mutate_after_capture
+            smoke.run_installed_semantic_matrix = semantic
+            smoke.subprocess.run = static_subprocess
+            try:
+                receipt = smoke.run_smokes(cache, source)
+            finally:
+                smoke.capture_verified_private_snapshots = original_capture
+                smoke.run_installed_semantic_matrix = original_matrix
+                smoke.subprocess.run = original_subprocess
+
+        self.assertEqual(39, receipt["accepted"])
+        self.assertEqual("vacancy-first-smoke-sources-v1", observed["source_schema"])
+        self.assertEqual(observed["semantic_root"], observed["static_cwd"])
+
     def test_exact_installed_cache_resolver_accepts_only_one_enabled_matching_row(self) -> None:
         helper = load_repo_script(INSTALLED_RELEASE_HELPER_PATH, "installed_release_helper")
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -350,7 +559,7 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
         self.assertEqual(("rejected-group",), receipt["rejected_groups"])
         self.assertEqual(17, receipt["file_count"])
         self.assertEqual("a" * 64, receipt["aggregate_sha256"])
-        self.assertEqual("exact_cache_root_only", receipt["import_boundary"])
+        self.assertEqual("verified_private_snapshot_only", receipt["import_boundary"])
         self.assertEqual("not_bundled_not_claimed", receipt["repository_conformance"])
 
     def test_release_inventory_rejects_bytecode_artifacts(self) -> None:

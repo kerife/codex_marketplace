@@ -10,11 +10,14 @@ import importlib.util
 import json
 import os
 import re
+import stat
 import subprocess
 import sys
 import tempfile
 from collections.abc import Mapping
+from contextlib import contextmanager
 from pathlib import Path
+from pathlib import PurePosixPath
 from types import ModuleType
 
 
@@ -114,6 +117,171 @@ HISTORICAL_RENDER_SNAPSHOTS = {
 
 class InstalledSmokeError(RuntimeError):
     """One fixed-diagnostic installed smoke failure."""
+
+
+_STABLE_STAT_FIELDS = ("st_dev", "st_ino", "st_size", "st_mtime_ns")
+
+
+def _snapshot_inventory(root: Path) -> tuple[tuple[str, str], ...]:
+    """Use the release verifier's closed regular-file inventory contract."""
+
+    return _load_release_helper().release_inventory(root)
+
+
+def _snapshot_relative_path(value: object) -> tuple[str, ...]:
+    try:
+        if not isinstance(value, str) or not value or "\x00" in value:
+            raise ValueError
+        value.encode("utf-8", errors="strict")
+        relative = PurePosixPath(value)
+        if (
+            relative.is_absolute()
+            or relative.as_posix() != value
+            or not relative.parts
+            or any(part in {"", ".", ".."} for part in relative.parts)
+        ):
+            raise ValueError
+        return relative.parts
+    except (TypeError, UnicodeError, ValueError):
+        raise InstalledSmokeError("installed smoke failed") from None
+
+
+def _private_snapshot_directory(root: Path, parts: tuple[str, ...]) -> Path:
+    directory = root
+    for part in parts:
+        directory = directory / part
+        directory.mkdir(mode=0o700, exist_ok=True)
+        if directory.is_symlink() or not stat.S_ISDIR(directory.lstat().st_mode):
+            raise OSError
+        os.chmod(directory, 0o700)
+    return directory
+
+
+def _write_all(descriptor: int, payload: bytes) -> None:
+    position = 0
+    while position < len(payload):
+        written = os.write(descriptor, payload[position:])
+        if written <= 0:
+            raise OSError
+        position += written
+
+
+def _copy_snapshot_file(
+    source_root: Path,
+    relative_parts: tuple[str, ...],
+    expected_digest: str,
+    destination: Path,
+) -> None:
+    """Copy one inventory entry through stable, no-follow descriptors only."""
+
+    directory_flags = (
+        os.O_RDONLY
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+    file_flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    source_directory = os.open(source_root, directory_flags)
+    source_descriptor: int | None = None
+    destination_descriptor: int | None = None
+    try:
+        if not stat.S_ISDIR(os.fstat(source_directory).st_mode):
+            raise OSError
+        for part in relative_parts[:-1]:
+            child_directory = os.open(part, directory_flags, dir_fd=source_directory)
+            if not stat.S_ISDIR(os.fstat(child_directory).st_mode):
+                os.close(child_directory)
+                raise OSError
+            os.close(source_directory)
+            source_directory = child_directory
+        source_descriptor = os.open(relative_parts[-1], file_flags, dir_fd=source_directory)
+        before = os.fstat(source_descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            raise OSError
+        destination_descriptor = os.open(
+            destination,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+            0o600,
+        )
+        digest = hashlib.sha256()
+        while True:
+            payload = os.read(source_descriptor, 1024 * 1024)
+            if not payload:
+                break
+            digest.update(payload)
+            _write_all(destination_descriptor, payload)
+        after = os.fstat(source_descriptor)
+        current = os.stat(
+            relative_parts[-1], dir_fd=source_directory, follow_symlinks=False
+        )
+        if (
+            not stat.S_ISREG(current.st_mode)
+            or any(
+                getattr(before, field) != getattr(after, field)
+                or getattr(after, field) != getattr(current, field)
+                for field in _STABLE_STAT_FIELDS
+            )
+            or digest.hexdigest() != expected_digest
+        ):
+            raise OSError
+        os.fchmod(destination_descriptor, 0o600)
+    finally:
+        if destination_descriptor is not None:
+            os.close(destination_descriptor)
+        if source_descriptor is not None:
+            os.close(source_descriptor)
+        os.close(source_directory)
+
+
+def _capture_private_snapshot(source_root: Path, destination_root: Path) -> None:
+    inventory = _snapshot_inventory(source_root)
+    if not inventory:
+        raise InstalledSmokeError("installed smoke failed")
+    destination_root.mkdir(mode=0o700)
+    os.chmod(destination_root, 0o700)
+    previous_relative: str | None = None
+    for relative, expected_digest in inventory:
+        relative_parts = _snapshot_relative_path(relative)
+        if (
+            not isinstance(expected_digest, str)
+            or SHA256_PATTERN.fullmatch(expected_digest) is None
+            or previous_relative is not None
+            and relative <= previous_relative
+        ):
+            raise InstalledSmokeError("installed smoke failed")
+        previous_relative = relative
+        destination_directory = _private_snapshot_directory(
+            destination_root, relative_parts[:-1]
+        )
+        _copy_snapshot_file(
+            source_root,
+            relative_parts,
+            expected_digest,
+            destination_directory / relative_parts[-1],
+        )
+
+
+@contextmanager
+def capture_verified_private_snapshots(source_archive: Path, plugin_root: Path):
+    """Capture two independent private release snapshots and verify their parity."""
+
+    try:
+        temporary_directory = tempfile.TemporaryDirectory(prefix="pgc-installed-smoke-")
+    except (OSError, RuntimeError, TypeError, ValueError):
+        raise InstalledSmokeError("installed smoke failed") from None
+    try:
+        temporary_root = Path(temporary_directory.name)
+        os.chmod(temporary_root, 0o700)
+        source_snapshot = temporary_root / "source-archive"
+        plugin_snapshot = temporary_root / "plugin-root"
+        try:
+            _capture_private_snapshot(source_archive, source_snapshot)
+            _capture_private_snapshot(plugin_root, plugin_snapshot)
+            _load_release_helper().verify_release_parity(source_snapshot, plugin_snapshot)
+        except (InstalledSmokeError, OSError, RuntimeError, TypeError, UnicodeError, ValueError):
+            raise InstalledSmokeError("installed smoke failed") from None
+        yield source_snapshot, plugin_snapshot
+    finally:
+        temporary_directory.cleanup()
 
 
 def _canonical_sha256(value: object) -> str:
@@ -1236,81 +1404,87 @@ def compose_installed_smoke_receipt(
         "rejected_groups": semantic["rejected_groups"],
         "file_count": parity["file_count"],
         "aggregate_sha256": parity["source_aggregate_sha256"],
-        "import_boundary": "exact_cache_root_only",
+        "import_boundary": "verified_private_snapshot_only",
         "repository_conformance": "not_bundled_not_claimed",
     }
 
 
 def run_smokes(plugin_root: Path, source_archive: Path) -> dict[str, object]:
     try:
-        release_helper = _load_release_helper()
-        parity = release_helper.verify_release_parity(source_archive, plugin_root)
-        modules = load_installed_product_modules(plugin_root)
-        required = {
-            "build_candidate_gap_response_v1": "build_candidate_gap_response_v1",
-            "validate_candidate_gap_response_v1": "validate_candidate_gap_response_v1",
-            "build_candidate_gap_assessment_v1": "build_candidate_gap_assessment_v1",
-            "validate_candidate_gap_assessment_v1": "validate_candidate_gap_assessment_v1",
-            "build_career_next_action_eligibility_v1": "build_career_next_action_eligibility_v1",
-            "validate_career_next_action_eligibility_v1": "validate_career_next_action_eligibility_v1",
-            "project_career_learning_decision_v3": "project_career_learning_decision_v3",
-            "build_career_learning_decision_v3": "build_career_learning_decision_v3",
-            "validate_career_learning_decision_v3": "validate_career_learning_decision_v3",
-            "render_executive_career_dossier_v2": "render_dossier_html",
-        }
-        for module_name, interface in required.items():
-            if not callable(getattr(modules[module_name], interface, None)):
-                raise InstalledSmokeError
-
-        snapshot = modules["semantic_provenance_snapshot"]
-        safe_group = {"signal": "terraform", "recurrence": [2, True, None]}
-        if snapshot.bounded_plain_snapshot(safe_group) != safe_group:
-            raise InstalledSmokeError
-        rejected = 0
-        hostile_values: list[object] = []
-        cycle: list[object] = []
-        cycle.append(cycle)
-        hostile_values.append({"cycle": cycle})
-        hostile_values.append({"oversized": "x" * 4097})
-        hostile_values.append({"too_many": list(range(151))})
-        for value in hostile_values:
-            try:
-                snapshot.bounded_plain_snapshot(value)
-            except ValueError as error:
-                if str(error) != "semantic input group is invalid":
+        with capture_verified_private_snapshots(source_archive, plugin_root) as (
+            source_snapshot,
+            plugin_snapshot,
+        ):
+            release_helper = _load_release_helper()
+            parity = release_helper.verify_release_parity(source_snapshot, plugin_snapshot)
+            modules = load_installed_product_modules(plugin_snapshot)
+            required = {
+                "build_candidate_gap_response_v1": "build_candidate_gap_response_v1",
+                "validate_candidate_gap_response_v1": "validate_candidate_gap_response_v1",
+                "build_candidate_gap_assessment_v1": "build_candidate_gap_assessment_v1",
+                "validate_candidate_gap_assessment_v1": "validate_candidate_gap_assessment_v1",
+                "build_career_next_action_eligibility_v1": "build_career_next_action_eligibility_v1",
+                "validate_career_next_action_eligibility_v1": "validate_career_next_action_eligibility_v1",
+                "project_career_learning_decision_v3": "project_career_learning_decision_v3",
+                "build_career_learning_decision_v3": "build_career_learning_decision_v3",
+                "validate_career_learning_decision_v3": "validate_career_learning_decision_v3",
+                "render_executive_career_dossier_v2": "render_dossier_html",
+            }
+            for module_name, interface in required.items():
+                if not callable(getattr(modules[module_name], interface, None)):
                     raise InstalledSmokeError
-                rejected += 1
-            else:
-                raise InstalledSmokeError
 
-        schema_names = (
-            "candidate-gap-response-v1.schema.json",
-            "candidate-gap-assessment-v1.schema.json",
-            "career-next-action-eligibility-v1.schema.json",
-            "career-learning-decision-v3.schema.json",
-        )
-        for name in schema_names:
-            schema = json.loads((plugin_root / "schemas" / name).read_text(encoding="utf-8"))
-            if schema.get("type") != "object" or schema.get("additionalProperties") is not False:
+            snapshot = modules["semantic_provenance_snapshot"]
+            safe_group = {"signal": "terraform", "recurrence": [2, True, None]}
+            if snapshot.bounded_plain_snapshot(safe_group) != safe_group:
                 raise InstalledSmokeError
+            rejected = 0
+            hostile_values: list[object] = []
+            cycle: list[object] = []
+            cycle.append(cycle)
+            hostile_values.append({"cycle": cycle})
+            hostile_values.append({"oversized": "x" * 4097})
+            hostile_values.append({"too_many": list(range(151))})
+            for value in hostile_values:
+                try:
+                    snapshot.bounded_plain_snapshot(value)
+                except ValueError as error:
+                    if str(error) != "semantic input group is invalid":
+                        raise InstalledSmokeError
+                    rejected += 1
+                else:
+                    raise InstalledSmokeError
 
-        environment = dict(os.environ)
-        environment["PYTHONDONTWRITEBYTECODE"] = "1"
-        static = subprocess.run(
-            [sys.executable, "-B", str(plugin_root / "tests" / "run_static_checks.py")],
-            cwd=plugin_root,
-            env=environment,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=1800,
-        )
-        if static.returncode != 0 or "repository conformance not bundled" not in static.stdout:
-            raise InstalledSmokeError
-        if rejected != len(hostile_values):
-            raise InstalledSmokeError
-        semantic = run_installed_semantic_matrix(plugin_root, modules)
-        return compose_installed_smoke_receipt(parity, semantic)
+            schema_names = (
+                "candidate-gap-response-v1.schema.json",
+                "candidate-gap-assessment-v1.schema.json",
+                "career-next-action-eligibility-v1.schema.json",
+                "career-learning-decision-v3.schema.json",
+            )
+            for name in schema_names:
+                schema = json.loads(
+                    (plugin_snapshot / "schemas" / name).read_text(encoding="utf-8")
+                )
+                if schema.get("type") != "object" or schema.get("additionalProperties") is not False:
+                    raise InstalledSmokeError
+
+            environment = dict(os.environ)
+            environment["PYTHONDONTWRITEBYTECODE"] = "1"
+            static = subprocess.run(
+                [sys.executable, "-B", str(plugin_snapshot / "tests" / "run_static_checks.py")],
+                cwd=plugin_snapshot,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=1800,
+            )
+            if static.returncode != 0 or "repository conformance not bundled" not in static.stdout:
+                raise InstalledSmokeError
+            if rejected != len(hostile_values):
+                raise InstalledSmokeError
+            semantic = run_installed_semantic_matrix(plugin_snapshot, modules)
+            return compose_installed_smoke_receipt(parity, semantic)
     except (InstalledSmokeError, OSError, RuntimeError, TypeError, ValueError, json.JSONDecodeError):
         raise InstalledSmokeError("installed smoke failed") from None
 
