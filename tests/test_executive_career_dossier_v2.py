@@ -1302,6 +1302,8 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     f'<h4 id="weekly-decision-relations-title">{heading}</h4>',
                     region,
                 )
+                self.assertIn("<ul>", region)
+                self.assertIn("</ul>", region)
                 self.assertEqual(7, region.count('class="weekly-decision-relation"'))
                 self.assertLess(
                     region.index('id="weekly-decision-evidence"'),
@@ -1361,6 +1363,10 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                         )
                         self.assertEqual(
                             1, region.count('href="#market-matrix-title"')
+                        )
+                        self.assertLess(
+                            region.index('href="#market-vacancy-key-title"'),
+                            region.index('href="#market-matrix-title"'),
                         )
 
     def test_v3_every_state_has_exact_es_en_copy_and_one_primary_action(self) -> None:
