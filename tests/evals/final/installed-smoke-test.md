@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `9149c8beaf4cb336499792054a7cbfd09a0e026e`
+source_commit: `0605646d8550d8dba8b98744a45ae6c3dff5900a`
 
-source_tree: `0def4b6f01b325c7ba1467d78a874238230c40b1`
+source_tree: `fded7bd0271da4d8201cdfc50f0711ad33e2857a`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260823064531`
+installed_cache_version: `0.2.0+codex.20260823103807`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `c151f757f37223f7146aa88fac84fe0d12a869e6f6b3d6e4688d2a32490fa7ce`
+source_aggregate_sha256: `885a8c5895fdc19fea8995a44d2159c94255c54349f454038d201349144475ba`
 
-cache_aggregate_sha256: `c151f757f37223f7146aa88fac84fe0d12a869e6f6b3d6e4688d2a32490fa7ce`
+cache_aggregate_sha256: `885a8c5895fdc19fea8995a44d2159c94255c54349f454038d201349144475ba`
 
 source_bytecode_count: `0`
 
@@ -62,8 +62,8 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster timestamp: 2026-08-23T06:45:31Z.
-- Installed validation timestamp: 2026-08-23T07:22:37Z.
+- Cachebuster timestamp: 2026-08-23T10:38:07Z.
+- Installed validation timestamp: 2026-08-23T11:13:22Z.
 - Commit A changed only the plugin manifest, was pushed to remote `main`, and
   was verified by fetch plus a live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -75,14 +75,15 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- The official source release runner completed successfully in 3839.96 seconds.
-- Plugin package discovery: 223/223 tests passed in 142.071 seconds.
-- Repository root discovery: 1395/1395 tests passed in 3361.293 seconds.
+- The official source release runner completed successfully with exit 0.
+- Plugin package discovery: 223/223 tests passed in 142.387 seconds.
+- Repository root discovery: 1396/1396 tests passed in 3357.516 seconds.
 - Static validation passed private-schema, dossier-handoff, and package checks.
 - Repository privacy passed without findings or sensitive-value echo.
 - The official locked release runner passed skill/plugin validators, static,
   package discovery 223/223, root discovery 1395/1395, and privacy.
-- Post-cachebuster structure/full-plugin verification passed 258/258 tests;
+- Post-cachebuster structure/full-plugin verification passed 258/258 tests in
+  1279.998 seconds;
   post-cachebuster static validation also passed.
 - A fresh validation-environment bootstrap was blocked by the established
   persistent-install sandbox policy. Every gate used the documented, verified
