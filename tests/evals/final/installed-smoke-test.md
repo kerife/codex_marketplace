@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `10a140bcc936a4900f4661a52d958a7a1faf05bd`
+source_commit: `9149c8beaf4cb336499792054a7cbfd09a0e026e`
 
-source_tree: `643cb69faeb0c27714d5a796dd9ad54b6e56d947`
+source_tree: `0def4b6f01b325c7ba1467d78a874238230c40b1`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260823020253`
+installed_cache_version: `0.2.0+codex.20260823064531`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `3c42bf5884689ded9b2ab1310bc9af28f45d7eb5b77382889ba144b2220072c5`
+source_aggregate_sha256: `c151f757f37223f7146aa88fac84fe0d12a869e6f6b3d6e4688d2a32490fa7ce`
 
-cache_aggregate_sha256: `3c42bf5884689ded9b2ab1310bc9af28f45d7eb5b77382889ba144b2220072c5`
+cache_aggregate_sha256: `c151f757f37223f7146aa88fac84fe0d12a869e6f6b3d6e4688d2a32490fa7ce`
 
 source_bytecode_count: `0`
 
@@ -62,8 +62,8 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster timestamp: 2026-08-23T02:02:53Z.
-- Installed validation timestamp: 2026-08-23T02:39:33Z.
+- Cachebuster timestamp: 2026-08-23T06:45:31Z.
+- Installed validation timestamp: 2026-08-23T07:22:37Z.
 - Commit A changed only the plugin manifest, was pushed to remote `main`, and
   was verified by fetch plus a live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -75,13 +75,13 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- Reviewed source matrix: 605/605 tests passed in 3049.439 seconds.
-- Plugin package discovery: 223/223 tests passed in 141.276 seconds.
-- Repository root discovery: 1394/1394 tests passed in 3164.136 seconds.
+- The official source release runner completed successfully in 3839.96 seconds.
+- Plugin package discovery: 223/223 tests passed in 142.071 seconds.
+- Repository root discovery: 1395/1395 tests passed in 3361.293 seconds.
 - Static validation passed private-schema, dossier-handoff, and package checks.
 - Repository privacy passed without findings or sensitive-value echo.
 - The official locked release runner passed skill/plugin validators, static,
-  package discovery 223/223, root discovery 1394/1394, and privacy.
+  package discovery 223/223, root discovery 1395/1395, and privacy.
 - Post-cachebuster structure/full-plugin verification passed 258/258 tests;
   post-cachebuster static validation also passed.
 - A fresh validation-environment bootstrap was blocked by the established
@@ -110,7 +110,8 @@ external_action_state: `not_executed`
   validation; exact 1/5 and 2/5 recurrence routes; supported, unknown, and
   professional-experience zero-learning states; provider absent, empty,
   choice, L1-to-LP-001, and L2-to-LP-002 states; all 12 action rows; localized
-  ES/EN copy; one named weekly card; and pinned historical rendering.
+  ES/EN copy including the selection-required row; one named weekly card; and
+  pinned historical rendering.
 - Rejected groups: provider displacement, private disclosure, forged sources,
   crossed sources, mutable one-pass input, oversized input, exceptional input,
   writer output, and CLI output.
@@ -131,8 +132,8 @@ external_action_state: `not_executed`
 ## Scope boundary
 
 - Superdesign evidence is structural source/canvas evidence from the approved
-  Task 5 direction. **Visual QA not run**: no empirical browser,
-  print-preview, or assistive-technology QA is claimed.
+  selection-required navigation-help direction. **Visual QA not run**: no
+  empirical browser, print-preview, or assistive-technology QA is claimed.
 - No LinkedIn/profile edit, recruiter connection, message, application,
   purchase, enrollment, upload, or other external career action was executed.
 - This deterministic synthetic attestation demonstrates release integrity and
