@@ -38,6 +38,13 @@ This repository is a Python-rendered, offline HTML/CSS plugin rather than a Java
 
 The exact HTML templates and CSS implementation are included in `layouts.md` and `theme.md` below.
 
+## VacancyApplicationPacketShell
+
+- Sources: `plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.html`, `plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.css`, and `plugins/professional-growth-coach/scripts/render_private_vacancy_application_packet_v1.py`.
+- Description: compact private packet shell with one readiness decision, public vacancy context, requirements/evidence, unsupported items, private drafts, claim review, interview handoff, tracking proposal, approval boundary, and repeated print boundary. Stop suppresses the draft, claim, handoff-detail, and tracking-detail surfaces.
+- Inputs: one same-package opaque validated packet snapshot. Only closed renderer copy, closed catalog labels, validated draft copy, and escaped public vacancy title, organization, and date are visible.
+- Privacy boundary: no internal IDs, snapshots, digests, paths, URLs, source prose, raw enums, signal bindings, forms, buttons, scripts, or external assets. Visual, print, and assistive-technology QA were not run; the implemented evidence is deterministic DOM/CSS testing only.
+
 ## WeeklyDecision
 
 - Sources: `plugins/professional-growth-coach/schemas/career-next-action-eligibility-v1.schema.json`, `plugins/professional-growth-coach/schemas/career-learning-decision-v3.schema.json`, `plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py`, and `plugins/professional-growth-coach/assets/career-learning-eligibility-v1.css`.

@@ -92,6 +92,36 @@ and symbols without color-only meaning. The four-stage gap route remains a
 non-interactive evidence workflow and recommends no course or certification
 while `learning_state=not_evaluated`.
 
+## Private vacancy application packet
+
+The approved packet is implemented as a compact 920px editorial shell using
+the existing paper, white surface, ink, forest, coral, line, system-sans, and
+Georgia token family. It does not inherit the dossier grid, example facts, or
+wide shell. The source assets are
+`plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.html`
+and `.css`; the renderer is
+`plugins/professional-growth-coach/scripts/render_private_vacancy_application_packet_v1.py`.
+
+The reading order is fixed: private/draft header; one readiness decision;
+public vacancy context; requirement/evidence cards; unsupported items; private
+drafts; claim review; first-interview handoff; proposed tracking; approval
+boundary; footer. Stop replaces drafts, claim review, and detailed handoff and
+tracking with one bounded suppression section. The document exposes one `h1`,
+an explicitly labelled focusable main landmark, labelled sections/articles,
+definition lists, semantic lists, and one captioned claim table with scoped
+headers and stable local row IDs.
+
+Only the same-package opaque validated snapshot can reach rendering. Visible
+dynamic content is limited to closed localized templates and catalog labels,
+validated packet projections, and escaped public vacancy title, organization,
+and date. Internal IDs, snapshots, digests, paths, URLs, raw enums, source
+prose, signal bindings, forms, buttons, scripts, and external assets are not
+rendered. The HTML carries CSP, noindex, and no-referrer metadata; CSS includes
+dark, forced-colors, reduced-motion, 640px mobile, print atomicity, and a
+repeated print privacy/authorization boundary. Browser visual QA, printed-page
+QA, and assistive-technology QA were not run; evidence is limited to static and
+deterministic renderer tests.
+
 ## Vacancy-first weekly decision v3
 
 Career-learning-decision v3 adds one full-width WeeklyDecision card immediately

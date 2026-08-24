@@ -56,6 +56,18 @@ for version 1, plus `build_career_market_learning_dossier_v2.py`,
 
 Each tree ends at a self-contained HTML/CSS surface. The renderer is responsible for validated data-to-template binding; the artifact is the visual product.
 
+## Private vacancy application packet
+
+- `plugins/professional-growth-coach/scripts/render_private_vacancy_application_packet_v1.py`
+  - accepts only `ValidatedPrivateVacancyPacket` from the same plugin package identity
+  - reads `plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.html`
+  - inlines `plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.css`
+  - composes readiness, context, requirements/evidence, unsupported items, drafts, claim review, interview handoff, tracking proposal, approval boundary, and footer
+  - replaces drafts/claim/handoff detail/tracking detail with one bounded suppression section for stop
+  - atomically writes private mode-600 HTML through the existing packet writer boundary
+
+The renderer contains no browser behavior or external resource path. Static structure and CSS modes are tested; browser visual, printed-page, and assistive-technology QA were not run.
+
 ## Executive career dossier v3 extension
 
 - `plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py`

@@ -10,6 +10,7 @@ There is no web router. The plugin exposes deterministic CLI entry points that w
 | Recruiter practice session | `scripts/render_recruiter_practice_session.py` | `assets/recruiter-practice-session-v1.html` | `assets/recruiter-practice-session-v1.css` |
 | Conversion outcome receipt | `scripts/render_private_recruiter_conversion_outcome.py` | `assets/private-recruiter-conversion-outcome-v1.html` | `assets/private-recruiter-conversion-outcome-v1.css` |
 | Follow-through checkpoint receipt | `scripts/render_private_recruiter_followthrough_checkpoint.py` | `assets/private-recruiter-followthrough-checkpoint-v1.html` | `assets/private-recruiter-followthrough-checkpoint-v1.css` |
+| Private vacancy application packet | `scripts/render_private_vacancy_application_packet_v1.py` | `assets/private-vacancy-application-packet-v1.html` | `assets/private-vacancy-application-packet-v1.css` |
 
 All routes are local-file artifacts. The privacy contract forbids external fetches and preserves no-action/manual-handoff boundaries.
 
@@ -31,3 +32,5 @@ not a separate route: it is the sole primary weekly imperative and leaves the
 inspection authorization visibly secondary. Its v3-only stylesheet is
 `assets/career-learning-eligibility-v1.css`; unavailable eligibility omits the
 card and preserves the existing safe step.
+
+The private vacancy packet route captures and validates the packet plus its source group once, then writes a mode-600 HTML artifact atomically. JSON and HTML writers can consume the same in-process opaque snapshot; neither route authorizes an external action.

@@ -55,3 +55,11 @@
 - Description: one full-width, non-interactive weekly decision after the condensed market summary. It presents a public vacancy/signal, exact evidence statement, one action, one deliverable, one done-when, and the fixed outcome/no-action boundary. The `gap_unknown` variant inserts the fixed localized relation list after evidence and before the action.
 - Extractable props: validated eligibility public projection, validated public market vacancies, and locale; provider-selection state includes the complete non-ranked L1–Ln choice list.
 - Hardcoded: unavailable renders no card; no forms, buttons, external links, internal IDs, snapshots, URLs, source prose, raw enums, or caller-authored recommendation text. The relation list is rendered only for `insufficient_gap_evidence` + `unknown` + `confirm_gap_relation`, is labelled by its own stable heading, and is not card description text. Only `selection_required` renders exactly two internal navigation links, to the vacancy key and signal matrix.
+
+## VacancyApplicationPacket
+
+- Source: `plugins/professional-growth-coach/scripts/render_private_vacancy_application_packet_v1.py` with `plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.html` and `.css`.
+- Category: standalone private offline artifact.
+- Description: deterministic ES/EN packet with a single readiness decision and a stop-specific suppressed surface.
+- Extractable props: none from unvalidated callers; rendering accepts only the same plugin package's opaque validated snapshot.
+- Hardcoded: localized hierarchy, catalog labels, CSP/noindex/referrer policy, no-action boundary, 920px shell, dark/forced-colors/reduced-motion/mobile/print contracts, and print repetition. Browser visual, print-output, and assistive-technology QA remain unverified.

@@ -137,3 +137,29 @@ Source: `plugins/professional-growth-coach/assets/executive-career-dossier-v1.ht
 </html>
 ```
 
+## Private vacancy application packet
+
+Source: `plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.html`
+
+```html
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <title>{{DOCUMENT_TITLE}}</title>
+  <style>
+{{INLINE_CSS}}
+  </style>
+</head>
+<body class="private-vacancy-packet-document" data-print-private="{{PRINT_PRIVATE}}" data-print-boundary="{{PRINT_BOUNDARY}}">
+  <a class="skip-link" href="#main-content">{{SKIP_LINK}}</a>
+{{HEADER}}
+{{MAIN}}
+{{FOOTER}}
+</body>
+</html>
+```
