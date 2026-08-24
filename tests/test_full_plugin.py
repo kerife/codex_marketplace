@@ -944,7 +944,9 @@ class FullPluginIntegrationTests(unittest.TestCase):
 
         self.assertIn("prepare_private_vacancy_packet", combined)
         self.assertIn("private-vacancy-application-packet-v1.schema.json", combined)
-        self.assertIn("validated packet JSON, rendered HTML, and CLI receipt", combined)
+        self.assertIn("private packet JSON, rendered HTML, and exact receipts", combined)
+        self.assertIn("build_validated_private_vacancy_application_packet_v1", combined)
+        self.assertIn("no caller-supplied packet JSON", combined)
         for section_name in (
             "private_packet_summary",
             "readiness_decision",

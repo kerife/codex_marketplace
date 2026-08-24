@@ -98,7 +98,7 @@ class PrivateVacancyApplicationPacketRoutingTests(unittest.TestCase):
         self.assertIn("no second vacancy selector", packet.casefold())
 
     def test_packet_route_requires_the_complete_composite_without_fallback(self) -> None:
-        """Break caught: an incomplete source group produces an untyped packet or another route."""
+        """Break caught: routing requires a caller packet or falls through on missing evidence."""
 
         routing = ROUTING.read_text(encoding="utf-8")
         packet = section(routing, "## Private vacancy application packet routing")
@@ -106,26 +106,45 @@ class PrivateVacancyApplicationPacketRoutingTests(unittest.TestCase):
         for member in COMPOSITE_MEMBERS:
             with self.subTest(member=member):
                 self.assertIn(f"`{member}`", packet)
+        self.assertNotIn("Require one supplied packet JSON", packet)
+        self.assertIn("require no caller-supplied packet JSON", packet)
+        self.assertIn(
+            "`build_validated_private_vacancy_application_packet_v1`", packet
+        )
         self.assertIn("only the missing identity-free private evidence", packet)
         self.assertIn("do not fall through", packet.casefold())
         self.assertIn("no packet", packet.casefold())
         self.assertIn("no external action", packet.casefold())
 
-    def test_execution_proof_uses_one_source_group_and_the_exact_cli_receipt(self) -> None:
+    def test_execution_proof_uses_one_source_group_and_exact_writer_receipts(self) -> None:
         """Break caught: JSON, HTML, or receipt can come from crossed source captures."""
 
         workflow = ASSET_WORKFLOW.read_text(encoding="utf-8")
+        exact_flow = exact_fenced_lines(
+            workflow, "The exact one-capture in-process workflow is:"
+        )
+        self.assertEqual(
+            (
+                "validated_packet = build_validated_private_vacancy_application_packet_v1(complete_source_group)",
+                "json_receipt = write_private_vacancy_application_packet_v1(validated_packet, private_json_output)",
+                "html_receipt = write_private_vacancy_application_packet_html_v1(validated_packet, private_html_output)",
+            ),
+            exact_flow,
+        )
+        self.assertNotIn("<packet-json>", workflow)
+        self.assertIn("captures the complete composite exactly once", workflow)
+        self.assertIn("same opaque validated snapshot", workflow)
+        self.assertIn("same captured composite source group", workflow)
         self.assertIn(
-            "python3 -B scripts/render_private_vacancy_application_packet_v1.py "
-            "<packet-json> --source-group <complete-source-group-json> "
-            "--output <private-output.html>",
+            "validated packet JSON, rendered HTML, and their exact receipts",
             workflow,
         )
-        self.assertIn("same captured composite source group", workflow)
-        self.assertIn("validated packet JSON, rendered HTML, and CLI receipt", workflow)
         self.assertEqual(
             RECEIPT_FIELDS,
-            exact_fenced_lines(workflow, "The successful receipt contains exactly:"),
+            exact_fenced_lines(
+                workflow,
+                "Each successful writer returns a receipt containing exactly:",
+            ),
         )
         self.assertIn("`private_draft=true`", workflow)
         self.assertIn("`external_action_authorized=false`", workflow)
@@ -188,6 +207,7 @@ class PrivateVacancyApplicationPacketRoutingTests(unittest.TestCase):
             "private-vacancy-application-packet-v1.schema.json",
             "build_private_vacancy_application_packet_v1.py",
             "validate_private_vacancy_application_packet_v1.py",
+            "build_validated_private_vacancy_application_packet_v1",
             "write_private_vacancy_application_packet_v1.py",
             "render_private_vacancy_application_packet_v1.py",
         ):

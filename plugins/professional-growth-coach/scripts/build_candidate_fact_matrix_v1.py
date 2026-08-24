@@ -9,6 +9,7 @@ import json
 import re
 import sys
 from collections.abc import Mapping
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -89,6 +90,16 @@ def _canonical_json(value: object) -> str:
 def _source_snapshot(source_group: Mapping[str, object]) -> str:
     digest = hashlib.sha256(_canonical_json(source_group).encode("utf-8")).hexdigest()
     return f"snap-candidate-facts-sha256-{digest}"
+
+
+def _is_exact_utc_timestamp(value: str) -> bool:
+    if _TIMESTAMP.fullmatch(value) is None:
+        return False
+    try:
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        return False
+    return True
 
 
 def _validate_source_row(row: object) -> None:
@@ -174,7 +185,7 @@ def _validated_source_group(frozen_group: object) -> Mapping[str, object]:
         type(locale) is not str
         or locale not in {"es", "en"}
         or type(captured_at) is not str
-        or _TIMESTAMP.fullmatch(captured_at) is None
+        or not _is_exact_utc_timestamp(captured_at)
         or not isinstance(sources, list)
         or not 1 <= len(sources) <= 20
         or not isinstance(facts, list)

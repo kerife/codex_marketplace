@@ -352,6 +352,30 @@ class CandidateFactMatrixV1Tests(unittest.TestCase):
                 mutation(group)
                 self.assert_rejected(group)
 
+    def test_captured_at_requires_a_real_exact_utc_calendar_instant(self) -> None:
+        """Break caught: a shape-valid but impossible UTC date or time is accepted."""
+        for captured_at in (
+            "2024-02-29T00:00:00Z",
+            "2026-08-24T23:59:59Z",
+        ):
+            with self.subTest(valid=captured_at):
+                artifact = build(source_group(captured_at=captured_at))
+                self.assertEqual(
+                    [captured_at] * len(artifact["sources"]),
+                    [row["captured_at"] for row in artifact["sources"]],
+                )
+
+        for captured_at in (
+            "2023-02-29T12:30:45Z",
+            "2026-04-31T12:30:45Z",
+            "2026-08-24T24:00:00Z",
+            "2026-08-24T12:60:00Z",
+            "2026-08-24T12:30:60Z",
+            "0000-01-01T00:00:00Z",
+        ):
+            with self.subTest(invalid=captured_at):
+                self.assert_rejected(source_group(captured_at=captured_at))
+
     def test_builder_validator_and_snapshot_capture_each_caller_mapping_once(self) -> None:
         """Break caught: validation rereads mutable caller mappings after the detached capture."""
         builder_group = OneShotMapping(source_group())

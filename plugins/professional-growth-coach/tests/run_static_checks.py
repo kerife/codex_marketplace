@@ -1162,9 +1162,11 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         ),
         "validate_private_vacancy_application_packet_v1": (
             "validate_private_vacancy_application_packet_v1",
+            "build_validated_private_vacancy_application_packet_v1",
             "load_private_vacancy_application_packet_v1",
             "ValidatedPrivateVacancyPacket",
             "_validate_private_vacancy_packet_from_frozen",
+            "_revalidate_validated_private_vacancy_packet",
         ),
         "write_private_vacancy_application_packet_v1": (
             "write_private_vacancy_application_packet_v1",

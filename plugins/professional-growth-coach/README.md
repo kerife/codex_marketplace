@@ -68,9 +68,11 @@ untyped fallback. The versioned entry points are:
 - `scripts/write_private_vacancy_application_packet_v1.py`
 - `scripts/render_private_vacancy_application_packet_v1.py`
 
-The renderer validates the packet JSON against the complete captured source
-group, writes one private local HTML artifact, and emits the closed eight-field
-receipt. The client receives only a private summary, readiness decision,
+The validator's `build_validated_private_vacancy_application_packet_v1`
+captures the complete composite once, builds and fully revalidates the packet,
+and returns one opaque snapshot. The JSON and HTML writers recompute that
+carried complete binding before output and emit closed eight-field receipts.
+No caller-supplied packet JSON is required by the root route. The client receives only a private summary, readiness decision,
 verified local artifact link, and approval boundary. The draft does not
 authorize an application, upload, export, message, publication, or other
 external action. No external action is performed.

@@ -12,15 +12,19 @@ Use vacancy terminology only when it truthfully names the candidate's work. A tr
 
 ## Versioned private vacancy packet
 
-Use [candidate-fact-matrix-v1.schema.json](../../../schemas/candidate-fact-matrix-v1.schema.json) and [private-vacancy-application-packet-v1.schema.json](../../../schemas/private-vacancy-application-packet-v1.schema.json) as the only field contracts. The complete source group contains `eligibility_group` with `eligibility`, `research`, `executive_dossier`, `market_dossier`, `gap_response`, `gap_assessment`, and `provider_research`, plus `candidate_fact_group` with `candidate_fact_matrix` and `source_group`. Capture it once. Eligibility remains the sole target and packet-trigger authority; recompute `prepare_private_vacancy_packet` and accept no second selector.
+Use [candidate-fact-matrix-v1.schema.json](../../../schemas/candidate-fact-matrix-v1.schema.json) and [private-vacancy-application-packet-v1.schema.json](../../../schemas/private-vacancy-application-packet-v1.schema.json) as the only field contracts. The complete source group contains `eligibility_group` with `eligibility`, `research`, `executive_dossier`, `market_dossier`, `gap_response`, `gap_assessment`, and `provider_research`, plus `candidate_fact_group` with `candidate_fact_matrix` and `source_group`. Eligibility remains the sole target and packet-trigger authority; accept no second selector and no caller-supplied packet JSON.
 
-From the plugin root, render the private local artifact with exactly this invocation shape:
+The exact one-capture in-process workflow is:
 
 ```text
-python3 -B scripts/render_private_vacancy_application_packet_v1.py <packet-json> --source-group <complete-source-group-json> --output <private-output.html>
+validated_packet = build_validated_private_vacancy_application_packet_v1(complete_source_group)
+json_receipt = write_private_vacancy_application_packet_v1(validated_packet, private_json_output)
+html_receipt = write_private_vacancy_application_packet_html_v1(validated_packet, private_html_output)
 ```
 
-The CLI must exit zero after atomically publishing the HTML. The successful receipt contains exactly:
+The first call captures the complete composite exactly once, recomputes the eligibility authority, builds the deterministic packet, fully validates it against that frozen composite, and carries both in one opaque snapshot. Pass that same opaque validated snapshot unchanged to both writers. Each writer independently revalidates the carried full source binding before bytes, asset reads, destination resolution, receipt derivation, or output. Do not rebuild, reload, or accept a packet artifact between those calls.
+
+Each successful writer returns a receipt containing exactly:
 
 ```text
 artifact_type
@@ -33,7 +37,7 @@ private_draft
 external_action_authorized
 ```
 
-Require `artifact_type=private_vacancy_application_packet`, packet-matching version/locale/readiness/vacancy values, the resolved output path, `private_draft=true`, and `external_action_authorized=false`. Treat the validated packet JSON, rendered HTML, and CLI receipt as execution proof only when they derive from the same captured composite source group; a mismatch is not execution proof. If a canonical private JSON copy is needed, use `write_private_vacancy_application_packet_v1.py` with the same packet and source-group arguments and require the same receipt shape.
+Require `artifact_type=private_vacancy_application_packet`, packet-matching version/locale/readiness/vacancy values, each writer's resolved output path, `private_draft=true`, and `external_action_authorized=false`. Treat the validated packet JSON, rendered HTML, and their exact receipts as execution proof only when they derive from the same opaque snapshot and same captured composite source group; a mismatch is not execution proof.
 
 Missing, crossed, stale, invalid, failed, or partial inputs produce no client artifact claim and no fallback packet. The legacy textual `application_claim_review_matrix` remains available only for ordinary text asset evaluation; do not treat it as the versioned schema, receipt, consent, or authorization. Its compatibility vocabulary remains `candidate_id`, `target_vacancy_id`, `matched_evidence`, `role_requirements`, `unsupported_or_missing_claims`, `recruiter_summary`, `message_angle`, `first_interview_prep_handoff`, `tracking_event`, `approval_gate`, `draft_only=true`, `consent=not_granted`, and `causality_boundary=no_outcome_guarantee`; none is a v1 client-delivery field. Root delivery exposes only the four client fields and the localized no-external-action line, never candidate/fact/source/snapshot IDs, bindings, raw source prose, paths other than the verified local artifact link, or receipt JSON.
 

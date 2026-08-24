@@ -183,6 +183,39 @@ class PrivateVacancyApplicationPacketRendererTests(unittest.TestCase):
                     self.assertNotIn(marker, str(caught.exception))
         asset_read.assert_not_called()
 
+    def test_forged_same_class_proof_revalidates_before_assets_or_destination(self) -> None:
+        """Break caught: a forged opaque instance reaches asset or destination I/O."""
+        marker = "review-sensitive-forged-proof"
+        tampered = copy.deepcopy(self.artifacts["ready-en"])
+        tampered["readiness"]["headline"] = marker
+        forged = self.renderer._IDENTITY._issue_validated_private_vacancy_packet(
+            json.dumps(tampered, sort_keys=True, separators=(",", ":")),
+            json.dumps(
+                self.sources["ready-en"], sort_keys=True, separators=(",", ":")
+            ),
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output = Path(temporary_directory) / "packet.html"
+            with patch.object(
+                self.renderer.ASSET_LOADER, "read_private_asset"
+            ) as asset_read, patch.object(
+                self.renderer._WRITER, "_resolved_output_path"
+            ) as destination:
+                with self.assertRaises(
+                    self.renderer.PrivateVacancyApplicationPacketRenderError
+                ) as caught:
+                    self.renderer.write_private_vacancy_application_packet_html_v1(
+                        forged, output
+                    )
+            self.assertEqual(
+                "cannot render private vacancy application packet",
+                str(caught.exception),
+            )
+            self.assertNotIn(marker, str(caught.exception))
+            asset_read.assert_not_called()
+            destination.assert_not_called()
+            self.assertFalse(output.exists())
+
     def test_ready_dom_has_exact_landmarks_aria_lists_definition_lists_and_claim_table(self) -> None:
         """Break caught: the ready document loses its semantic hierarchy or stable references."""
         document = self.renderer.render_private_vacancy_application_packet_v1(
@@ -414,6 +447,66 @@ class PrivateVacancyApplicationPacketRendererTests(unittest.TestCase):
         self.assertNotIn("Fixture < 7 & Reliability", document)
         self.assertNotIn("R&D & Reliability", document)
 
+    def test_unmapped_public_and_inferred_only_requirements_render_total_localized_receipts(self) -> None:
+        """Break caught: valid missing/review-required rows crash catalog-only rendering."""
+        helpers = load_module(
+            ROOT / "tests" / "test_private_vacancy_application_packet_v1.py",
+            "private_packet_renderer_totality_helpers",
+        )
+        expected_copy = {
+            "es": ("Requisito público no mapeado", "Requiere revisión"),
+            "en": ("Unmapped public requirement", "Review required"),
+        }
+        for locale, phrases in expected_copy.items():
+            with self.subTest(locale=locale):
+                group = helpers.composite_group(
+                    locale=locale,
+                    requirements=[
+                        helpers.requirement("language", 1),
+                        helpers.requirement("terraform", 2),
+                    ],
+                    facts=[
+                        helpers.fact(
+                            "terraform",
+                            evidence="inferred",
+                            confidentiality="review_required",
+                        )
+                    ],
+                )
+                captured_at = "2024-02-29T01:02:03Z"
+                raw_facts = group["candidate_fact_group"]["source_group"]
+                raw_facts["captured_at"] = captured_at
+                group["candidate_fact_group"]["candidate_fact_matrix"] = (
+                    helpers.FACT_BUILDER.build_candidate_fact_matrix_v1(raw_facts)
+                )
+                packet = helpers.PACKET_BUILDER.build_private_vacancy_application_packet_v1(
+                    group
+                )
+                snapshot = self.validator.validate_private_vacancy_application_packet_v1(
+                    packet, group
+                )
+                document = self.renderer.render_private_vacancy_application_packet_v1(
+                    snapshot
+                )
+                self.assertIn(phrases[0], document)
+                self.assertIn(phrases[1], document)
+                self.assertNotIn("review_required", document)
+                self.assertNotIn("language", document)
+                self.assertNotIn(captured_at, document)
+
+                with tempfile.TemporaryDirectory() as temporary_directory:
+                    output = Path(temporary_directory) / "packet.html"
+                    receipt = (
+                        self.renderer.write_private_vacancy_application_packet_html_v1(
+                            snapshot, output
+                        )
+                    )
+                    self.assertEqual(document, output.read_text(encoding="utf-8"))
+                    self.assertEqual(locale, receipt.locale)
+                    self.assertEqual("revise_first", receipt.readiness_state)
+                    self.assertEqual(output.resolve(), receipt.output_path)
+                    self.assertFalse(receipt.external_action_authorized)
+
     def test_html_omits_internal_ids_sources_snapshots_urls_controls_and_candidate_bindings(self) -> None:
         """Break caught: private provenance, source prose, or an action surface reaches HTML."""
         forbidden_fragments = (
@@ -540,12 +633,12 @@ class PrivateVacancyApplicationPacketRendererTests(unittest.TestCase):
     def test_one_captured_snapshot_drives_json_html_html_write_and_receipt(self) -> None:
         """Break caught: JSON, HTML, and receipts are rebuilt from different caller captures."""
         marker = "review-sensitive-second-capture"
-        packet = OnePassMapping(copy.deepcopy(self.artifacts["ready-es"]), marker)
         sources = OnePassMapping(copy.deepcopy(self.sources["ready-es"]), marker)
-        snapshot = self.validator.validate_private_vacancy_application_packet_v1(
-            packet, sources
+        snapshot = (
+            self.validator.build_validated_private_vacancy_application_packet_v1(
+                sources
+            )
         )
-        self.assertEqual(1, packet.items_calls)
         self.assertEqual(1, sources.items_calls)
 
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -578,7 +671,6 @@ class PrivateVacancyApplicationPacketRendererTests(unittest.TestCase):
             self.assertEqual(0o600, stat.S_IMODE(json_output.stat().st_mode))
             self.assertEqual(0o600, stat.S_IMODE(html_output.stat().st_mode))
 
-        self.assertEqual(1, packet.items_calls)
         self.assertEqual(1, sources.items_calls)
 
     def test_html_cli_captures_once_emits_exact_receipt_and_fails_without_echo_or_partial_output(self) -> None:

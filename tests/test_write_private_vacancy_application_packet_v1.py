@@ -175,6 +175,48 @@ class PrivateVacancyApplicationPacketWriterTests(unittest.TestCase):
             self.assertEqual(b"previous-private-bytes", output.read_bytes())
             self.assertEqual([], list(output.parent.glob(f".{output.name}.tmp-*")))
 
+    def test_rejects_forged_same_class_proofs_before_resolving_destination(self) -> None:
+        """Break caught: same-class proof bytes are trusted without source recomputation."""
+        packet = self._packet()
+        sources = self._sources()
+        marker = "review-sensitive-forged-proof"
+        tampered_packet = json.loads(json.dumps(packet))
+        tampered_packet["readiness"]["headline"] = marker
+        tampered_sources = json.loads(json.dumps(sources))
+        tampered_sources["candidate_fact_group"]["source_group"]["captured_at"] = (
+            "2026-08-24T12:30:46Z"
+        )
+        forged_packets = (
+            WRITER._identity._issue_validated_private_vacancy_packet(
+                json.dumps(tampered_packet, sort_keys=True, separators=(",", ":")),
+                json.dumps(sources, sort_keys=True, separators=(",", ":")),
+            ),
+            WRITER._identity._issue_validated_private_vacancy_packet(
+                json.dumps(packet, sort_keys=True, separators=(",", ":")),
+                json.dumps(tampered_sources, sort_keys=True, separators=(",", ":")),
+            ),
+        )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output = Path(temporary_directory) / "packet.json"
+            output.write_bytes(b"previous-private-bytes")
+            for forged in forged_packets:
+                with self.subTest(forged=forged):
+                    with patch.object(WRITER, "_resolved_output_path") as destination:
+                        with self.assertRaises(
+                            WRITER.PrivateVacancyApplicationPacketWriteError
+                        ) as caught:
+                            WRITER.write_private_vacancy_application_packet_v1(
+                                forged, output, force=True
+                            )
+                    self.assertEqual(
+                        "cannot write private vacancy application packet",
+                        str(caught.exception),
+                    )
+                    self.assertNotIn(marker, str(caught.exception))
+                    destination.assert_not_called()
+            self.assertEqual(b"previous-private-bytes", output.read_bytes())
+
     def test_accepts_opaque_snapshot_from_independently_loaded_validator_only(self) -> None:
         """Break caught: a separately imported canonical validator proof fails identity checks."""
         module_names: list[str] = []

@@ -160,7 +160,9 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
         asset_contract = paths[2].read_text(encoding="utf-8")
         workflow = paths[3].read_text(encoding="utf-8")
         self.assertIn("private-vacancy-application-packet-v1.schema.json", asset_contract)
-        self.assertIn("render_private_vacancy_application_packet_v1.py", workflow)
+        self.assertIn("build_validated_private_vacancy_application_packet_v1", workflow)
+        self.assertIn("write_private_vacancy_application_packet_v1", workflow)
+        self.assertIn("write_private_vacancy_application_packet_html_v1", workflow)
 
     def test_private_snapshot_keeps_real_copied_bytes_after_originals_change(self) -> None:
         """Break caught: reopening either supplied root after capture changes imports."""
@@ -2532,6 +2534,10 @@ raise SystemExit(64)
             (
                 "validate_private_vacancy_application_packet_v1.py",
                 "validate_private_vacancy_application_packet_v1",
+            ),
+            (
+                "validate_private_vacancy_application_packet_v1.py",
+                "build_validated_private_vacancy_application_packet_v1",
             ),
             (
                 "write_private_vacancy_application_packet_v1.py",

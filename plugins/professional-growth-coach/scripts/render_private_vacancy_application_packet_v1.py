@@ -126,6 +126,8 @@ _COPY = {
         "partial": "Parcial",
         "missing": "Faltante",
         "conflicting": "En conflicto",
+        "review_required": "Requiere revisión",
+        "unmapped_public_requirement": "Requisito público no mapeado",
         "high": "Alta",
         "medium": "Media",
         "low": "Baja",
@@ -215,6 +217,8 @@ _COPY = {
         "partial": "Partial",
         "missing": "Missing",
         "conflicting": "Conflicting",
+        "review_required": "Review required",
+        "unmapped_public_requirement": "Unmapped public requirement",
         "high": "High",
         "medium": "Medium",
         "low": "Low",
@@ -302,15 +306,23 @@ def _rows(value: object) -> Sequence[object]:
 
 
 def _artifact(validated_packet: object) -> dict[str, object]:
-    if type(validated_packet) is not ValidatedPrivateVacancyPacket:
-        raise PrivateVacancyApplicationPacketRenderError(_FAILURE)
     try:
-        artifact = validated_packet.artifact
+        artifact = _VALIDATOR._revalidate_validated_private_vacancy_packet(
+            validated_packet
+        )
         if not isinstance(artifact, dict):
             raise ValueError("artifact is unavailable")
         return artifact
     except Exception:
         raise PrivateVacancyApplicationPacketRenderError(_FAILURE) from None
+
+
+def _signal_label(locale: str, signal: object) -> str:
+    if not isinstance(signal, str):
+        raise ValueError("signal is unavailable")
+    return _SIGNAL_LABELS[locale].get(
+        signal, str(_COPY[locale]["unmapped_public_requirement"])
+    )
 
 
 def _definition_list(rows: Sequence[tuple[str, str]], css_class: str) -> str:
@@ -335,7 +347,7 @@ def _requirements(artifact: Mapping[str, object], locale: str) -> str:
     cards: list[str] = []
     for number, raw_row in enumerate(_rows(artifact["requirement_evidence"]), start=1):
         row = _mapping(raw_row)
-        signal = _SIGNAL_LABELS[locale][str(row["signal"])]
+        signal = _signal_label(locale, row["signal"])
         fact_count = len(_rows(row["fact_ids"]))
         details = _definition_list(
             (
@@ -367,7 +379,7 @@ def _unsupported(artifact: Mapping[str, object], locale: str) -> str:
     items: list[str] = []
     for raw_row in _rows(artifact["unsupported_or_missing_claims"]):
         row = _mapping(raw_row)
-        signal = _SIGNAL_LABELS[locale][str(row["signal"])]
+        signal = _signal_label(locale, row["signal"])
         items.append(
             f"<li><strong>{_escape(signal)}</strong> — "
             f'{_escape(copy["next_private_step"])}: {_escape(row["next_private_step"])}</li>'
@@ -429,7 +441,7 @@ def _claim_review(artifact: Mapping[str, object], locale: str) -> str:
     for number, raw_claim in enumerate(_rows(artifact["claim_review"]), start=1):
         claim = _mapping(raw_claim)
         requirement_ids = [str(value) for value in _rows(claim["requirement_ids"])]
-        signal_labels = [_SIGNAL_LABELS[locale][signals[value]] for value in requirement_ids]
+        signal_labels = [_signal_label(locale, signals[value]) for value in requirement_ids]
         signal_text = ", ".join(signal_labels)
         draft_id = claim["draft_id"]
         if draft_id is None:

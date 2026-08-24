@@ -45,7 +45,7 @@ private and perform no external action.
 
 Except for explicit private recruiter-practice or private recruiter-reply triage requests, inbound recruiter replies, recruiter screen invitations, proposed meeting times, and requests to send, confirm, accept, schedule, book, message, reply, or create a calendar item route first to `optimize-professional-profile` and require one `recruiter_reply_triage` row before any draft response. Explicit private practice wins even with those signals or debug, raw, or internal-row requests. Explicit private recruiter-reply triage also wins even with those signals or debug, raw, or internal-row requests. Neither emits recruiter triage, router rows, or a module-execution packet; use [routing.md](references/routing.md) for the non-private authorization and time-handling rules.
 
-After recruiter routes, execute `prepare_private_vacancy_packet` only through the validated branch in `routing.md`; it selects `optimize-career-assets`, one complete composite, no router/module packet, and no external action.
+After recruiter routes, execute `prepare_private_vacancy_packet` only via `routing.md`: capture one composite as one opaque snapshot for both private writers; no caller packet JSON, router/module packet, or external action.
 
 When a request needs more than one domain skill, keep `selected_module` as the first safe module to execute and then provide an `ordered plan` labelled `multi-module`. Each later step must name the module, required evidence, and whether action-time authorization will be needed.
 

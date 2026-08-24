@@ -119,6 +119,53 @@ def validate_private_vacancy_application_packet_v1(
         raise ValueError(_MISMATCH) from None
 
 
+def build_validated_private_vacancy_application_packet_v1(
+    source_group: object,
+) -> ValidatedPrivateVacancyPacket:
+    """Capture one complete composite, build its packet, and issue one opaque proof."""
+    try:
+        frozen_source_group = _snapshot.bounded_plain_snapshot(source_group)
+        if not isinstance(frozen_source_group, Mapping):
+            raise ValueError(_MISMATCH)
+        value = _builder._project_private_vacancy_packet_from_frozen(
+            frozen_source_group
+        )
+        return _validate_private_vacancy_packet_from_frozen(
+            {"value": value, "source_group": frozen_source_group}
+        )
+    except Exception:
+        raise ValueError(_MISMATCH) from None
+
+
+def _revalidate_validated_private_vacancy_packet(
+    validated_packet: object,
+) -> dict[str, object]:
+    """Recompute a carried artifact from its full frozen composite for a consumer."""
+    try:
+        artifact_json, source_group_json = _identity._validation_payload_json(
+            validated_packet
+        )
+        if (
+            len(artifact_json.encode("utf-8")) > _MAX_INPUT_BYTES
+            or len(source_group_json.encode("utf-8")) > _MAX_INPUT_BYTES
+        ):
+            raise ValueError(_MISMATCH)
+        value = json.loads(artifact_json, object_pairs_hook=_unique_object)
+        source_group = json.loads(
+            source_group_json, object_pairs_hook=_unique_object
+        )
+        frozen = _snapshot.bounded_plain_snapshot(
+            {"value": value, "source_group": source_group}
+        )
+        _validate_private_vacancy_packet_from_frozen(frozen)
+        frozen_value = frozen["value"]
+        if not isinstance(frozen_value, dict):
+            raise ValueError(_MISMATCH)
+        return frozen_value
+    except Exception:
+        raise ValueError(_MISMATCH) from None
+
+
 def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
     result: dict[str, object] = {}
     for key, value in pairs:

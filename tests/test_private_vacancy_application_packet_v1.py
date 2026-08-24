@@ -798,6 +798,25 @@ class PrivateVacancyApplicationPacketV1Tests(unittest.TestCase):
             ),
         )
 
+    def test_validator_builds_one_opaque_packet_from_one_composite_capture(self) -> None:
+        """Break caught: routing needs a caller-supplied packet or rereads its composite."""
+        raw_group = composite_group()
+        one_shot = OneShotMapping(raw_group)
+        build_validated = getattr(
+            PACKET_VALIDATOR,
+            "build_validated_private_vacancy_application_packet_v1",
+            None,
+        )
+        self.assertTrue(callable(build_validated))
+        validated = build_validated(one_shot)
+
+        self.assertEqual(1, one_shot.reads)
+        self.assertIs(
+            type(validated),
+            PACKET_VALIDATOR.ValidatedPrivateVacancyPacket,
+        )
+        self.assertEqual(build_packet(raw_group), validated.artifact)
+
     def test_builder_is_total_bounded_and_no_echo_for_hostile_mappings(self) -> None:
         """Break caught: recursive, oversized, or exception input leaks details or partial data."""
         recursive = composite_group()

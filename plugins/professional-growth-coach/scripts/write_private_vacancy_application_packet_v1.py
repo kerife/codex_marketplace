@@ -86,10 +86,10 @@ class PrivateVacancyApplicationPacketWriteReceipt:
 
 
 def _canonical_bytes(validated_packet: object) -> tuple[dict[str, object], bytes]:
-    if type(validated_packet) is not ValidatedPrivateVacancyPacket:
-        raise PrivateVacancyApplicationPacketWriteError(_FAILURE)
     try:
-        artifact = validated_packet.artifact
+        artifact = _validator._revalidate_validated_private_vacancy_packet(
+            validated_packet
+        )
         if not isinstance(artifact, dict):
             raise ValueError("artifact is unavailable")
         content = json.dumps(

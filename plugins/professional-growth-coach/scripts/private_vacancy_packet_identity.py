@@ -58,3 +58,15 @@ def _issue_validated_private_vacancy_packet(
         artifact_json,
         source_group_json,
     )
+
+
+def _validation_payload_json(
+    validated_packet: object,
+) -> tuple[str, str]:
+    """Return carried canonical inputs only for the exact package proof class."""
+    if type(validated_packet) is not ValidatedPrivateVacancyPacket:
+        raise TypeError("validated private vacancy packet is unavailable")
+    return (
+        validated_packet._ValidatedPrivateVacancyPacket__artifact_json,
+        validated_packet._ValidatedPrivateVacancyPacket__source_group_json,
+    )
