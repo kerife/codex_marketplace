@@ -159,8 +159,8 @@ class CandidateFactMatrixV1Tests(unittest.TestCase):
                 group["facts"][0]["fact_text"] = prose
                 self.assert_rejected(group)
 
-    def test_builder_rejects_totalized_source_path_families_without_echo(self) -> None:
-        """Break caught: one path family evades the source-location privacy boundary."""
+    def test_builder_rejects_closed_source_path_and_filename_families_without_echo(self) -> None:
+        """Break caught: a bare source file or relative location reaches the fact matrix."""
         for prose in (
             "Evidence kept at /Users/example/private-cv.pdf.",
             r"Evidence kept at C:\Users\example\private-cv.pdf.",
@@ -170,17 +170,25 @@ class CandidateFactMatrixV1Tests(unittest.TestCase):
             r"Document at source\\private-cv.pdf",
             r"Document at \server\share\private-cv.pdf",
             r"Document at \\server\share\private-cv.pdf",
+            "Document at private-review-sensitive.PDF;",
+            "Document at resume.docx)",
+            "Document at notes.JSON.",
+            "Document at source/private-cv",
+            "Document at folder/subdir/private_cv",
+            r"Document at folder\\subdir\\private_cv",
         ):
             with self.subTest(prose=prose):
                 group = source_group()
                 group["facts"][0]["fact_text"] = prose
                 self.assert_rejected(group)
 
-    def test_builder_path_boundary_preserves_professional_vocabulary_and_versions(self) -> None:
-        """Break caught: total path rejection blocks ordinary technical prose, certificates, or versions."""
+    def test_builder_path_boundary_preserves_explicit_professional_vocabulary_and_versions(self) -> None:
+        """Break caught: closed source-path rejection blocks approved technical prose or credentials."""
         for prose in (
             "Authentication version 2.1 control practice.",
             "Kubernetes/Helm operations practice.",
+            "CI/CD pipeline practice.",
+            "client/server systems design practice.",
             "AWS Certified Security - Specialty version 2024 preparation.",
         ):
             with self.subTest(prose=prose):

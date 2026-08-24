@@ -67,12 +67,22 @@ _SECRET = re.compile(
 )
 _PATH_LIKE = re.compile(
     r"(?:^|[\s?&#=;\"'])(?:"
-    r"(?:[A-Za-z]:)?[\\/]+[^\s\\/]+|"
-    r"[^\s\\/]+(?:[\\/]+[^\s\\/]+)+\.(?:pdf|docx?|txt|json)"
+    r"(?:[A-Za-z]:)?[\\/]+[^\s\\/]+"
     r")",
     re.I,
 )
 _LOCAL_FILE_URI = re.compile(r"(?<![^\W_])file\s*:(?:[\\/]){2,}", re.I)
+_SOURCE_FILENAME = re.compile(
+    r"(?<![A-Za-z0-9_.-])[A-Za-z0-9][A-Za-z0-9_.-]*\."
+    r"(?:pdf|docx?|rtf|txt|md|json|csv|xlsx?|pptx?|ya?ml)(?![A-Za-z0-9_-])",
+    re.I,
+)
+_RELATIVE_SOURCE_LOCATION = re.compile(
+    r"(?<![A-Za-z0-9_.-])"
+    r"(?P<location>[A-Za-z0-9][A-Za-z0-9_.-]*(?:[\\/]+[A-Za-z0-9][A-Za-z0-9_.-]*)+)"
+    r"(?![A-Za-z0-9_.-])"
+)
+_SAFE_TECHNICAL_SLASH_TERMS = frozenset({"kubernetes/helm", "ci/cd", "client/server"})
 
 
 def _canonical_json(value: object) -> str:
@@ -93,8 +103,17 @@ def _is_plain_string(value: object, minimum: int, maximum: int) -> bool:
     )
 
 
+def _contains_source_location(value: str) -> bool:
+    if _PATH_LIKE.search(value) or _LOCAL_FILE_URI.search(value) or _SOURCE_FILENAME.search(value):
+        return True
+    return any(
+        match.group("location").replace("\\", "/").casefold() not in _SAFE_TECHNICAL_SLASH_TERMS
+        for match in _RELATIVE_SOURCE_LOCATION.finditer(value)
+    )
+
+
 def _safe_fact_text(value: object) -> bool:
-    return _is_plain_string(value, 1, 500) and not contains_unicode_controls(value) and not contains_candidate_like_name(value) and not any(
+    return _is_plain_string(value, 1, 500) and not contains_unicode_controls(value) and not contains_candidate_like_name(value) and not _contains_source_location(value) and not any(
         pattern.search(value)
         for pattern in (
             _URL,
@@ -103,8 +122,6 @@ def _safe_fact_text(value: object) -> bool:
             _CONTACT,
             _PRIVATE_ANALYTICS,
             _SECRET,
-            _PATH_LIKE,
-            _LOCAL_FILE_URI,
         )
     )
 
