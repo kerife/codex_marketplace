@@ -54,6 +54,27 @@ learning group. Partial or crossed groups fail before output. These flags read
 local identity-free artifacts only; they do not apply, edit a profile, message,
 purchase, enroll, schedule, or publish.
 
+### Private vacancy application packet v1
+
+When recomputed eligibility selects `prepare_private_vacancy_packet`, the root
+routes the complete private composite to `optimize-career-assets`. Eligibility
+remains the only vacancy selector. Missing or crossed inputs fail without an
+untyped fallback. The versioned entry points are:
+
+- `schemas/candidate-fact-matrix-v1.schema.json`
+- `schemas/private-vacancy-application-packet-v1.schema.json`
+- `scripts/build_private_vacancy_application_packet_v1.py`
+- `scripts/validate_private_vacancy_application_packet_v1.py`
+- `scripts/write_private_vacancy_application_packet_v1.py`
+- `scripts/render_private_vacancy_application_packet_v1.py`
+
+The renderer validates the packet JSON against the complete captured source
+group, writes one private local HTML artifact, and emits the closed eight-field
+receipt. The client receives only a private summary, readiness decision,
+verified local artifact link, and approval boundary. The draft does not
+authorize an application, upload, export, message, publication, or other
+external action. No external action is performed.
+
 ### Installed test scope
 
 An extracted marketplace cache contains the package-local validators, renderers,

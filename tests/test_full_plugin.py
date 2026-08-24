@@ -823,6 +823,34 @@ class FullPluginIntegrationTests(unittest.TestCase):
         self.assertIn("sorted POSIX relative paths", release_docs)
         self.assertIn("repository conformance not bundled", release_docs)
 
+    def test_private_packet_route_is_an_identity_free_artifact_delivery(self) -> None:
+        """Break caught: the packet route falls back to the ordinary router response."""
+
+        root_skill = (SKILLS_ROOT / "professional-growth-coach" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        routing = (
+            SKILLS_ROOT / "professional-growth-coach" / "references" / "routing.md"
+        ).read_text(encoding="utf-8")
+        assets = (SKILLS_ROOT / "optimize-career-assets" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        combined = "\n".join((root_skill, routing, assets))
+
+        self.assertIn("prepare_private_vacancy_packet", combined)
+        self.assertIn("private-vacancy-application-packet-v1.schema.json", combined)
+        self.assertIn("validated packet JSON, rendered HTML, and CLI receipt", combined)
+        for section_name in (
+            "private_packet_summary",
+            "readiness_decision",
+            "verified_local_artifact",
+            "approval_boundary",
+        ):
+            with self.subTest(section_name=section_name):
+                self.assertEqual(1, routing.count(f"\n{section_name}\n"))
+        self.assertIn("No external action is performed.", routing)
+        self.assertIn("No se realiza ninguna acción externa.", routing)
+
     def test_artifact_failure_cannot_be_claimed_as_success(self) -> None:
         reference_path = (
             SKILLS_ROOT

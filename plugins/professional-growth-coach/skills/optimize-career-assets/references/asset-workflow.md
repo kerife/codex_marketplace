@@ -10,22 +10,32 @@ Create a master CV recommendation from supported facts. For each vacancy-tailore
 
 Use vacancy terminology only when it truthfully names the candidate's work. A truthful transferable phrasing is preferable to keyword stuffing. A recommendation can say `inferred: recommendation=complete a candidate-owned Terraform lab before claiming Terraform familiarity`; it cannot state that the lab or skill already exists.
 
-## Application packet
+## Versioned private vacancy packet
 
-For a supplied vacancy, assemble a review packet after the fact matrix and before portfolio planning. Keep it draft-only and traceable:
+Use [candidate-fact-matrix-v1.schema.json](../../../schemas/candidate-fact-matrix-v1.schema.json) and [private-vacancy-application-packet-v1.schema.json](../../../schemas/private-vacancy-application-packet-v1.schema.json) as the only field contracts. The complete source group contains `eligibility_group` with `eligibility`, `research`, `executive_dossier`, `market_dossier`, `gap_response`, `gap_assessment`, and `provider_research`, plus `candidate_fact_group` with `candidate_fact_matrix` and `source_group`. Capture it once. Eligibility remains the sole target and packet-trigger authority; recompute `prepare_private_vacancy_packet` and accept no second selector.
 
-- `matched_evidence` lists each vacancy requirement with the supporting candidate fact IDs or `unknown:` if no support exists.
-- `role_requirements` assigns stable requirement IDs from the supplied vacancy; map support as `V-### -> F-###` wherever possible.
-- `unsupported_or_missing_claims` names requirements, outcomes, metrics, certifications, work authorization, or tools that cannot be claimed yet.
-- `cv_bullets` contains only fact-backed bullets or confirmation placeholders.
-- `recruiter_summary` is a concise draft positioning note with fact IDs and no guarantee of fit, interview, or response.
-- `message_angle` states the truthful outreach or cover-letter angle without implying permission to send.
-- `application_claim_review_matrix` reviews every material CV bullet, recruiter-summary claim, and message angle before the packet is used. Use semicolon rows with `application_claim_review_matrix=claim_to_asset_readiness_gate`, `claim_id=AC-###`, `asset_surface`, `vacancy_requirement_ids`, `candidate_fact_ids`, `claim_text`, `evidence_state`, `confidence`, `missing_proof`, `blocked_claims`, `decision`, `reviewer_note`, `draft_only=true`, and `no_external_action=true`.
-- `first_interview_prep_handoff` lists vacancy requirement IDs, candidate fact IDs, and gaps to pass to `prepare-role-interviews` once the interview stage is known.
-- `tracking_event` is a proposed local event for `track-career-outcomes`; leave submission, response, interview, and offer states unknown until observed.
-- `approval_gate` records `draft_only=true`, `consent=not_granted`, and `causality_boundary=no_outcome_guarantee`.
+From the plugin root, render the private local artifact with exactly this invocation shape:
 
-Approve a claim with `decision=use` only when it cites candidate fact IDs and the evidence state is supported. Claims with partial proof, missing scope, conflicting evidence, unknown facts, unsupported requirements, or confidentiality concerns must be `revise`, `hold_for_confirmation`, or `remove`. The matrix is a review tool, not authorization to apply, upload, send, or publish.
+```text
+python3 -B scripts/render_private_vacancy_application_packet_v1.py <packet-json> --source-group <complete-source-group-json> --output <private-output.html>
+```
+
+The CLI must exit zero after atomically publishing the HTML. The successful receipt contains exactly:
+
+```text
+artifact_type
+schema_version
+locale
+readiness_state
+vacancy_id
+output_path
+private_draft
+external_action_authorized
+```
+
+Require `artifact_type=private_vacancy_application_packet`, packet-matching version/locale/readiness/vacancy values, the resolved output path, `private_draft=true`, and `external_action_authorized=false`. Treat the validated packet JSON, rendered HTML, and CLI receipt as execution proof only when they derive from the same captured composite source group; a mismatch is not execution proof. If a canonical private JSON copy is needed, use `write_private_vacancy_application_packet_v1.py` with the same packet and source-group arguments and require the same receipt shape.
+
+Missing, crossed, stale, invalid, failed, or partial inputs produce no client artifact claim and no fallback packet. The legacy textual `application_claim_review_matrix` remains available only for ordinary text asset evaluation; do not treat it as the versioned schema, receipt, consent, or authorization. Its compatibility vocabulary remains `candidate_id`, `target_vacancy_id`, `matched_evidence`, `role_requirements`, `unsupported_or_missing_claims`, `recruiter_summary`, `message_angle`, `first_interview_prep_handoff`, `tracking_event`, `approval_gate`, `draft_only=true`, `consent=not_granted`, and `causality_boundary=no_outcome_guarantee`; none is a v1 client-delivery field. Root delivery exposes only the four client fields and the localized no-external-action line, never candidate/fact/source/snapshot IDs, bindings, raw source prose, paths other than the verified local artifact link, or receipt JSON.
 
 ## Portfolio and export
 

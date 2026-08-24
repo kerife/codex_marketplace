@@ -99,6 +99,35 @@ def load_repo_script(path: Path, name: str):
 
 
 class JobSearchCoachPluginStructureTests(unittest.TestCase):
+    def test_private_packet_skill_routing_surface_is_regular_and_versioned(self) -> None:
+        """Break caught: routing points to a missing, linked, or unversioned contract."""
+
+        paths = (
+            PLUGIN_ROOT / "skills" / "professional-growth-coach" / "SKILL.md",
+            PLUGIN_ROOT
+            / "skills"
+            / "professional-growth-coach"
+            / "references"
+            / "routing.md",
+            PLUGIN_ROOT / "skills" / "optimize-career-assets" / "SKILL.md",
+            PLUGIN_ROOT
+            / "skills"
+            / "optimize-career-assets"
+            / "references"
+            / "asset-workflow.md",
+            PLUGIN_ROOT / "README.md",
+            REPO_ROOT / "tests" / "test_private_vacancy_application_packet_routing.py",
+        )
+        for path in paths:
+            with self.subTest(path=path.name):
+                self.assertTrue(path.is_file(), path)
+                self.assertFalse(path.is_symlink(), path)
+
+        asset_contract = paths[2].read_text(encoding="utf-8")
+        workflow = paths[3].read_text(encoding="utf-8")
+        self.assertIn("private-vacancy-application-packet-v1.schema.json", asset_contract)
+        self.assertIn("render_private_vacancy_application_packet_v1.py", workflow)
+
     def test_private_snapshot_keeps_real_copied_bytes_after_originals_change(self) -> None:
         """Break caught: reopening either supplied root after capture changes imports."""
 

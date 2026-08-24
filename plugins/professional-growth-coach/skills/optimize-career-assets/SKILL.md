@@ -23,13 +23,13 @@ For portfolio ideas, propose only evidence plans whose material the candidate ow
 
 Content eligibility does not authorize execution. Even when ownership or documented rights-holder permission makes material eligible, retain the separate action gate and obtain exact action-and-target authorization immediately before any external share, publication, upload, or export.
 
-## Application packet
+## Private vacancy application packet v1
 
-When a target vacancy is supplied, create a draft-only application packet that a coach could review before any external action. Include `candidate_id`, `target_vacancy_id`, `packet_goal`, `vacancy_source_state`, `role_requirements`, `matched_evidence`, `unsupported_or_missing_claims`, `cv_bullets`, `recruiter_summary`, `message_angle`, `application_claim_review_matrix`, `first_interview_prep_handoff`, `tracking_event`, and `approval_gate`. Set `draft_only=true`, `consent=not_granted`, and `causality_boundary=no_outcome_guarantee` until the user gives exact action-and-target authorization.
+Use this versioned branch only when the root router supplies the complete validated composite and recomputes `recommended_next_action=prepare_private_vacancy_packet`. Eligibility remains the sole vacancy and trigger authority; accept no independent selector. Read [candidate-fact-matrix-v1.schema.json](../../schemas/candidate-fact-matrix-v1.schema.json), [private-vacancy-application-packet-v1.schema.json](../../schemas/private-vacancy-application-packet-v1.schema.json), and the exact invocation in [asset-workflow.md](references/asset-workflow.md). Do not hand-author the retired identity-bearing prose packet.
 
-The packet is a planning artifact, not an application. The recruiter summary must cite supported fact IDs, name missing requirements plainly, avoid fit guarantees, and never imply the user is authorized to send it. Create the `first_interview_prep_handoff` only from supplied vacancy requirements and candidate fact IDs; route to `prepare-role-interviews` for stage-specific coaching after the vacancy and interview stage are known. Create the `tracking_event` as a proposed local record for `track-career-outcomes`; do not mark an application submitted or response received without evidence.
+The versioned schema is the packet field contract. Keep every claim source-recomputed and truthful, preserve the no-outcome boundary, and leave the artifact private with manual review required and external action unauthorized. Creating or approving the draft grants neither consent nor authority to apply, send, upload, export, share, or publish. The legacy textual `application_claim_review_matrix` evaluator remains unchanged for ordinary text asset coaching; it is a review gate, not versioned execution proof.
 
-Add one `application_claim_review_matrix=claim_to_asset_readiness_gate` row for each material CV bullet, recruiter-summary claim, and message angle. Each row includes `claim_id`, `asset_surface`, `vacancy_requirement_ids`, `candidate_fact_ids`, `claim_text`, `evidence_state`, `confidence`, `missing_proof`, `blocked_claims`, `decision`, `reviewer_note`, `draft_only=true`, and `no_external_action=true`. Use `decision=use` only when the claim cites candidate fact IDs and has supported evidence; unsupported, conflicting, unknown, or missing-proof claims must be `revise`, `hold_for_confirmation`, or `remove`.
+Execution proof is the validated packet JSON, rendered HTML, and exact CLI receipt from the same captured source group. On success, return only the root skill's four-section identity-free artifact delivery. Do not emit the ordinary asset response, candidate or provenance IDs, router fields, a `module_execution_packet`, source bindings, or receipt JSON.
 
 ## Required response
 
@@ -44,6 +44,8 @@ application_packet
 portfolio_evidence_plan
 consistency_report
 ```
+
+The validated private vacancy-packet branch replaces this ordinary seven-section response with the root artifact delivery.
 
 ## Action gate
 
