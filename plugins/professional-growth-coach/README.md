@@ -84,6 +84,15 @@ repository integration tools; their absence from an installed cache is not a
 runtime or package failure. The installed static runner reports package checks
 separately and never claims repository conformance from an extracted cache.
 
+The installed smoke receipt keeps the historical vacancy-first matrix at
+exactly 39 accepted and 9 rejected cases. The private packet increment is a
+separate matrix with exactly 6 accepted and 12 rejected case IDs; it is never
+reported as a combined 45/21 result. Packet artifacts and HTML are generated
+only by installed builders and the installed renderer after archive/cache
+parity is captured, with `verified_private_snapshot_only` as the import
+boundary. Rejections remain generic, do not echo private input, and do not
+leave partial output.
+
 ## Installation
 
 This source tree is repo-local at `plugins/professional-growth-coach`. Source edits do not update the installed plugin cache. A separate explicitly authorized installation is required to publish a source increment into the local marketplace cache; existing chats may continue using their loaded version, so verify the new installation from a fresh chat. Use the repo-local marketplace workflow only after the exact target and command are approved.

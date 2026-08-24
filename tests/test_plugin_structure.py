@@ -852,6 +852,129 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
         )
         self.assertNotIn("PYTHONPATH", renderer_environment)
 
+    def test_installed_smoke_runs_private_packet_matrix_from_installed_root(self) -> None:
+        """Break caught: packet proof reopens supplied roots or checkout modules."""
+
+        smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_packet_matrix")
+        accepted_ids = (
+            "packet_ready_es",
+            "packet_ready_en",
+            "packet_revise_missing_es",
+            "packet_revise_review_en",
+            "packet_stop_constraint_es",
+            "packet_stop_constraint_en",
+        )
+        rejected_ids = (
+            "packet_wrong_action",
+            "packet_crossed_research",
+            "packet_crossed_fact_source",
+            "packet_tampered_matrix",
+            "packet_tampered_packet",
+            "packet_alias_signal",
+            "packet_substring_signal",
+            "packet_caller_prose",
+            "packet_private_value",
+            "packet_confidential_claim",
+            "packet_hostile_mapping",
+            "packet_writer_cli_partial",
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source"
+            cache = root / "cache"
+            for plugin in (source, cache):
+                shutil.copytree(
+                    PLUGIN_ROOT,
+                    plugin,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+                )
+
+            original_capture = smoke.capture_verified_private_snapshots
+            original_semantic = smoke.run_installed_semantic_matrix
+            original_subprocess = smoke.subprocess.run
+            poison_name = "build_candidate_fact_matrix_v1"
+            prior_poison = sys.modules.get(poison_name)
+            checkout_poison = type(sys)(poison_name)
+            checkout_poison.__file__ = str(
+                PLUGIN_ROOT / "scripts" / f"{poison_name}.py"
+            )
+
+            def poisoned_builder(*args, **kwargs):
+                raise RuntimeError("checkout packet builder executed")
+
+            checkout_poison.build_candidate_fact_matrix_v1 = poisoned_builder
+            sys.modules[poison_name] = checkout_poison
+
+            @contextmanager
+            def poison_after_capture(source_root: Path, cache_root: Path):
+                with original_capture(source_root, cache_root) as snapshots:
+                    for supplied in (source_root, cache_root):
+                        for relative in (
+                            "scripts/build_candidate_fact_matrix_v1.py",
+                            "scripts/build_private_vacancy_application_packet_v1.py",
+                            "scripts/render_private_vacancy_application_packet_v1.py",
+                            "assets/private-vacancy-application-packet-v1.html",
+                            "assets/private-vacancy-application-packet-v1.css",
+                            "tests/fixtures/vacancy-first-smoke/sources.json",
+                        ):
+                            (supplied / relative).write_text(
+                                "supplied root poisoned after snapshot\n",
+                                encoding="utf-8",
+                            )
+                    yield snapshots
+
+            def historical_semantic(*args, **kwargs):
+                return {
+                    "matrix_version": "vacancy-first-installed-smoke-v1",
+                    "accepted": 39,
+                    "rejected": 9,
+                    "accepted_cases": tuple(f"accepted.{index}" for index in range(39)),
+                    "rejected_cases": tuple(f"rejected.{index}" for index in range(9)),
+                    "accepted_groups": ("accepted",),
+                    "rejected_groups": ("rejected",),
+                }
+
+            def routed_subprocess(*args, **kwargs):
+                command = args[0]
+                if command[-1].endswith("run_static_checks.py"):
+                    return subprocess.CompletedProcess(
+                        command,
+                        0,
+                        stdout="repository conformance not bundled\n",
+                        stderr="",
+                    )
+                return original_subprocess(*args, **kwargs)
+
+            smoke.capture_verified_private_snapshots = poison_after_capture
+            smoke.run_installed_semantic_matrix = historical_semantic
+            smoke.subprocess.run = routed_subprocess
+            try:
+                receipt = smoke.run_smokes(cache, source)
+            finally:
+                smoke.capture_verified_private_snapshots = original_capture
+                smoke.run_installed_semantic_matrix = original_semantic
+                smoke.subprocess.run = original_subprocess
+                if prior_poison is None:
+                    sys.modules.pop(poison_name, None)
+                else:
+                    sys.modules[poison_name] = prior_poison
+
+        self.assertEqual(39, receipt["accepted"])
+        self.assertEqual(9, receipt["rejected"])
+        self.assertEqual(6, receipt["packet_accepted"])
+        self.assertEqual(12, receipt["packet_rejected"])
+        self.assertEqual(accepted_ids, tuple(receipt["packet_accepted_cases"]))
+        self.assertEqual(rejected_ids, tuple(receipt["packet_rejected_cases"]))
+        self.assertEqual(
+            "validated_installed_builder_output_only",
+            receipt["packet_artifact_provenance"],
+        )
+        self.assertEqual(
+            "validated_installed_renderer_output_only",
+            receipt["packet_renderer_provenance"],
+        )
+        self.assertEqual("verified_private_snapshot_only", receipt["import_boundary"])
+
     def test_installed_smoke_recomputes_pinned_historical_render_bytes(self) -> None:
         smoke = load_repo_script(INSTALLED_SMOKE_HELPER_PATH, "installed_smoke_history")
         modules = smoke.load_installed_product_modules(PLUGIN_ROOT)
@@ -885,8 +1008,39 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
             "accepted_groups": ("accepted-group",),
             "rejected_groups": ("rejected-group",),
         }
+        packet = {
+            "matrix_version": "private-vacancy-application-packet-installed-smoke-v1",
+            "accepted": 6,
+            "rejected": 12,
+            "accepted_cases": (
+                "packet_ready_es",
+                "packet_ready_en",
+                "packet_revise_missing_es",
+                "packet_revise_review_en",
+                "packet_stop_constraint_es",
+                "packet_stop_constraint_en",
+            ),
+            "rejected_cases": (
+                "packet_wrong_action",
+                "packet_crossed_research",
+                "packet_crossed_fact_source",
+                "packet_tampered_matrix",
+                "packet_tampered_packet",
+                "packet_alias_signal",
+                "packet_substring_signal",
+                "packet_caller_prose",
+                "packet_private_value",
+                "packet_confidential_claim",
+                "packet_hostile_mapping",
+                "packet_writer_cli_partial",
+            ),
+            "artifact_provenance": "validated_installed_builder_output_only",
+            "renderer_provenance": "validated_installed_renderer_output_only",
+        }
         receipt = smoke.compose_installed_smoke_receipt(
-            {"file_count": 17, "source_aggregate_sha256": "a" * 64}, semantic
+            {"file_count": 17, "source_aggregate_sha256": "a" * 64},
+            semantic,
+            packet,
         )
         self.assertEqual(39, receipt["accepted"])
         self.assertEqual(9, receipt["rejected"])
@@ -899,6 +1053,18 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
         )
         self.assertEqual(("accepted-group",), receipt["accepted_groups"])
         self.assertEqual(("rejected-group",), receipt["rejected_groups"])
+        self.assertEqual(6, receipt["packet_accepted"])
+        self.assertEqual(12, receipt["packet_rejected"])
+        self.assertEqual(packet["accepted_cases"], receipt["packet_accepted_cases"])
+        self.assertEqual(packet["rejected_cases"], receipt["packet_rejected_cases"])
+        self.assertEqual(
+            "validated_installed_builder_output_only",
+            receipt["packet_artifact_provenance"],
+        )
+        self.assertEqual(
+            "validated_installed_renderer_output_only",
+            receipt["packet_renderer_provenance"],
+        )
         self.assertEqual(17, receipt["file_count"])
         self.assertEqual("a" * 64, receipt["aggregate_sha256"])
         self.assertEqual("verified_private_snapshot_only", receipt["import_boundary"])
@@ -1836,6 +2002,167 @@ raise SystemExit(64)
             self.assertNotEqual(0, result.returncode)
             self.assertIn("VALIDATOR_CHECKSUM_MISMATCH", result.stderr)
             self.assertFalse(sentinel.exists())
+
+    def test_release_runner_stale_attestation_opt_in_is_exact_and_bounded(self) -> None:
+        """Break caught: stale mode skips, broadens, or accepts the wrong failure."""
+
+        selector = (
+            "tests.test_full_plugin.FullPluginIntegrationTests."
+            "test_checked_in_attestation_is_bound_to_immutable_git_archive_evidence"
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            trace = root / "release-runner-trace.jsonl"
+            fake_python = root / "validation-python"
+            fake_python.write_text(
+                "#!/usr/bin/env python3\n"
+                "import json, os, sys\n"
+                "from pathlib import Path\n"
+                "args = sys.argv[1:]\n"
+                "with Path(os.environ['RELEASE_RUNNER_TRACE']).open('a', encoding='utf-8') as stream:\n"
+                "    stream.write(json.dumps(args) + '\\n')\n"
+                f"selector = {selector!r}\n"
+                "if selector in args:\n"
+                "    if os.environ.get('FAKE_ATTESTATION_GREEN') == '1':\n"
+                "        raise SystemExit(0)\n"
+                "    sys.stderr.write(\n"
+                "        'test_checked_in_attestation_is_bound_to_immutable_git_archive_evidence '\n"
+                "        f'(tests.test_full_plugin.FullPluginIntegrationTests.'\n"
+                "        'test_checked_in_attestation_is_bound_to_immutable_git_archive_evidence) ... FAIL\\n\\n'\n"
+                "        '======================================================================\\n'\n"
+                "        'FAIL: test_checked_in_attestation_is_bound_to_immutable_git_archive_evidence '\n"
+                "        f'({selector})\\n'\n"
+                "        '----------------------------------------------------------------------\\n'\n"
+                "        \"AssertionError: Lists differ: [] != ['release attestation contract is invalid']\\n\\n\"\n"
+                "        '----------------------------------------------------------------------\\n'\n"
+                "        'Ran 1 test in 0.001s\\n\\n'\n"
+                "        'FAILED (failures=1)\\n'\n"
+                "    )\n"
+                "    raise SystemExit(1)\n"
+                "if args[:2] == ['-B', '-c'] and len(args) > 2 and selector in args[2]:\n"
+                "    raise SystemExit(47 if os.environ.get('FAKE_ADDITIONAL_FAILURE') == '1' else 0)\n"
+                "raise SystemExit(0)\n",
+                encoding="utf-8",
+            )
+            fake_python.chmod(0o755)
+
+            def run_case(**changes: str) -> tuple[subprocess.CompletedProcess[str], list[list[str]]]:
+                if trace.exists():
+                    trace.unlink()
+                environment = {
+                    **os.environ,
+                    "PYTHONDONTWRITEBYTECODE": "1",
+                    "RELEASE_RUNNER_TRACE": str(trace),
+                    "VALIDATION_PYTHON": str(fake_python),
+                }
+                environment.pop("ALLOW_STALE_INSTALLED_ATTESTATION", None)
+                environment.update(changes)
+                result = subprocess.run(
+                    ["bash", str(RELEASE_RUNNER_PATH)],
+                    cwd=REPO_ROOT,
+                    env=environment,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                invocations = (
+                    [json.loads(line) for line in trace.read_text(encoding="utf-8").splitlines()]
+                    if trace.exists()
+                    else []
+                )
+                return result, invocations
+
+            strict, strict_invocations = run_case()
+            self.assertEqual(0, strict.returncode, strict.stdout + strict.stderr)
+            self.assertTrue(
+                any(
+                    args[:4] == ["-B", "-m", "unittest", "discover"]
+                    and str(REPO_ROOT / "tests") in args
+                    for args in strict_invocations
+                ),
+                strict_invocations,
+            )
+            self.assertFalse(any(selector in args for args in strict_invocations))
+
+            invalid, invalid_invocations = run_case(
+                ALLOW_STALE_INSTALLED_ATTESTATION="true"
+            )
+            self.assertNotEqual(0, invalid.returncode)
+            self.assertIn("INVALID_STALE_ATTESTATION_OPT_IN", invalid.stderr)
+            self.assertEqual([], invalid_invocations)
+
+            stale, stale_invocations = run_case(ALLOW_STALE_INSTALLED_ATTESTATION="1")
+            self.assertEqual(0, stale.returncode, stale.stdout + stale.stderr)
+            self.assertEqual(
+                1,
+                sum(
+                    args[:4] == ["-B", "-m", "unittest", "-v"]
+                    and selector in args
+                    for args in stale_invocations
+                ),
+            )
+            self.assertTrue(
+                any(
+                    args[:2] == ["-B", "-c"]
+                    and len(args) > 2
+                    and selector in args[2]
+                    for args in stale_invocations
+                ),
+                stale_invocations,
+            )
+            for required in (
+                str(PLUGIN_ROOT / "tests" / "run_static_checks.py"),
+                str(REPO_ROOT / "scripts" / "check_repository_privacy.py"),
+            ):
+                self.assertTrue(
+                    any(required in args for args in stale_invocations),
+                    (required, stale_invocations),
+                )
+            self.assertTrue(
+                any(
+                    args[:4] == ["-B", "-m", "unittest", "discover"]
+                    and str(PLUGIN_ROOT / "tests") in args
+                    for args in stale_invocations
+                ),
+                stale_invocations,
+            )
+
+            additional, additional_invocations = run_case(
+                ALLOW_STALE_INSTALLED_ATTESTATION="1",
+                FAKE_ADDITIONAL_FAILURE="1",
+            )
+            self.assertNotEqual(0, additional.returncode)
+            self.assertTrue(
+                any(
+                    args[:2] == ["-B", "-c"]
+                    and len(args) > 2
+                    and selector in args[2]
+                    for args in additional_invocations
+                )
+            )
+
+            green, green_invocations = run_case(
+                ALLOW_STALE_INSTALLED_ATTESTATION="1",
+                FAKE_ATTESTATION_GREEN="1",
+            )
+            self.assertNotEqual(0, green.returncode)
+            self.assertIn("STALE_ATTESTATION_OPT_IN_REJECTED", green.stderr)
+            self.assertEqual(
+                1,
+                sum(
+                    args[:4] == ["-B", "-m", "unittest", "-v"]
+                    and selector in args
+                    for args in green_invocations
+                ),
+            )
+            self.assertFalse(
+                any(
+                    args[:2] == ["-B", "-c"]
+                    and len(args) > 2
+                    and selector in args[2]
+                    for args in green_invocations
+                )
+            )
 
     def test_root_test_import_does_not_expose_plugin_test_directory(self) -> None:
         module_path = REPO_ROOT / "tests" / "test_career_learning_decision.py"

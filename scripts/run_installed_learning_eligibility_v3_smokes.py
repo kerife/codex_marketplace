@@ -40,6 +40,12 @@ DEFAULT_MODULES = (
     "project_career_learning_decision_v3",
     "build_career_learning_decision_v3",
     "validate_career_learning_decision_v3",
+    "build_candidate_fact_matrix_v1",
+    "validate_candidate_fact_matrix_v1",
+    "build_private_vacancy_application_packet_v1",
+    "validate_private_vacancy_application_packet_v1",
+    "write_private_vacancy_application_packet_v1",
+    "render_private_vacancy_application_packet_v1",
     "render_executive_career_dossier_v2",
 )
 SMOKE_SOURCES_RELATIVE = Path("tests/fixtures/vacancy-first-smoke/sources.json")
@@ -115,6 +121,28 @@ HISTORICAL_RENDER_SNAPSHOTS = {
         "sha256": "19d85f8a4061ca5eb44746801a2f0094a9109d9d5764e80d515d84bafdfd79d6",
     },
 }
+PACKET_ACCEPTED_CASE_IDS = (
+    "packet_ready_es",
+    "packet_ready_en",
+    "packet_revise_missing_es",
+    "packet_revise_review_en",
+    "packet_stop_constraint_es",
+    "packet_stop_constraint_en",
+)
+PACKET_REJECTED_CASE_IDS = (
+    "packet_wrong_action",
+    "packet_crossed_research",
+    "packet_crossed_fact_source",
+    "packet_tampered_matrix",
+    "packet_tampered_packet",
+    "packet_alias_signal",
+    "packet_substring_signal",
+    "packet_caller_prose",
+    "packet_private_value",
+    "packet_confidential_claim",
+    "packet_hostile_mapping",
+    "packet_writer_cli_partial",
+)
 
 
 class InstalledSmokeError(RuntimeError):
@@ -350,7 +378,7 @@ def load_installed_smoke_sources(plugin_root: Path) -> dict[str, object]:
 
 def _descendant(path: object, root: Path) -> bool:
     try:
-        return Path(str(path)).resolve(strict=True).is_relative_to(root)
+        return Path(str(path)).resolve(strict=True).is_relative_to(root.resolve(strict=True))
     except (OSError, RuntimeError, TypeError, ValueError):
         return False
 
@@ -577,6 +605,10 @@ def _source_group(
     research["locale"] = locale
     dossier["locale"] = locale
     provider["locale"] = locale
+    if locale == "en":
+        dossier["focus"]["statement"] = (
+            "Target under review: clarify a synthetic professional positioning statement."
+        )
     if recurrent:
         research["vacancies"][0]["requirements"][0]["signal"] = "terraform"
     if provider_mode == "absent":
@@ -778,14 +810,398 @@ class _RaisingMapping(Mapping[str, object]):
         raise RuntimeError("private")
 
 
-def _expect_generic_rejection(callable_value: object, diagnostic: str) -> None:
+def _expect_generic_rejection(
+    callable_value: object, diagnostic: str, *forbidden_values: str
+) -> None:
     try:
         callable_value()
     except (RuntimeError, ValueError) as error:
-        if str(error) != diagnostic or error.__cause__ is not None:
+        if (
+            str(error) != diagnostic
+            or error.__cause__ is not None
+            or any(value in str(error) for value in forbidden_values)
+        ):
             raise InstalledSmokeError
     else:
         raise InstalledSmokeError
+
+
+def _packet_fact_source(locale: str, mode: str) -> dict[str, object]:
+    sources = [
+        {"source_type": "verified_record", "evidence_state": "verified"},
+        {"source_type": "cv", "evidence_state": "candidate_reported"},
+        {"source_type": "portfolio", "evidence_state": "inferred"},
+        {"source_type": "candidate_statement", "evidence_state": "unknown"},
+    ]
+    supported = {
+        "fact_type": "experience",
+        "source_ordinals": [1],
+        "signal_bindings": [{"kind": "requirement", "signal": "terraform"}],
+        "signal_relation": "supports",
+        "conflict_state": "clear",
+        "confidentiality": "usable",
+    }
+    if mode == "ready":
+        facts = [supported]
+    elif mode == "revise_missing":
+        facts = [
+            {
+                "fact_type": "portfolio_evidence",
+                "source_ordinals": [3],
+                "signal_bindings": [],
+                "signal_relation": "unknown",
+                "conflict_state": "clear",
+                "confidentiality": "forbidden",
+            }
+        ]
+    elif mode == "revise_review":
+        facts = [
+            supported,
+            {
+                "fact_type": "constraint",
+                "source_ordinals": [1],
+                "signal_bindings": [
+                    {"kind": "requirement", "signal": "terraform"}
+                ],
+                "signal_relation": "unknown",
+                "conflict_state": "clear",
+                "confidentiality": "review_required",
+            },
+        ]
+    elif mode == "stop_constraint":
+        facts = [
+            supported,
+            {
+                "fact_type": "constraint",
+                "source_ordinals": [1],
+                "signal_bindings": [
+                    {"kind": "eligibility_gate", "signal": "country_geography"}
+                ],
+                "signal_relation": "contradicts",
+                "conflict_state": "clear",
+                "confidentiality": "usable",
+            },
+        ]
+    else:
+        raise InstalledSmokeError
+    return {
+        "locale": locale,
+        "captured_at": "2026-08-24T12:30:45Z",
+        "sources": sources,
+        "facts": facts,
+    }
+
+
+def _packet_eligibility_group(case: Mapping[str, object]) -> dict[str, object]:
+    return {
+        "eligibility": copy.deepcopy(case["eligibility"]),
+        "research": copy.deepcopy(case["research"]),
+        "executive_dossier": copy.deepcopy(case["dossier"]),
+        "market_dossier": copy.deepcopy(case["market"]),
+        "gap_response": copy.deepcopy(case["response"]),
+        "gap_assessment": copy.deepcopy(case["assessment"]),
+        "provider_research": copy.deepcopy(case["provider"]),
+    }
+
+
+def _build_installed_packet_case(
+    plugin_root: Path,
+    modules: Mapping[str, ModuleType],
+    sources: Mapping[str, object],
+    locale: str,
+    mode: str,
+    output_root: Path,
+) -> dict[str, object]:
+    eligibility_case = _build_case(
+        "insufficient_recurrence", locale, sources, modules
+    )
+    raw_facts = _packet_fact_source(locale, mode)
+    matrix = modules[
+        "build_candidate_fact_matrix_v1"
+    ].build_candidate_fact_matrix_v1(raw_facts)
+    if modules[
+        "validate_candidate_fact_matrix_v1"
+    ].validate_candidate_fact_matrix_v1(matrix, raw_facts):
+        raise InstalledSmokeError
+    source_group = {
+        "eligibility_group": _packet_eligibility_group(eligibility_case),
+        "candidate_fact_group": {
+            "candidate_fact_matrix": matrix,
+            "source_group": raw_facts,
+        },
+    }
+    packet = modules[
+        "build_private_vacancy_application_packet_v1"
+    ].build_private_vacancy_application_packet_v1(source_group)
+    validated = modules[
+        "validate_private_vacancy_application_packet_v1"
+    ].validate_private_vacancy_application_packet_v1(packet, source_group)
+    rendered = modules[
+        "render_private_vacancy_application_packet_v1"
+    ].render_private_vacancy_application_packet_v1(validated)
+    if (
+        not isinstance(rendered, str)
+        or rendered.count("<h1") != 1
+        or "external_action_authorized" in rendered
+        or "source_snapshot" in rendered
+    ):
+        raise InstalledSmokeError
+    case_root = output_root / f"{locale}-{mode}"
+    json_output = case_root / "packet.json"
+    html_output = case_root / "packet.html"
+    json_receipt = modules[
+        "write_private_vacancy_application_packet_v1"
+    ].write_private_vacancy_application_packet_v1(validated, json_output)
+    html_receipt = modules[
+        "render_private_vacancy_application_packet_v1"
+    ].write_private_vacancy_application_packet_html_v1(validated, html_output)
+    if (
+        json_receipt.readiness_state != packet["readiness"]["state"]
+        or html_receipt.readiness_state != packet["readiness"]["state"]
+        or json.loads(json_output.read_text(encoding="utf-8")) != packet
+        or html_output.read_text(encoding="utf-8") != rendered
+        or (json_output.stat().st_mode & 0o777) != 0o600
+        or (html_output.stat().st_mode & 0o777) != 0o600
+        or not all(
+            _descendant(getattr(modules[name], "__file__", None), plugin_root)
+            for name in (
+                "build_candidate_fact_matrix_v1",
+                "build_private_vacancy_application_packet_v1",
+                "validate_private_vacancy_application_packet_v1",
+                "write_private_vacancy_application_packet_v1",
+                "render_private_vacancy_application_packet_v1",
+            )
+        )
+    ):
+        raise InstalledSmokeError
+    return {
+        "raw_facts": raw_facts,
+        "matrix": matrix,
+        "source_group": source_group,
+        "packet": packet,
+        "readiness": packet["readiness"]["state"],
+    }
+
+
+def run_installed_packet_matrix(
+    plugin_root: Path, modules: Mapping[str, ModuleType]
+) -> dict[str, object]:
+    """Run the closed additive packet matrix against installed builders only."""
+
+    try:
+        sources = load_installed_smoke_sources(plugin_root)["sources"]
+        accepted_rules = (
+            ("packet_ready_es", "es", "ready", "ready_for_manual_authorization"),
+            ("packet_ready_en", "en", "ready", "ready_for_manual_authorization"),
+            ("packet_revise_missing_es", "es", "revise_missing", "revise_first"),
+            ("packet_revise_review_en", "en", "revise_review", "revise_first"),
+            ("packet_stop_constraint_es", "es", "stop_constraint", "stop"),
+            ("packet_stop_constraint_en", "en", "stop_constraint", "stop"),
+        )
+        with tempfile.TemporaryDirectory(prefix="pgc-installed-packet-") as temporary:
+            output_root = Path(temporary)
+            built = {
+                case_id: _build_installed_packet_case(
+                    plugin_root, modules, sources, locale, mode, output_root
+                )
+                for case_id, locale, mode, _ in accepted_rules
+            }
+            accepted_results = tuple(
+                (case_id, built[case_id]["readiness"] == expected)
+                for case_id, _, _, expected in accepted_rules
+            )
+
+            ready_es = built["packet_ready_es"]
+            ready_en = built["packet_ready_en"]
+            revise_missing = built["packet_revise_missing_es"]
+            packet_builder = modules["build_private_vacancy_application_packet_v1"]
+            fact_builder = modules["build_candidate_fact_matrix_v1"]
+            packet_validator = modules["validate_private_vacancy_application_packet_v1"]
+
+            wrong_action = copy.deepcopy(ready_es["source_group"])
+            wrong_action["eligibility_group"] = _packet_eligibility_group(
+                _build_case("proof", "es", sources, modules)
+            )
+            _expect_generic_rejection(
+                lambda: packet_builder.build_private_vacancy_application_packet_v1(
+                    wrong_action
+                ),
+                "private vacancy application packet is invalid",
+            )
+
+            crossed_research = copy.deepcopy(ready_es["source_group"])
+            crossed_research["eligibility_group"]["research"] = copy.deepcopy(
+                ready_en["source_group"]["eligibility_group"]["research"]
+            )
+            _expect_generic_rejection(
+                lambda: packet_builder.build_private_vacancy_application_packet_v1(
+                    crossed_research
+                ),
+                "private vacancy application packet is invalid",
+            )
+
+            crossed_fact_source = copy.deepcopy(ready_es["source_group"])
+            crossed_fact_source["candidate_fact_group"]["source_group"] = copy.deepcopy(
+                revise_missing["raw_facts"]
+            )
+            _expect_generic_rejection(
+                lambda: packet_builder.build_private_vacancy_application_packet_v1(
+                    crossed_fact_source
+                ),
+                "private vacancy application packet is invalid",
+            )
+
+            tampered_matrix = copy.deepcopy(ready_es["source_group"])
+            tampered_matrix["candidate_fact_group"]["candidate_fact_matrix"]["facts"][0][
+                "evidence_state"
+            ] = "candidate_reported"
+            _expect_generic_rejection(
+                lambda: packet_builder.build_private_vacancy_application_packet_v1(
+                    tampered_matrix
+                ),
+                "private vacancy application packet is invalid",
+            )
+
+            tampered_packet = copy.deepcopy(ready_es["packet"])
+            tampered_packet["readiness"]["state"] = "stop"
+            _expect_generic_rejection(
+                lambda: packet_validator.validate_private_vacancy_application_packet_v1(
+                    tampered_packet, ready_es["source_group"]
+                ),
+                "private vacancy application packet does not match validated sources",
+            )
+
+            alias_source = copy.deepcopy(ready_es["raw_facts"])
+            alias_source["facts"][0]["signal_bindings"][0]["signal"] = "iac"
+            _expect_generic_rejection(
+                lambda: fact_builder.build_candidate_fact_matrix_v1(alias_source),
+                "candidate fact matrix is invalid",
+            )
+
+            substring_source = copy.deepcopy(ready_es["raw_facts"])
+            substring_source["facts"][0]["signal_bindings"][0]["signal"] = (
+                "terraform_cloud"
+            )
+            _expect_generic_rejection(
+                lambda: fact_builder.build_candidate_fact_matrix_v1(substring_source),
+                "candidate fact matrix is invalid",
+            )
+
+            caller_prose = copy.deepcopy(ready_es["raw_facts"])
+            caller_prose["facts"][0]["fact_text"] = "private caller prose"
+            _expect_generic_rejection(
+                lambda: fact_builder.build_candidate_fact_matrix_v1(caller_prose),
+                "candidate fact matrix is invalid",
+                "private caller prose",
+            )
+
+            private_value = "private-person@example.invalid"
+            private_group = copy.deepcopy(ready_es["source_group"])
+            private_group["eligibility_group"]["research"]["vacancies"][2][
+                "title"
+            ] = private_value
+            _expect_generic_rejection(
+                lambda: packet_builder.build_private_vacancy_application_packet_v1(
+                    private_group
+                ),
+                "private vacancy application packet is invalid",
+                private_value,
+            )
+
+            confidential_claim = copy.deepcopy(ready_es["source_group"])
+            confidential_claim["candidate_fact_group"]["candidate_fact_matrix"]["facts"][
+                0
+            ]["confidentiality"] = "forbidden"
+            _expect_generic_rejection(
+                lambda: packet_builder.build_private_vacancy_application_packet_v1(
+                    confidential_claim
+                ),
+                "private vacancy application packet is invalid",
+            )
+
+            _expect_generic_rejection(
+                lambda: packet_builder.build_private_vacancy_application_packet_v1(
+                    _RaisingMapping()
+                ),
+                "private vacancy application packet is invalid",
+            )
+
+            cli_root = output_root / "rejected-cli"
+            cli_root.mkdir()
+            packet_path = cli_root / "packet.json"
+            source_path = cli_root / "sources.json"
+            output_path = cli_root / "partial.json"
+            packet_path.write_text(
+                json.dumps(ready_es["packet"], ensure_ascii=False), encoding="utf-8"
+            )
+            source_path.write_text(
+                json.dumps(private_group, ensure_ascii=False), encoding="utf-8"
+            )
+            cli_result = subprocess.run(
+                [
+                    sys.executable,
+                    "-I",
+                    "-B",
+                    str(
+                        plugin_root
+                        / "scripts"
+                        / "write_private_vacancy_application_packet_v1.py"
+                    ),
+                    str(packet_path),
+                    "--source-group",
+                    str(source_path),
+                    "--output",
+                    str(output_path),
+                ],
+                cwd=cli_root,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=60,
+                env={"PATH": os.defpath, "PYTHONDONTWRITEBYTECODE": "1"},
+            )
+            writer_cli_rejected = (
+                cli_result.returncode == 2
+                and cli_result.stdout == ""
+                and cli_result.stderr
+                == "cannot write private vacancy application packet\n"
+                and private_value not in cli_result.stderr
+                and not output_path.exists()
+                and not tuple(cli_root.glob(".*.tmp"))
+            )
+            rejected_results = (
+                ("packet_wrong_action", True),
+                ("packet_crossed_research", True),
+                ("packet_crossed_fact_source", True),
+                ("packet_tampered_matrix", True),
+                ("packet_tampered_packet", True),
+                ("packet_alias_signal", True),
+                ("packet_substring_signal", True),
+                ("packet_caller_prose", True),
+                ("packet_private_value", True),
+                ("packet_confidential_claim", True),
+                ("packet_hostile_mapping", True),
+                ("packet_writer_cli_partial", writer_cli_rejected),
+            )
+
+        accepted_ids = tuple(case_id for case_id, passed in accepted_results if passed)
+        rejected_ids = tuple(case_id for case_id, passed in rejected_results if passed)
+        if (
+            accepted_ids != PACKET_ACCEPTED_CASE_IDS
+            or rejected_ids != PACKET_REJECTED_CASE_IDS
+        ):
+            raise InstalledSmokeError
+        return {
+            "matrix_version": "private-vacancy-application-packet-installed-smoke-v1",
+            "accepted": len(accepted_ids),
+            "rejected": len(rejected_ids),
+            "accepted_cases": accepted_ids,
+            "rejected_cases": rejected_ids,
+            "artifact_provenance": "validated_installed_builder_output_only",
+            "renderer_provenance": "validated_installed_renderer_output_only",
+        }
+    except Exception:
+        raise InstalledSmokeError("installed packet smoke matrix failed") from None
 
 
 def _historical_v1_alignment(
@@ -1518,9 +1934,11 @@ def _load_release_helper() -> ModuleType:
 
 
 def compose_installed_smoke_receipt(
-    parity: Mapping[str, object], semantic: Mapping[str, object]
+    parity: Mapping[str, object],
+    semantic: Mapping[str, object],
+    packet: Mapping[str, object],
 ) -> dict[str, object]:
-    """Combine verified parity and semantic results without changing counts."""
+    """Combine parity with two deliberately separate semantic matrices."""
 
     return {
         "matrix_version": semantic["matrix_version"],
@@ -1530,6 +1948,13 @@ def compose_installed_smoke_receipt(
         "rejected_cases": semantic["rejected_cases"],
         "accepted_groups": semantic["accepted_groups"],
         "rejected_groups": semantic["rejected_groups"],
+        "packet_matrix_version": packet["matrix_version"],
+        "packet_accepted": packet["accepted"],
+        "packet_rejected": packet["rejected"],
+        "packet_accepted_cases": packet["accepted_cases"],
+        "packet_rejected_cases": packet["rejected_cases"],
+        "packet_artifact_provenance": packet["artifact_provenance"],
+        "packet_renderer_provenance": packet["renderer_provenance"],
         "file_count": parity["file_count"],
         "aggregate_sha256": parity["source_aggregate_sha256"],
         "import_boundary": "verified_private_snapshot_only",
@@ -1559,6 +1984,12 @@ def run_smokes(plugin_root: Path, source_archive: Path) -> dict[str, object]:
                     "project_career_learning_decision_v3": "project_career_learning_decision_v3",
                     "build_career_learning_decision_v3": "build_career_learning_decision_v3",
                     "validate_career_learning_decision_v3": "validate_career_learning_decision_v3",
+                    "build_candidate_fact_matrix_v1": "build_candidate_fact_matrix_v1",
+                    "validate_candidate_fact_matrix_v1": "validate_candidate_fact_matrix_v1",
+                    "build_private_vacancy_application_packet_v1": "build_private_vacancy_application_packet_v1",
+                    "validate_private_vacancy_application_packet_v1": "validate_private_vacancy_application_packet_v1",
+                    "write_private_vacancy_application_packet_v1": "write_private_vacancy_application_packet_v1",
+                    "render_private_vacancy_application_packet_v1": "render_private_vacancy_application_packet_v1",
                     "render_executive_career_dossier_v2": "render_dossier_html",
                 }
                 for module_name, interface in required.items():
@@ -1591,6 +2022,8 @@ def run_smokes(plugin_root: Path, source_archive: Path) -> dict[str, object]:
                     "candidate-gap-assessment-v1.schema.json",
                     "career-next-action-eligibility-v1.schema.json",
                     "career-learning-decision-v3.schema.json",
+                    "candidate-fact-matrix-v1.schema.json",
+                    "private-vacancy-application-packet-v1.schema.json",
                 )
                 for name in schema_names:
                     schema = json.loads(
@@ -1619,7 +2052,8 @@ def run_smokes(plugin_root: Path, source_archive: Path) -> dict[str, object]:
                 if rejected != len(hostile_values):
                     raise InstalledSmokeError
                 semantic = run_installed_semantic_matrix(plugin_snapshot, modules)
-                return compose_installed_smoke_receipt(parity, semantic)
+                packet = run_installed_packet_matrix(plugin_snapshot, modules)
+                return compose_installed_smoke_receipt(parity, semantic, packet)
     except Exception:
         raise InstalledSmokeError("installed smoke failed") from None
     finally:

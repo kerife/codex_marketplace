@@ -181,10 +181,36 @@ VACANCY_FIRST_ATTESTATION_FIELDS = frozenset(
         "source_pycache_directory_count", "installed_pycache_directory_count",
         "source_verification_matrix", "installed_package_static_scope",
         "installed_semantic_accepted_smokes", "installed_semantic_rejected_smokes",
+        "installed_packet_accepted_smokes", "installed_packet_rejected_smokes",
+        "installed_packet_accepted_case_ids", "installed_packet_rejected_case_ids",
+        "installed_packet_artifact_provenance",
+        "installed_packet_renderer_provenance",
         "installed_import_boundary", "installed_output_atomicity",
         "visual_browser_assistive_technology_QA",
         "repository_conformance_from_installed_cache", "external_action_state",
     }
+)
+PACKET_ACCEPTED_CASE_IDS = (
+    "packet_ready_es",
+    "packet_ready_en",
+    "packet_revise_missing_es",
+    "packet_revise_review_en",
+    "packet_stop_constraint_es",
+    "packet_stop_constraint_en",
+)
+PACKET_REJECTED_CASE_IDS = (
+    "packet_wrong_action",
+    "packet_crossed_research",
+    "packet_crossed_fact_source",
+    "packet_tampered_matrix",
+    "packet_tampered_packet",
+    "packet_alias_signal",
+    "packet_substring_signal",
+    "packet_caller_prose",
+    "packet_private_value",
+    "packet_confidential_claim",
+    "packet_hostile_mapping",
+    "packet_writer_cli_partial",
 )
 
 
@@ -226,6 +252,12 @@ def validate_vacancy_first_attestation(
         rejected_count, rejected_total = (
             int(part) for part in parsed["installed_semantic_rejected_smokes"].split("/")
         )
+        packet_accepted_count, packet_accepted_total = (
+            int(part) for part in parsed["installed_packet_accepted_smokes"].split("/")
+        )
+        packet_rejected_count, packet_rejected_total = (
+            int(part) for part in parsed["installed_packet_rejected_smokes"].split("/")
+        )
     except (TypeError, ValueError):
         return ["release attestation contract is invalid"]
     zero_fields = (
@@ -263,6 +295,16 @@ def validate_vacancy_first_attestation(
         == "passed_repository_conformance_not_bundled"
         and accepted_count == accepted_total == 39
         and rejected_count == rejected_total == 9
+        and packet_accepted_count == packet_accepted_total == 6
+        and packet_rejected_count == packet_rejected_total == 12
+        and parsed["installed_packet_accepted_case_ids"]
+        == ",".join(PACKET_ACCEPTED_CASE_IDS)
+        and parsed["installed_packet_rejected_case_ids"]
+        == ",".join(PACKET_REJECTED_CASE_IDS)
+        and parsed["installed_packet_artifact_provenance"]
+        == "validated_installed_builder_output_only"
+        and parsed["installed_packet_renderer_provenance"]
+        == "validated_installed_renderer_output_only"
         and parsed["installed_import_boundary"] == "verified_private_snapshot_only"
         and parsed["installed_output_atomicity"] == "passed_generic_no_echo"
         and parsed["visual_browser_assistive_technology_QA"] == "not_run_not_claimed"
@@ -474,6 +516,12 @@ class FullPluginIntegrationTests(unittest.TestCase):
             "installed_package_static_scope": "passed_repository_conformance_not_bundled",
             "installed_semantic_accepted_smokes": "39/39",
             "installed_semantic_rejected_smokes": "9/9",
+            "installed_packet_accepted_smokes": "6/6",
+            "installed_packet_rejected_smokes": "12/12",
+            "installed_packet_accepted_case_ids": ",".join(PACKET_ACCEPTED_CASE_IDS),
+            "installed_packet_rejected_case_ids": ",".join(PACKET_REJECTED_CASE_IDS),
+            "installed_packet_artifact_provenance": "validated_installed_builder_output_only",
+            "installed_packet_renderer_provenance": "validated_installed_renderer_output_only",
             "installed_import_boundary": "verified_private_snapshot_only",
             "installed_output_atomicity": "passed_generic_no_echo",
             "visual_browser_assistive_technology_QA": "not_run_not_claimed",
@@ -518,6 +566,43 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 **values,
                 "installed_semantic_rejected_smokes": "8/8",
             },
+            "packet-accepted-not-6-of-6": {
+                **values,
+                "installed_packet_accepted_smokes": "5/5",
+            },
+            "packet-rejected-not-12-of-12": {
+                **values,
+                "installed_packet_rejected_smokes": "11/11",
+            },
+            "packet-accepted-ids-reordered": {
+                **values,
+                "installed_packet_accepted_case_ids": ",".join(
+                    reversed(PACKET_ACCEPTED_CASE_IDS)
+                ),
+            },
+            "packet-rejected-ids-reordered": {
+                **values,
+                "installed_packet_rejected_case_ids": ",".join(
+                    reversed(PACKET_REJECTED_CASE_IDS)
+                ),
+            },
+            "packet-case-ids-crossed": {
+                **values,
+                "installed_packet_accepted_case_ids": ",".join(
+                    PACKET_REJECTED_CASE_IDS[:6]
+                ),
+                "installed_packet_rejected_case_ids": ",".join(
+                    (*PACKET_ACCEPTED_CASE_IDS, *PACKET_REJECTED_CASE_IDS[6:])
+                ),
+            },
+            "packet-artifact-provenance-stale": {
+                **values,
+                "installed_packet_artifact_provenance": "repository_fixture_output",
+            },
+            "packet-renderer-provenance-stale": {
+                **values,
+                "installed_packet_renderer_provenance": "source_checkout_renderer_output",
+            },
             "claimed-visual": {**values, "visual_browser_assistive_technology_QA": "passed"},
         }
         for label, fields in cases.items():
@@ -530,6 +615,26 @@ class FullPluginIntegrationTests(unittest.TestCase):
         self.assertEqual(
             ["release attestation contract is invalid"],
             validate_vacancy_first_attestation(duplicate, **expected),
+        )
+        extra = valid + "\nunexpected_packet_field: `forbidden`"
+        self.assertEqual(
+            ["release attestation contract is invalid"],
+            validate_vacancy_first_attestation(extra, **expected),
+        )
+
+        release_documentation = (
+            REPO_ROOT / "docs" / "release-validation.md"
+        ).read_text(encoding="utf-8")
+        documented = re.search(
+            r"<!-- installed-attestation-fields:start -->\n```text\n(.*?)\n```\n"
+            r"<!-- installed-attestation-fields:end -->",
+            release_documentation,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(documented)
+        self.assertEqual(
+            VACANCY_FIRST_ATTESTATION_FIELDS,
+            frozenset(parse_vacancy_first_attestation(documented.group(1))),
         )
 
     def test_release_attestation_rejects_missing_or_empty_roots(self) -> None:
