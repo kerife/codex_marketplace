@@ -33,6 +33,36 @@
         }
       },
       "updatedAt": "2026-08-24T04:52:00Z"
+    },
+    "vacancy-application-packet": {
+      "targetKind": "new-ui",
+      "projectId": "971e4b3b-dcab-4940-9b8e-36dd181cb3d1",
+      "activeDraftId": "a7447bcf-574b-470f-8dad-13f193c54cc7",
+      "designSystemPath": ".superdesign/design-system.md",
+      "referenceIds": [],
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "plugins/professional-growth-coach/assets/private-recruiter-reply-triage-v1.html",
+        "plugins/professional-growth-coach/assets/private-recruiter-reply-triage-v1.css",
+        "plugins/professional-growth-coach/skills/optimize-career-assets/SKILL.md",
+        "plugins/professional-growth-coach/skills/optimize-career-assets/references/asset-workflow.md"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "831cb747c67bc869953ec2bf044df08f7442c2a68f39c1f4f9b8ec5a1be127eb",
+        "plugins/professional-growth-coach/assets/private-recruiter-reply-triage-v1.html": "21362d1bc014a813fe2cf2a79e60977eff3925e73a03a698b1f1766e27379535",
+        "plugins/professional-growth-coach/assets/private-recruiter-reply-triage-v1.css": "7a01ea8fea845de195cb0e443bf52290a1621683e1873045f848071d724c7a1e",
+        "plugins/professional-growth-coach/skills/optimize-career-assets/SKILL.md": "ad11cd91ed597c57b29b427ea439e2f735c9b6e11a27e1af2c410de505e0e4f1",
+        "plugins/professional-growth-coach/skills/optimize-career-assets/references/asset-workflow.md": "6f0517c284154dee673e506e979f452eb60250d50de681e945b58273b9b0e1ef"
+      },
+      "components": [],
+      "drafts": {
+        "a7447bcf-574b-470f-8dad-13f193c54cc7": {
+          "title": "Revisión privada de candidatura",
+          "visualDirection": "compact editorial private vacancy packet with one readiness decision, evidence coverage, claim review, handoff, tracking proposal, and explicit approval boundary",
+          "currentVersion": 1
+        }
+      },
+      "updatedAt": "2026-08-24T11:01:42Z"
     }
   }
 }

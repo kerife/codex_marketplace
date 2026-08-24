@@ -1,7 +1,7 @@
 # Private Vacancy Application Packet — Design Specification
 
 **Date:** 2026-08-24
-**Status:** Proposed for written-spec approval
+**Status:** Approved; implementation authority
 **Scope:** `professional-growth-coach` plugin, private/offline artifacts only
 
 ## 1. Decision summary
@@ -115,6 +115,13 @@ captured_at
 - `captured_at`: common ISO-8601 UTC timestamp for the captured group.
 
 The artifact stores no source path, filename, URL, account, organization-private identifier, or raw document body.
+
+Source type constrains the maximum evidence state. Only `verified_record` may
+carry `evidence_state=verified`. `cv`, `professional_profile`, `portfolio`,
+`interview_notes`, and `candidate_statement` may carry only
+`candidate_reported | inferred | unknown`. This is a structural ceiling, not
+proof that every verified record is sufficient; downstream relation, conflict,
+and confidentiality gates still apply.
 
 ### 5.3 Facts
 
@@ -402,13 +409,13 @@ Constants:
 
 Precedence is deterministic:
 
-1. `stop` when a vacancy eligibility gate is contradicted by an exact-token, verified candidate constraint.
+1. `stop` when a vacancy eligibility gate is contradicted by an exact-token, verified candidate constraint whose `conflict_state=clear` and which is not superseded.
 2. `revise_first` when any required requirement is partial, missing, conflicting, review-required, or supported only by evidence that cannot form a claim; or any claim-review row is `revise`/`omit`.
-3. `ready_for_manual_authorization` only when all required requirements are supported, every emitted claim is `use`, no blocker exists, and all source bindings validate.
+3. `ready_for_manual_authorization` only when all required requirements are supported, at least one affirmative draft and its `use` claim exist, every emitted claim is `use`, no blocker exists, and all source bindings validate. An all-optional or otherwise empty packet is `revise_first`, never vacuously ready.
 
 Unknown evidence never yields `stop` by itself. It yields `revise_first`. The headline and rationale come from closed ES/EN copy tables. `ready_for_manual_authorization` is a private-review readiness label only and confers no permission.
 
-An eligibility artifact whose `recommended_next_action` is not `prepare_private_vacancy_packet` is invalid input and produces no packet; it is not converted into a `stop` artifact. Eligibility-gate contradiction is derived only by matching the closed target gate token to a candidate constraint with `signal_relation=contradicts` and `evidence_state=verified`.
+An eligibility artifact whose `recommended_next_action` is not `prepare_private_vacancy_packet` is invalid input and produces no packet; it is not converted into a `stop` artifact. Eligibility-gate contradiction is derived only by matching the closed target gate token to a non-superseded candidate constraint with `signal_relation=contradicts`, `evidence_state=verified`, and `conflict_state=clear`.
 
 `blocking_gate_tokens` records those exact gate enum values in target order. `blocking_requirement_ids` equals all required requirement IDs whose coverage is not `supported`, in vacancy order. Both arrays are ordered and unique; `blocking_gate_tokens` is non-empty for `stop` and empty otherwise. `blocking_requirement_ids` is empty for `ready_for_manual_authorization` and may coexist with a higher-precedence gate blocker in `stop`.
 
@@ -591,7 +598,16 @@ Only one proposal is generated. The result is evaluated against the contract bef
 
 ## 10. Renderer and CLI receipt
 
-The renderer consumes only a validated packet snapshot and returns a string. The writer and CLI reuse the generic/no-echo/atomic boundary.
+Full packet validation always requires the complete captured composite source
+group. The packet validator returns an opaque immutable validated-packet
+snapshot that carries the frozen artifact and cannot be constructed from an
+artifact alone. The renderer consumes only that opaque snapshot and returns a
+string; it exposes no artifact-only validation path. The JSON writer and HTML
+renderer/writer accept the same opaque snapshot in the in-process packet
+workflow, so JSON, HTML, and receipt derive from one composite capture.
+Standalone CLI entry points capture the artifact and complete source group
+together before obtaining the opaque snapshot. All paths reuse the
+generic/no-echo/atomic boundary.
 
 Successful CLI JSON receipt contains exactly:
 
@@ -732,7 +748,7 @@ New production boundaries:
 Modified boundaries:
 
 - `optimize-career-assets` routing and workflow references;
-- root `professional-growth-coach/SKILL.md` and `professional-growth-coach/references/routing.md` for the exact packet trigger and delivery exception;
+- root `skills/professional-growth-coach/SKILL.md` and `skills/professional-growth-coach/references/routing.md` for the exact packet trigger and delivery exception;
 - plugin/package/static/privacy inventories and their tests;
 - installed-smoke harness, release docs, and attestation parser/tests;
 - Superdesign init/resume evidence only as required by the generation workflow.
@@ -747,7 +763,7 @@ The new typed packet replaces the older prose-only `Application packet` field li
 2. Run focused, package, privacy, static, source-discovery, and official release gates.
 3. Treat the existing installed attestation as stale evidence until release.
 4. Create one manifest-only cachebuster commit A after all source gates pass.
-5. On exact A, before push, rerun structure/full-plugin integration, static, privacy, source discovery, and the official validator. The only permitted non-green result is the exact checked-in installed-attestation freshness/binding check that cannot become current until A is installed; it must be isolated by name with every other test green. Any other failure blocks publication.
+5. From the first plugin-tree change through exact A, the checked-in installed attestation is expected to be stale. Every source run must isolate by exact name the single `FullPluginIntegrationTests.test_checked_in_attestation_is_bound_to_immutable_git_archive_evidence` failure and require every other test green; any additional failure blocks progress. On B the complete official validator, including that named test, must return entirely green.
 6. Push A to `origin/main`, fetch, and verify live remote SHA.
 7. Align the clean public checkout safely, install the exact public selector, and resolve exactly one enabled version.
 8. Compare immutable A archive to the exact cache: inventory, every SHA-256, aggregate digest, `diff -qr`, path/symlink/private-metadata/bytecode checks.
