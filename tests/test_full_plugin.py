@@ -360,7 +360,7 @@ def validate_real_vacancy_first_attestation(text: str, repo_root: Path) -> list[
         if not isinstance(version, str):
             raise ValueError
         file_count, archive_aggregate = immutable_git_archive_inventory(repo_root, resolved_commit)
-    except (AssertionError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+    except (AssertionError, KeyError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
         return ["release attestation contract is invalid"]
     return validate_vacancy_first_attestation(
         text,
@@ -388,40 +388,56 @@ class FullPluginIntegrationTests(unittest.TestCase):
             check=True,
             text=True,
         ).stdout.strip()
-        stale_commit = next(
-            commit
-            for commit in subprocess.run(
-                ["git", "rev-list", "--all"],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                check=True,
-                text=True,
-            ).stdout.splitlines()
-            if subprocess.run(
+        stale_commit = None
+        stale_tree = None
+        for commit in subprocess.run(
+            ["git", "rev-list", "HEAD"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            check=True,
+            text=True,
+        ).stdout.splitlines():
+            candidate = subprocess.run(
                 ["git", "rev-parse", f"{commit}:plugins/professional-growth-coach"],
                 cwd=REPO_ROOT,
                 capture_output=True,
-                check=True,
+                check=False,
                 text=True,
-            ).stdout.strip()
-            != head_tree
-        )
+            )
+            if candidate.returncode != 0:
+                continue
+            if candidate.stdout.strip() != head_tree:
+                stale_commit = commit
+                stale_tree = candidate.stdout.strip()
+                break
+        self.assertIsNotNone(stale_commit, "expected an ancestor with a stale plugin subtree")
+        self.assertNotEqual(head_tree, stale_tree)
 
         def with_fields(**changes: str) -> str:
             values = {**parsed, **changes}
             return "\n".join(f"{key}: `{value}`" for key, value in values.items())
 
+        def without_fields(*names: str) -> str:
+            return "\n".join(
+                f"{key}: `{value}`" for key, value in parsed.items() if key not in names
+            )
+
         wrong_digest = (
             "0" if parsed["source_aggregate_sha256"][0] != "0" else "1"
         ) + parsed["source_aggregate_sha256"][1:]
+        wrong_count = str(int(parsed["source_file_count"]) + 1)
         cases = {
+            "missing-source-commit": without_fields("source_commit"),
             "unresolved-commit": with_fields(source_commit="0" * 40),
             "wrong-tree": with_fields(source_tree="0" * 40),
             "stale-source-commit": with_fields(source_commit=stale_commit),
             "wrong-manifest-version": with_fields(
                 installed_cache_version="0.2.0+codex.20260823154006"
             ),
-            "file-count-mismatch": with_fields(source_file_count="0"),
+            "file-count-mismatch": with_fields(
+                source_file_count=wrong_count,
+                installed_file_count=wrong_count,
+            ),
             "equal-but-wrong-aggregates": with_fields(
                 source_aggregate_sha256=wrong_digest,
                 cache_aggregate_sha256=wrong_digest,
