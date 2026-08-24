@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/professional-growth-coach/candidate-fact-matrix-v1.schema.json",
+  "title": "Candidate Fact Matrix v1",
+  "type": "object",
+  "required": ["schema_version", "locale", "case_scope", "sources", "facts", "source_snapshot"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "candidate-fact-matrix-v1"},
+    "locale": {"enum": ["es", "en"]},
+    "case_scope": {"const": "single_candidate"},
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": ["source_id", "source_type", "evidence_state", "captured_at"],
+        "additionalProperties": false,
+        "properties": {
+          "source_id": {"type": "string", "pattern": "^FS-[0-9]{3}$"},
+          "source_type": {"enum": ["cv", "professional_profile", "portfolio", "interview_notes", "candidate_statement", "verified_record"]},
+          "evidence_state": {"enum": ["verified", "candidate_reported", "inferred", "unknown"]},
+          "captured_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"}
+        }
+      }
+    },
+    "facts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": ["fact_id", "fact_text", "fact_type", "evidence_state", "source_ids", "signals", "signal_relation", "conflict_state", "confidentiality"],
+        "additionalProperties": false,
+        "properties": {
+          "fact_id": {"type": "string", "pattern": "^F-[0-9]{3}$"},
+          "fact_text": {"type": "string", "minLength": 1, "maxLength": 500},
+          "fact_type": {"enum": ["skill", "experience", "outcome", "credential", "portfolio_evidence", "work_preference", "constraint"]},
+          "evidence_state": {"enum": ["verified", "candidate_reported", "inferred", "unknown"]},
+          "source_ids": {"type": "array", "minItems": 1, "maxItems": 5, "items": {"type": "string", "pattern": "^FS-[0-9]{3}$"}},
+          "signals": {"type": "array", "minItems": 0, "maxItems": 20, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"}},
+          "signal_relation": {"enum": ["supports", "contradicts", "unknown"]},
+          "conflict_state": {"enum": ["clear", "conflicting", "superseded"]},
+          "confidentiality": {"enum": ["usable", "review_required", "forbidden"]}
+        }
+      }
+    },
+    "source_snapshot": {"type": "string", "pattern": "^snap-candidate-facts-sha256-[0-9a-f]{64}$"}
+  }
+}

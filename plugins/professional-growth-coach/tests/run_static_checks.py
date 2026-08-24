@@ -258,6 +258,7 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/candidate-gap-response-v1.schema.json",
     "schemas/candidate-gap-assessment-v1.schema.json",
     "schemas/career-next-action-eligibility-v1.schema.json",
+    "schemas/candidate-fact-matrix-v1.schema.json",
     "scripts/semantic_provenance_snapshot.py",
     "scripts/validate_target_vacancy_research.py",
     "scripts/derive_candidate_market_alignment_v2.py",
@@ -280,10 +281,13 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "scripts/validate_candidate_gap_assessment_v1.py",
     "scripts/build_career_next_action_eligibility_v1.py",
     "scripts/validate_career_next_action_eligibility_v1.py",
+    "scripts/build_candidate_fact_matrix_v1.py",
+    "scripts/validate_candidate_fact_matrix_v1.py",
     "assets/career-market-learning-dossier-v1.css",
     "assets/career-learning-eligibility-v1.css",
     "tests/fixtures/vacancy-first-smoke/sources.json",
     "tests/test_learning_eligibility_v3.py",
+    "tests/test_candidate_fact_matrix_v1.py",
     "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
     "tests/evals/with-skill/fixtures/target-vacancy-research/limited-four-en.json",
     "tests/evals/with-skill/fixtures/target-vacancy-research/unavailable-es.json",
@@ -838,6 +842,8 @@ def _load_market_package_modules(plugin_root: Path) -> dict[str, object]:
             "validate_candidate_gap_assessment_v1",
             "build_career_next_action_eligibility_v1",
             "validate_career_next_action_eligibility_v1",
+            "build_candidate_fact_matrix_v1",
+            "validate_candidate_fact_matrix_v1",
             "render_executive_career_dossier_v2",
         ):
             path = scripts_root / f"{name}.py"
@@ -924,6 +930,7 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         "schemas/candidate-gap-response-v1.schema.json": "source_market_snapshot",
         "schemas/candidate-gap-assessment-v1.schema.json": "source_gap_response_snapshot",
         "schemas/career-next-action-eligibility-v1.schema.json": "source_gap_assessment_snapshot",
+        "schemas/candidate-fact-matrix-v1.schema.json": "source_snapshot",
     }
     for relative_path, required_field in schema_requirements.items():
         if relative_path not in safe_paths:
@@ -1044,6 +1051,16 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             "validate_career_next_action_eligibility_v1",
             "snapshot_for_career_next_action_eligibility_v1",
             "load_career_next_action_eligibility_v1",
+        ),
+        "build_candidate_fact_matrix_v1": (
+            "build_candidate_fact_matrix_v1",
+            "snapshot_for_candidate_fact_matrix_v1",
+            "_project_candidate_fact_matrix_from_frozen",
+        ),
+        "validate_candidate_fact_matrix_v1": (
+            "validate_candidate_fact_matrix_v1",
+            "load_candidate_fact_matrix_v1",
+            "_validate_candidate_fact_matrix_from_frozen",
         ),
         "render_executive_career_dossier_v2": ("render_dossier_html",),
     }
