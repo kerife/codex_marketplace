@@ -25,25 +25,22 @@ def _sibling(name: str) -> Any:
 
 
 _snapshot = _sibling("semantic_provenance_snapshot.py")
-_prose = _sibling("private_prose_safety.py")
-
-contains_candidate_like_name = _prose.contains_candidate_like_name
-contains_unicode_controls = _prose.contains_unicode_controls
 
 SCHEMA_VERSION = "candidate-fact-matrix-v1"
+SIGNAL_VOCABULARY = "candidate-claim-signal-v1"
 _SOURCE_FIELDS = frozenset({"locale", "captured_at", "sources", "facts"})
 _RAW_SOURCE_FIELDS = frozenset({"source_type", "evidence_state"})
 _RAW_FACT_FIELDS = frozenset(
     {
-        "fact_text",
         "fact_type",
         "source_ordinals",
-        "signals",
+        "signal_bindings",
         "signal_relation",
         "conflict_state",
         "confidentiality",
     }
 )
+_SIGNAL_BINDING_FIELDS = frozenset({"kind", "signal"})
 _SOURCE_TYPES = frozenset(
     {"cv", "professional_profile", "portfolio", "interview_notes", "candidate_statement", "verified_record"}
 )
@@ -54,35 +51,35 @@ _FACT_TYPES = frozenset(
 _SIGNAL_RELATIONS = frozenset({"supports", "contradicts", "unknown"})
 _CONFLICT_STATES = frozenset({"clear", "conflicting", "superseded"})
 _CONFIDENTIALITIES = frozenset({"usable", "review_required", "forbidden"})
+_REQUIREMENT_SIGNALS = frozenset(
+    {
+        "authentication",
+        "certificate_management",
+        "incident_response",
+        "key_rotation",
+        "kubernetes",
+        "linux",
+        "observability",
+        "python",
+        "terraform",
+    }
+)
+_ELIGIBILITY_GATE_SIGNALS = frozenset(
+    {
+        "work_authorization",
+        "country_geography",
+        "work_arrangement",
+        "language",
+        "seniority",
+        "experience_floor",
+        "employment_arrangement",
+    }
+)
+_SIGNAL_CATALOGS = {
+    "requirement": _REQUIREMENT_SIGNALS,
+    "eligibility_gate": _ELIGIBILITY_GATE_SIGNALS,
+}
 _TIMESTAMP = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z\Z")
-_SIGNAL = re.compile(r"[a-z][a-z0-9_]{1,63}\Z")
-_URL = re.compile(r"(?:https?://|www\.)", re.I)
-_HTML = re.compile(r"<[^>]*>")
-_IDENTITY = re.compile(r"\b(?:candidate[ _-]?(?:id|name)|full[ _-]?name|linkedin|profile[ _-]?url)\b", re.I)
-_CONTACT = re.compile(r"(?:\bcontact\b|\b[\w.+-]+@[\w.-]+\.[a-z]{2,}\b|\+?\d[\d ()-]{7,}\d)", re.I)
-_PRIVATE_ANALYTICS = re.compile(r"\b(?:private[ _-]?analytics|profile[ _-]?views|impressions|follower[ _-]?count)\b", re.I)
-_SECRET = re.compile(
-    r"(?:\b(?:password|passwd|api[ _-]?key|access[ _-]?key|refresh[ _-]?token|bearer[ _-]?token|client[ _-]?secret|private[ _-]?key)\b\s*(?:=|:)|\bBearer\s+[A-Za-z0-9._~+/-]{8,}|-----BEGIN(?: [A-Z]+)? PRIVATE KEY-----|\b(?:ghp_|gho_|ghu_|ghs_|ghr_|sk-|AKIA|xoxb-|xoxa-|xoxp-|xoxr-|xoxs-)[A-Za-z0-9_-]{8,})",
-    re.I,
-)
-_PATH_LIKE = re.compile(
-    r"(?:^|[\s?&#=;\"'])(?:"
-    r"(?:[A-Za-z]:)?[\\/]+[^\s\\/]+"
-    r")",
-    re.I,
-)
-_LOCAL_FILE_URI = re.compile(r"(?<![^\W_])file\s*:(?:[\\/]){2,}", re.I)
-_SOURCE_FILENAME = re.compile(
-    r"(?<![A-Za-z0-9_.-])[A-Za-z0-9][A-Za-z0-9_.-]*\."
-    r"(?:pdf|docx?|rtf|txt|md|json|csv|xlsx?|pptx?|ya?ml)(?![A-Za-z0-9_-])",
-    re.I,
-)
-_RELATIVE_SOURCE_LOCATION = re.compile(
-    r"(?<![A-Za-z0-9_.-])"
-    r"(?P<location>[A-Za-z0-9][A-Za-z0-9_.-]*(?:[\\/]+[A-Za-z0-9][A-Za-z0-9_.-]*)+)"
-    r"(?![A-Za-z0-9_.-])"
-)
-_SAFE_TECHNICAL_SLASH_TERMS = frozenset({"kubernetes/helm", "ci/cd", "client/server"})
 
 
 def _canonical_json(value: object) -> str:
@@ -92,38 +89,6 @@ def _canonical_json(value: object) -> str:
 def _source_snapshot(source_group: Mapping[str, object]) -> str:
     digest = hashlib.sha256(_canonical_json(source_group).encode("utf-8")).hexdigest()
     return f"snap-candidate-facts-sha256-{digest}"
-
-
-def _is_plain_string(value: object, minimum: int, maximum: int) -> bool:
-    return (
-        type(value) is str
-        and minimum <= len(value) <= maximum
-        and value == value.strip()
-        and not any(ord(character) < 32 or ord(character) == 127 for character in value)
-    )
-
-
-def _contains_source_location(value: str) -> bool:
-    if _PATH_LIKE.search(value) or _LOCAL_FILE_URI.search(value) or _SOURCE_FILENAME.search(value):
-        return True
-    return any(
-        match.group("location").replace("\\", "/").casefold() not in _SAFE_TECHNICAL_SLASH_TERMS
-        for match in _RELATIVE_SOURCE_LOCATION.finditer(value)
-    )
-
-
-def _safe_fact_text(value: object) -> bool:
-    return _is_plain_string(value, 1, 500) and not contains_unicode_controls(value) and not contains_candidate_like_name(value) and not _contains_source_location(value) and not any(
-        pattern.search(value)
-        for pattern in (
-            _URL,
-            _HTML,
-            _IDENTITY,
-            _CONTACT,
-            _PRIVATE_ANALYTICS,
-            _SECRET,
-        )
-    )
 
 
 def _validate_source_row(row: object) -> None:
@@ -141,17 +106,30 @@ def _validate_source_row(row: object) -> None:
         raise ValueError("candidate fact matrix is invalid")
 
 
+def _validate_signal_binding(row: object) -> None:
+    if not isinstance(row, Mapping) or set(row) != _SIGNAL_BINDING_FIELDS:
+        raise ValueError("candidate fact matrix is invalid")
+    kind = row.get("kind")
+    signal = row.get("signal")
+    if (
+        type(kind) is not str
+        or kind not in _SIGNAL_CATALOGS
+        or type(signal) is not str
+        or signal not in _SIGNAL_CATALOGS[kind]
+    ):
+        raise ValueError("candidate fact matrix is invalid")
+
+
 def _validate_fact_row(row: object, source_count: int) -> None:
     if not isinstance(row, Mapping) or set(row) != _RAW_FACT_FIELDS:
         raise ValueError("candidate fact matrix is invalid")
-    fact_text = row.get("fact_text")
     fact_type = row.get("fact_type")
     ordinals = row.get("source_ordinals")
-    signals = row.get("signals")
+    bindings = row.get("signal_bindings")
     relation = row.get("signal_relation")
     conflict = row.get("conflict_state")
     confidentiality = row.get("confidentiality")
-    if not _safe_fact_text(fact_text) or type(fact_type) is not str or fact_type not in _FACT_TYPES:
+    if type(fact_type) is not str or fact_type not in _FACT_TYPES:
         raise ValueError("candidate fact matrix is invalid")
     if (
         not isinstance(ordinals, list)
@@ -161,10 +139,8 @@ def _validate_fact_row(row: object, source_count: int) -> None:
     ):
         raise ValueError("candidate fact matrix is invalid")
     if (
-        not isinstance(signals, list)
-        or len(signals) > 20
-        or any(type(signal) is not str or _SIGNAL.fullmatch(signal) is None for signal in signals)
-        or signals != sorted(set(signals))
+        not isinstance(bindings, list)
+        or len(bindings) > 20
         or type(relation) is not str
         or relation not in _SIGNAL_RELATIONS
         or type(conflict) is not str
@@ -173,10 +149,15 @@ def _validate_fact_row(row: object, source_count: int) -> None:
         or confidentiality not in _CONFIDENTIALITIES
     ):
         raise ValueError("candidate fact matrix is invalid")
+    for binding in bindings:
+        _validate_signal_binding(binding)
+    binding_keys = [(binding["kind"], binding["signal"]) for binding in bindings]
+    if binding_keys != sorted(set(binding_keys)):
+        raise ValueError("candidate fact matrix is invalid")
     if confidentiality == "forbidden":
-        if signals or relation != "unknown":
+        if bindings or relation != "unknown":
             raise ValueError("candidate fact matrix is invalid")
-    elif not signals:
+    elif not bindings:
         raise ValueError("candidate fact matrix is invalid")
     if relation == "contradicts" and fact_type != "constraint":
         raise ValueError("candidate fact matrix is invalid")
@@ -240,11 +221,13 @@ def _project_candidate_fact_matrix_from_frozen(
         projected_facts.append(
             {
                 "fact_id": f"F-{ordinal:03d}",
-                "fact_text": row["fact_text"],
                 "fact_type": row["fact_type"],
                 "evidence_state": weakest,
                 "source_ids": [source_row["source_id"] for source_row in source_rows],
-                "signals": list(row["signals"]),
+                "signal_bindings": [
+                    {"kind": binding["kind"], "signal": binding["signal"]}
+                    for binding in row["signal_bindings"]
+                ],
                 "signal_relation": row["signal_relation"],
                 "conflict_state": row["conflict_state"],
                 "confidentiality": row["confidentiality"],
@@ -254,6 +237,7 @@ def _project_candidate_fact_matrix_from_frozen(
         "schema_version": SCHEMA_VERSION,
         "locale": group["locale"],
         "case_scope": "single_candidate",
+        "signal_vocabulary": SIGNAL_VOCABULARY,
         "sources": projected_sources,
         "facts": projected_facts,
         "source_snapshot": _source_snapshot(group),

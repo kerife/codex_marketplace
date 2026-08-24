@@ -3,16 +3,18 @@
   "$id": "https://local.invalid/professional-growth-coach/candidate-fact-matrix-v1.schema.json",
   "title": "Candidate Fact Matrix v1",
   "type": "object",
-  "required": ["schema_version", "locale", "case_scope", "sources", "facts", "source_snapshot"],
+  "required": ["schema_version", "locale", "case_scope", "signal_vocabulary", "sources", "facts", "source_snapshot"],
   "additionalProperties": false,
   "properties": {
     "schema_version": {"const": "candidate-fact-matrix-v1"},
     "locale": {"enum": ["es", "en"]},
     "case_scope": {"const": "single_candidate"},
+    "signal_vocabulary": {"const": "candidate-claim-signal-v1"},
     "sources": {
       "type": "array",
       "minItems": 1,
       "maxItems": 20,
+      "uniqueItems": true,
       "items": {
         "type": "object",
         "required": ["source_id", "source_type", "evidence_state", "captured_at"],
@@ -22,28 +24,92 @@
           "source_type": {"enum": ["cv", "professional_profile", "portfolio", "interview_notes", "candidate_statement", "verified_record"]},
           "evidence_state": {"enum": ["verified", "candidate_reported", "inferred", "unknown"]},
           "captured_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"}
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "required": ["evidence_state"],
+              "properties": {"evidence_state": {"const": "verified"}}
+            },
+            "then": {"properties": {"source_type": {"const": "verified_record"}}}
+          }
+        ]
       }
     },
     "facts": {
       "type": "array",
       "minItems": 1,
       "maxItems": 100,
+      "uniqueItems": true,
       "items": {
         "type": "object",
-        "required": ["fact_id", "fact_text", "fact_type", "evidence_state", "source_ids", "signals", "signal_relation", "conflict_state", "confidentiality"],
+        "required": ["fact_id", "fact_type", "evidence_state", "source_ids", "signal_bindings", "signal_relation", "conflict_state", "confidentiality"],
         "additionalProperties": false,
         "properties": {
           "fact_id": {"type": "string", "pattern": "^F-[0-9]{3}$"},
-          "fact_text": {"type": "string", "minLength": 1, "maxLength": 500},
           "fact_type": {"enum": ["skill", "experience", "outcome", "credential", "portfolio_evidence", "work_preference", "constraint"]},
           "evidence_state": {"enum": ["verified", "candidate_reported", "inferred", "unknown"]},
-          "source_ids": {"type": "array", "minItems": 1, "maxItems": 5, "items": {"type": "string", "pattern": "^FS-[0-9]{3}$"}},
-          "signals": {"type": "array", "minItems": 0, "maxItems": 20, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"}},
+          "source_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^FS-[0-9]{3}$"}
+          },
+          "signal_bindings": {
+            "type": "array",
+            "minItems": 0,
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": ["kind", "signal"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "kind": {"const": "requirement"},
+                    "signal": {"enum": ["authentication", "certificate_management", "incident_response", "key_rotation", "kubernetes", "linux", "observability", "python", "terraform"]}
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": ["kind", "signal"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "kind": {"const": "eligibility_gate"},
+                    "signal": {"enum": ["work_authorization", "country_geography", "work_arrangement", "language", "seniority", "experience_floor", "employment_arrangement"]}
+                  }
+                }
+              ]
+            }
+          },
           "signal_relation": {"enum": ["supports", "contradicts", "unknown"]},
           "conflict_state": {"enum": ["clear", "conflicting", "superseded"]},
           "confidentiality": {"enum": ["usable", "review_required", "forbidden"]}
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "required": ["confidentiality"],
+              "properties": {"confidentiality": {"const": "forbidden"}}
+            },
+            "then": {
+              "properties": {
+                "signal_bindings": {"maxItems": 0},
+                "signal_relation": {"const": "unknown"}
+              }
+            },
+            "else": {"properties": {"signal_bindings": {"minItems": 1}}}
+          },
+          {
+            "if": {
+              "required": ["signal_relation"],
+              "properties": {"signal_relation": {"const": "contradicts"}}
+            },
+            "then": {"properties": {"fact_type": {"const": "constraint"}}}
+          }
+        ]
       }
     },
     "source_snapshot": {"type": "string", "pattern": "^snap-candidate-facts-sha256-[0-9a-f]{64}$"}
