@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import io
 import json
 import os
+import shutil
 import stat
 import sys
 import tempfile
@@ -39,6 +41,26 @@ def load_script(name: str):
     sys.modules[specification.name] = module
     specification.loader.exec_module(module)
     return module
+
+
+def load_independent_script(scripts: Path, name: str, namespace: str):
+    path = scripts / name
+    specification = importlib.util.spec_from_file_location(
+        f"private_vacancy_packet_independent_{namespace}_{path.stem}", path
+    )
+    if specification is None or specification.loader is None:
+        raise AssertionError("independent private vacancy packet module is unavailable")
+    module = importlib.util.module_from_spec(specification)
+    sys.modules[specification.name] = module
+    specification.loader.exec_module(module)
+    return module
+
+
+def identity_module_name(scripts: Path) -> str:
+    origin = os.path.realpath(scripts / "private_vacancy_packet_identity.py")
+    return "_pgc_private_vacancy_packet_identity_" + hashlib.sha256(
+        origin.encode("utf-8")
+    ).hexdigest()
 
 
 WRITER = load_script("write_private_vacancy_application_packet_v1.py")
@@ -138,13 +160,109 @@ class PrivateVacancyApplicationPacketWriterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             output = Path(temporary_directory) / "packet.json"
             output.write_bytes(b"previous-private-bytes")
-            with self.assertRaises(WRITER.PrivateVacancyApplicationPacketWriteError) as caught:
-                WRITER.write_private_vacancy_application_packet_v1(
-                    {"review-sensitive-secret": "forged"}, output, force=True
-                )
-            self.assertEqual("cannot write private vacancy application packet", str(caught.exception))
+            for forged in (self._packet(), {"review-sensitive-secret": "forged"}):
+                with self.subTest(forged_type=type(forged).__name__):
+                    with self.assertRaises(
+                        WRITER.PrivateVacancyApplicationPacketWriteError
+                    ) as caught:
+                        WRITER.write_private_vacancy_application_packet_v1(
+                            forged, output, force=True
+                        )
+                    self.assertEqual(
+                        "cannot write private vacancy application packet",
+                        str(caught.exception),
+                    )
             self.assertEqual(b"previous-private-bytes", output.read_bytes())
             self.assertEqual([], list(output.parent.glob(f".{output.name}.tmp-*")))
+
+    def test_accepts_opaque_snapshot_from_independently_loaded_validator_only(self) -> None:
+        """Break caught: a separately imported canonical validator proof fails identity checks."""
+        module_names: list[str] = []
+        prior_identity_modules: dict[str, object | None] = {}
+
+        def independent_modules(scripts: Path, namespace: str, *, writer_first: bool):
+            shared_name = identity_module_name(scripts)
+            if shared_name not in prior_identity_modules:
+                prior_identity_modules[shared_name] = sys.modules.get(shared_name)
+            sys.modules.pop(shared_name, None)
+            ordered = (
+                ("write_private_vacancy_application_packet_v1.py", "writer"),
+                ("validate_private_vacancy_application_packet_v1.py", "validator"),
+            )
+            if not writer_first:
+                ordered = tuple(reversed(ordered))
+            modules = {}
+            for name, role in ordered:
+                module = load_independent_script(scripts, name, f"{namespace}_{role}")
+                modules[role] = module
+                module_names.append(module.__name__)
+            return modules["validator"], modules["writer"]
+
+        try:
+            validator_first, writer_after_validator = independent_modules(
+                SCRIPTS, "validator_first", writer_first=False
+            )
+            validator_after_writer, writer_first = independent_modules(
+                SCRIPTS, "writer_first", writer_first=True
+            )
+            with tempfile.TemporaryDirectory() as temporary_directory:
+                copied_plugin = Path(temporary_directory) / "professional-growth-coach"
+                shutil.copytree(SCRIPTS.parent, copied_plugin)
+                copied_validator, copied_writer = independent_modules(
+                    copied_plugin / "scripts", "copied_plugin", writer_first=False
+                )
+                cases = (
+                    (validator_first, writer_after_validator, "validator-first.json"),
+                    (validator_after_writer, writer_first, "writer-first.json"),
+                    (copied_validator, copied_writer, "copied-plugin.json"),
+                )
+                snapshots = []
+                for validator, writer, filename in cases:
+                    with self.subTest(filename=filename):
+                        snapshot = validator.validate_private_vacancy_application_packet_v1(
+                            self._packet(), self._sources()
+                        )
+                        snapshots.append(snapshot)
+                        self.assertIsNot(validator, writer._validator)
+                        self.assertIs(
+                            validator.ValidatedPrivateVacancyPacket,
+                            writer.ValidatedPrivateVacancyPacket,
+                        )
+                        receipt = writer.write_private_vacancy_application_packet_v1(
+                            snapshot, Path(temporary_directory) / filename
+                        )
+                        self.assertEqual("V-003", receipt.vacancy_id)
+
+                self.assertIsNot(
+                    validator_first.ValidatedPrivateVacancyPacket,
+                    copied_validator.ValidatedPrivateVacancyPacket,
+                )
+
+                with self.assertRaises(
+                    writer_after_validator.PrivateVacancyApplicationPacketWriteError
+                ):
+                    writer_after_validator.write_private_vacancy_application_packet_v1(
+                        snapshots[2], Path(temporary_directory) / "cross-package.json"
+                    )
+
+                class Spoof(writer_after_validator.ValidatedPrivateVacancyPacket):
+                    pass
+
+                spoof = object.__new__(Spoof)
+                with self.assertRaises(
+                    writer_after_validator.PrivateVacancyApplicationPacketWriteError
+                ):
+                    writer_after_validator.write_private_vacancy_application_packet_v1(
+                        spoof, Path(temporary_directory) / "spoof.json"
+                    )
+        finally:
+            for name in module_names:
+                sys.modules.pop(name, None)
+            for name, module in prior_identity_modules.items():
+                if module is None:
+                    sys.modules.pop(name, None)
+                else:
+                    sys.modules[name] = module
 
     def test_cli_captures_complete_group_once_and_emits_exact_receipt_after_replace(self) -> None:
         """Break caught: CLI writes before full validation or emits a broadened receipt."""

@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
+import os
 import sys
 from collections.abc import Mapping
 from pathlib import Path
@@ -22,10 +24,37 @@ def _sibling(name: str) -> Any:
     return module
 
 
+def _packet_identity() -> Any:
+    path = Path(__file__).with_name("private_vacancy_packet_identity.py")
+    origin = os.path.realpath(os.fspath(path))
+    module_name = (
+        "_pgc_private_vacancy_packet_identity_"
+        + hashlib.sha256(origin.encode("utf-8")).hexdigest()
+    )
+    existing = sys.modules.get(module_name)
+    if existing is not None:
+        if os.path.realpath(os.fspath(getattr(existing, "__file__", ""))) != origin:
+            raise RuntimeError("private vacancy packet identity is unavailable")
+        return existing
+    specification = importlib.util.spec_from_file_location(module_name, path)
+    if specification is None or specification.loader is None:
+        raise RuntimeError("private vacancy packet identity is unavailable")
+    module = importlib.util.module_from_spec(specification)
+    sys.modules[module_name] = module
+    try:
+        specification.loader.exec_module(module)
+    except BaseException:
+        if sys.modules.get(module_name) is module:
+            del sys.modules[module_name]
+        raise
+    return module
+
+
 _builder = _sibling("build_private_vacancy_application_packet_v1.py")
 _snapshot = _sibling("semantic_provenance_snapshot.py")
 _schema_validation = _sibling("validate_json_schema_subset.py")
 _loader = _sibling("private_input_loader.py")
+_identity = _packet_identity()
 _SCHEMA_PATH = (
     Path(__file__).parents[1]
     / "schemas"
@@ -33,53 +62,11 @@ _SCHEMA_PATH = (
 )
 _MISMATCH = "private vacancy application packet does not match validated sources"
 _MAX_INPUT_BYTES = 512 * 1024
-_CONSTRUCTOR_TOKEN = object()
+ValidatedPrivateVacancyPacket = _identity.ValidatedPrivateVacancyPacket
 
 
 class PrivateVacancyApplicationPacketLoadError(ValueError):
     """Raised for a fixed, no-echo packet load failure."""
-
-
-class ValidatedPrivateVacancyPacket:
-    """Opaque immutable proof that an artifact matches one complete source group."""
-
-    __slots__ = ("__artifact_json", "__source_group_json")
-
-    def __new__(
-        cls,
-        token: object = None,
-        artifact_json: str = "",
-        source_group_json: str = "",
-    ):
-        if token is not _CONSTRUCTOR_TOKEN:
-            raise TypeError("validated private vacancy packet construction is private")
-        return super().__new__(cls)
-
-    def __init__(
-        self,
-        token: object = None,
-        artifact_json: str = "",
-        source_group_json: str = "",
-    ) -> None:
-        if token is not _CONSTRUCTOR_TOKEN:
-            raise TypeError("validated private vacancy packet construction is private")
-        object.__setattr__(self, "_ValidatedPrivateVacancyPacket__artifact_json", artifact_json)
-        object.__setattr__(
-            self,
-            "_ValidatedPrivateVacancyPacket__source_group_json",
-            source_group_json,
-        )
-
-    def __setattr__(self, name: str, value: object) -> None:
-        raise AttributeError("validated private vacancy packet is immutable")
-
-    @property
-    def artifact(self) -> dict[str, object]:
-        """Return a detached artifact copy without exposing the frozen composite."""
-        value = json.loads(self.__artifact_json)
-        if not isinstance(value, dict):
-            raise RuntimeError("validated private vacancy packet is unavailable")
-        return value
 
 
 def _schema() -> dict[str, object]:
@@ -96,8 +83,7 @@ def _canonical_json(value: object) -> str:
 def _validated_snapshot(
     value: Mapping[str, object], source_group: Mapping[str, object]
 ) -> ValidatedPrivateVacancyPacket:
-    return ValidatedPrivateVacancyPacket(
-        _CONSTRUCTOR_TOKEN,
+    return _identity._issue_validated_private_vacancy_packet(
         _canonical_json(value),
         _canonical_json(source_group),
     )

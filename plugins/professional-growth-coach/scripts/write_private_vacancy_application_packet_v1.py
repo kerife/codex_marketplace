@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -31,11 +32,38 @@ def _sibling(name: str) -> Any:
     return module
 
 
+def _packet_identity() -> Any:
+    path = Path(__file__).with_name("private_vacancy_packet_identity.py")
+    origin = os.path.realpath(os.fspath(path))
+    module_name = (
+        "_pgc_private_vacancy_packet_identity_"
+        + hashlib.sha256(origin.encode("utf-8")).hexdigest()
+    )
+    existing = sys.modules.get(module_name)
+    if existing is not None:
+        if os.path.realpath(os.fspath(getattr(existing, "__file__", ""))) != origin:
+            raise RuntimeError("private vacancy packet identity is unavailable")
+        return existing
+    specification = importlib.util.spec_from_file_location(module_name, path)
+    if specification is None or specification.loader is None:
+        raise RuntimeError("private vacancy packet identity is unavailable")
+    module = importlib.util.module_from_spec(specification)
+    sys.modules[module_name] = module
+    try:
+        specification.loader.exec_module(module)
+    except BaseException:
+        if sys.modules.get(module_name) is module:
+            del sys.modules[module_name]
+        raise
+    return module
+
+
 _loader = _sibling("private_input_loader.py")
 _snapshot = _sibling("semantic_provenance_snapshot.py")
 _validator = _sibling("validate_private_vacancy_application_packet_v1.py")
+_identity = _packet_identity()
 
-ValidatedPrivateVacancyPacket = _validator.ValidatedPrivateVacancyPacket
+ValidatedPrivateVacancyPacket = _identity.ValidatedPrivateVacancyPacket
 validate_private_vacancy_application_packet_v1 = (
     _validator.validate_private_vacancy_application_packet_v1
 )

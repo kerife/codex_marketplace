@@ -1011,6 +1011,7 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "scripts/build_private_vacancy_application_packet_v1.py",
                 "scripts/validate_private_vacancy_application_packet_v1.py",
                 "scripts/write_private_vacancy_application_packet_v1.py",
+                "scripts/private_vacancy_packet_identity.py",
                 "assets/career-market-learning-dossier-v1.css",
                 "assets/career-learning-eligibility-v1.css",
                 "tests/fixtures/vacancy-first-smoke/sources.json",
