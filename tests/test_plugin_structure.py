@@ -2056,6 +2056,10 @@ raise SystemExit(64)
                 "validate_private_vacancy_application_packet_v1.py",
                 "validate_private_vacancy_application_packet_v1",
             ),
+            (
+                "write_private_vacancy_application_packet_v1.py",
+                "write_private_vacancy_application_packet_v1",
+            ),
             ("render_executive_career_dossier_v2.py", "render_dossier_html"),
         )
         with tempfile.TemporaryDirectory() as temporary_directory:

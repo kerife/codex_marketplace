@@ -303,12 +303,14 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "scripts/validate_candidate_fact_matrix_v1.py",
     "scripts/build_private_vacancy_application_packet_v1.py",
     "scripts/validate_private_vacancy_application_packet_v1.py",
+    "scripts/write_private_vacancy_application_packet_v1.py",
     "assets/career-market-learning-dossier-v1.css",
     "assets/career-learning-eligibility-v1.css",
     "tests/fixtures/vacancy-first-smoke/sources.json",
     "tests/test_learning_eligibility_v3.py",
     "tests/test_candidate_fact_matrix_v1.py",
     "tests/test_private_vacancy_application_packet_v1.py",
+    "tests/test_write_private_vacancy_application_packet_v1.py",
     "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
     "tests/evals/with-skill/fixtures/target-vacancy-research/limited-four-en.json",
     "tests/evals/with-skill/fixtures/target-vacancy-research/unavailable-es.json",
@@ -868,6 +870,7 @@ def _load_market_package_modules(plugin_root: Path) -> dict[str, object]:
             "validate_candidate_fact_matrix_v1",
             "build_private_vacancy_application_packet_v1",
             "validate_private_vacancy_application_packet_v1",
+            "write_private_vacancy_application_packet_v1",
             "render_executive_career_dossier_v2",
         ):
             path = scripts_root / f"{name}.py"
@@ -1096,6 +1099,10 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             "load_private_vacancy_application_packet_v1",
             "ValidatedPrivateVacancyPacket",
             "_validate_private_vacancy_packet_from_frozen",
+        ),
+        "write_private_vacancy_application_packet_v1": (
+            "write_private_vacancy_application_packet_v1",
+            "PrivateVacancyApplicationPacketWriteReceipt",
         ),
         "render_executive_career_dossier_v2": ("render_dossier_html",),
     }
