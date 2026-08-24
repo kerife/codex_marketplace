@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `337158c188919d281f7fac9d00c7ebed9faa4a6b`
+source_commit: `e9414f2fb101fa0aa76eb0a7173aeae807f32866`
 
-source_tree: `2acb4f4aa6a4e0639836174324702790f1e1a59b`
+source_tree: `3a0eec05f365888a3825f2482a577d52d00598aa`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260823154005`
+installed_cache_version: `0.2.0+codex.20260824020329`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `367c1ed33d56d537b7fe4fd26a2b61acd06b69a197f312ad590c5ee0c9ae0f95`
+source_aggregate_sha256: `1458825375258afe42d09ff88ab47fb8f3605135a86a1041bf839c7aef3555f1`
 
-cache_aggregate_sha256: `367c1ed33d56d537b7fe4fd26a2b61acd06b69a197f312ad590c5ee0c9ae0f95`
+cache_aggregate_sha256: `1458825375258afe42d09ff88ab47fb8f3605135a86a1041bf839c7aef3555f1`
 
 source_bytecode_count: `0`
 
@@ -62,7 +62,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster timestamp: 2026-08-23T15:40:05Z.
+- Cachebuster timestamp: 2026-08-24T02:03:29Z.
 - Commit A changed only the plugin manifest, was pushed to remote `main`, and
   was verified by fetch plus a live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -76,12 +76,12 @@ external_action_state: `not_executed`
 
 - The official source release runner completed successfully with exit 0;
   skill and plugin validation both passed.
-- Plugin package discovery: 223/223 tests passed in 141.601 seconds.
-- Repository root discovery: 1407/1407 tests passed in 3379.513 seconds.
+- Plugin package discovery: 223/223 tests passed in 141.149 seconds.
+- Repository root discovery: 1408/1408 tests passed in 3347.310 seconds.
 - Static validation passed private-schema, dossier-handoff, and package checks.
 - Repository privacy passed without findings or sensitive-value echo.
-- Post-cachebuster structure/full-plugin verification passed 269/269 tests in
-  1308.034 seconds; post-cachebuster static validation also passed.
+- Post-cachebuster structure/full-plugin verification passed 270/270 tests in
+  1306.624 seconds; post-cachebuster static validation also passed.
 - A fresh validation-environment bootstrap was blocked by the established
   persistent-install sandbox policy. Every gate used the documented, verified
   locked CPython 3.11.15 arm64 environment with PyYAML 6.0.3.
