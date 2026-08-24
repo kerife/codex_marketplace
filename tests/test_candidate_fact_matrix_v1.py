@@ -159,18 +159,34 @@ class CandidateFactMatrixV1Tests(unittest.TestCase):
                 group["facts"][0]["fact_text"] = prose
                 self.assert_rejected(group)
 
-    def test_builder_rejects_local_source_paths_and_file_uris_without_echo(self) -> None:
-        """Break caught: local source locations or filenames can enter an emitted fact."""
+    def test_builder_rejects_totalized_source_path_families_without_echo(self) -> None:
+        """Break caught: one path family evades the source-location privacy boundary."""
         for prose in (
             "Evidence kept at /Users/example/private-cv.pdf.",
             r"Evidence kept at C:\Users\example\private-cv.pdf.",
             "Evidence kept at file:///private/example/private-cv.pdf.",
             "Evidence kept at source/private-cv.pdf.",
+            "Document at /foo/private-cv.pdf",
+            r"Document at source\\private-cv.pdf",
+            r"Document at \server\share\private-cv.pdf",
+            r"Document at \\server\share\private-cv.pdf",
         ):
             with self.subTest(prose=prose):
                 group = source_group()
                 group["facts"][0]["fact_text"] = prose
                 self.assert_rejected(group)
+
+    def test_builder_path_boundary_preserves_professional_vocabulary_and_versions(self) -> None:
+        """Break caught: total path rejection blocks ordinary technical prose, certificates, or versions."""
+        for prose in (
+            "Authentication version 2.1 control practice.",
+            "Kubernetes/Helm operations practice.",
+            "AWS Certified Security - Specialty version 2024 preparation.",
+        ):
+            with self.subTest(prose=prose):
+                group = source_group()
+                group["facts"][0]["fact_text"] = prose
+                self.assertEqual(prose, build(group)["facts"][0]["fact_text"])
 
     def test_builder_rejects_ordinary_candidate_identity_prose_without_labels(self) -> None:
         """Break caught: a candidate name pair reaches the fact matrix without an identity label."""

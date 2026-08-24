@@ -65,23 +65,14 @@ _SECRET = re.compile(
     r"(?:\b(?:password|passwd|api[ _-]?key|access[ _-]?key|refresh[ _-]?token|bearer[ _-]?token|client[ _-]?secret|private[ _-]?key)\b\s*(?:=|:)|\bBearer\s+[A-Za-z0-9._~+/-]{8,}|-----BEGIN(?: [A-Z]+)? PRIVATE KEY-----|\b(?:ghp_|gho_|ghu_|ghs_|ghr_|sk-|AKIA|xoxb-|xoxa-|xoxp-|xoxr-|xoxs-)[A-Za-z0-9_-]{8,})",
     re.I,
 )
-_LOCAL_PATH = re.compile(
+_PATH_LIKE = re.compile(
     r"(?:^|[\s?&#=;\"'])(?:"
-    r"~[\\/]|"
-    r"/{1,2}(?:Users|private|var|tmp|home|root)(?:[\\/]|$)|"
-    r"[A-Za-z]:[\\/](?:Users(?:[\\/]|$))?|"
-    r"\\\\[^\\/\s]+[\\/][^\\/\s]+"
+    r"(?:[A-Za-z]:)?[\\/]+[^\s\\/]+|"
+    r"[^\s\\/]+(?:[\\/]+[^\s\\/]+)+\.(?:pdf|docx?|txt|json)"
     r")",
     re.I,
 )
-_LOCAL_PATH_SEGMENT = re.compile(
-    r"(?:^|[\\/])(?:Users|private|var|tmp|home|root)(?:[\\/]|$)", re.I
-)
 _LOCAL_FILE_URI = re.compile(r"(?<![^\W_])file\s*:(?:[\\/]){2,}", re.I)
-_SOURCE_FILE = re.compile(
-    r"(?:^|[\s(\"'])(?:[\w.-]+[\\/])*[\w.-]+\.(?:pdf|docx?|txt|json)(?=$|[\s).,;:])",
-    re.I,
-)
 
 
 def _canonical_json(value: object) -> str:
@@ -112,10 +103,8 @@ def _safe_fact_text(value: object) -> bool:
             _CONTACT,
             _PRIVATE_ANALYTICS,
             _SECRET,
-            _LOCAL_PATH,
-            _LOCAL_PATH_SEGMENT,
+            _PATH_LIKE,
             _LOCAL_FILE_URI,
-            _SOURCE_FILE,
         )
     )
 
