@@ -547,6 +547,46 @@ class PrivateVacancyApplicationPacketV1Tests(unittest.TestCase):
         self.assertEqual([], optional_packet["claim_review"])
         self.assertEqual([], optional_packet["draft_materials"]["cv_bullets"])
 
+    def test_supported_optional_only_packet_stays_revise_first(self) -> None:
+        """Break caught: supported optional claims make an all-optional packet ready."""
+        rationales = {
+            "es": (
+                "Falta evidencia utilizable o hay afirmaciones que deben revisarse u "
+                "omitirse antes de una revisión privada final."
+            ),
+            "en": (
+                "Usable evidence is missing or claims must be revised or omitted "
+                "before final private review."
+            ),
+        }
+        for locale in ("es", "en"):
+            for importance in ("preferred", "responsibility_only"):
+                with self.subTest(locale=locale, importance=importance):
+                    packet = build_packet(
+                        composite_group(
+                            locale=locale,
+                            requirements=[
+                                requirement("terraform", 1, importance=importance)
+                            ],
+                            facts=[fact("terraform")],
+                        )
+                    )
+                    readiness = packet["readiness"]
+                    self.assertTrue(packet["draft_materials"]["cv_bullets"])
+                    self.assertTrue(packet["claim_review"])
+                    self.assertTrue(
+                        all(row["decision"] == "use" for row in packet["claim_review"])
+                    )
+                    self.assertEqual("revise_first", readiness["state"])
+                    self.assertEqual(rationales[locale], readiness["rationale"])
+                    self.assertEqual([], readiness["blocking_requirement_ids"])
+                    self.assertEqual([], readiness["blocking_gate_tokens"])
+                    self.assertEqual([], readiness["revision_claim_ids"])
+                    self.assertEqual(
+                        "suppressed",
+                        packet["first_interview_prep_handoff"]["state"],
+                    )
+
     def test_stop_requires_exact_verified_clear_nonsuperseded_gate_constraint(self) -> None:
         """Break caught: uncertainty stops work, or a verified gate blocker fails to suppress drafts."""
         blocker = fact(

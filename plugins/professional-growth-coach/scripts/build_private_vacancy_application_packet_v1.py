@@ -690,12 +690,16 @@ def _project_private_vacancy_packet_from_frozen(
         for row in requirement_rows
         if row["priority"] == "required" and row["coverage"] != "supported"
     ]
+    has_required_requirement = any(
+        row["priority"] == "required" for row in requirement_rows
+    )
     if blocking_gates:
         readiness_state = "stop"
         drafts = {"cv_bullets": [], "recruiter_summary": [], "message_angle": []}
         claims = []
     elif (
         blocking_requirements
+        or not has_required_requirement
         or any(row["decision"] in {"revise", "omit"} for row in claims)
         or not any(drafts.values())
         or not any(row["decision"] == "use" for row in claims)
