@@ -159,6 +159,36 @@ class CandidateFactMatrixV1Tests(unittest.TestCase):
                 group["facts"][0]["fact_text"] = prose
                 self.assert_rejected(group)
 
+    def test_builder_rejects_local_source_paths_and_file_uris_without_echo(self) -> None:
+        """Break caught: local source locations or filenames can enter an emitted fact."""
+        for prose in (
+            "Evidence kept at /Users/example/private-cv.pdf.",
+            r"Evidence kept at C:\Users\example\private-cv.pdf.",
+            "Evidence kept at file:///private/example/private-cv.pdf.",
+            "Evidence kept at source/private-cv.pdf.",
+        ):
+            with self.subTest(prose=prose):
+                group = source_group()
+                group["facts"][0]["fact_text"] = prose
+                self.assert_rejected(group)
+
+    def test_builder_rejects_ordinary_candidate_identity_prose_without_labels(self) -> None:
+        """Break caught: a candidate name pair reaches the fact matrix without an identity label."""
+        group = source_group()
+        group["facts"][0]["fact_text"] = "Alex Morgan led incident reviews."
+        self.assert_rejected(group)
+
+    def test_builder_rejects_c1_and_unicode_format_characters(self) -> None:
+        """Break caught: non-ASCII control or format characters evade the prose boundary."""
+        for prose in (
+            "Evidence\u0085hidden",
+            "Evidence\u200bhidden",
+        ):
+            with self.subTest(prose=prose):
+                group = source_group()
+                group["facts"][0]["fact_text"] = prose
+                self.assert_rejected(group)
+
     def test_builder_preserves_safe_security_vocabulary_and_certificate_names(self) -> None:
         """Break caught: safety scanning rejects ordinary security terminology or qualifications."""
         group = source_group()

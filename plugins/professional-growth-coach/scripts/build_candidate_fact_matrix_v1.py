@@ -25,6 +25,10 @@ def _sibling(name: str) -> Any:
 
 
 _snapshot = _sibling("semantic_provenance_snapshot.py")
+_prose = _sibling("private_prose_safety.py")
+
+contains_candidate_like_name = _prose.contains_candidate_like_name
+contains_unicode_controls = _prose.contains_unicode_controls
 
 SCHEMA_VERSION = "candidate-fact-matrix-v1"
 _SOURCE_FIELDS = frozenset({"locale", "captured_at", "sources", "facts"})
@@ -61,6 +65,23 @@ _SECRET = re.compile(
     r"(?:\b(?:password|passwd|api[ _-]?key|access[ _-]?key|refresh[ _-]?token|bearer[ _-]?token|client[ _-]?secret|private[ _-]?key)\b\s*(?:=|:)|\bBearer\s+[A-Za-z0-9._~+/-]{8,}|-----BEGIN(?: [A-Z]+)? PRIVATE KEY-----|\b(?:ghp_|gho_|ghu_|ghs_|ghr_|sk-|AKIA|xoxb-|xoxa-|xoxp-|xoxr-|xoxs-)[A-Za-z0-9_-]{8,})",
     re.I,
 )
+_LOCAL_PATH = re.compile(
+    r"(?:^|[\s?&#=;\"'])(?:"
+    r"~[\\/]|"
+    r"/{1,2}(?:Users|private|var|tmp|home|root)(?:[\\/]|$)|"
+    r"[A-Za-z]:[\\/](?:Users(?:[\\/]|$))?|"
+    r"\\\\[^\\/\s]+[\\/][^\\/\s]+"
+    r")",
+    re.I,
+)
+_LOCAL_PATH_SEGMENT = re.compile(
+    r"(?:^|[\\/])(?:Users|private|var|tmp|home|root)(?:[\\/]|$)", re.I
+)
+_LOCAL_FILE_URI = re.compile(r"(?<![^\W_])file\s*:(?:[\\/]){2,}", re.I)
+_SOURCE_FILE = re.compile(
+    r"(?:^|[\s(\"'])(?:[\w.-]+[\\/])*[\w.-]+\.(?:pdf|docx?|txt|json)(?=$|[\s).,;:])",
+    re.I,
+)
 
 
 def _canonical_json(value: object) -> str:
@@ -82,9 +103,20 @@ def _is_plain_string(value: object, minimum: int, maximum: int) -> bool:
 
 
 def _safe_fact_text(value: object) -> bool:
-    return _is_plain_string(value, 1, 500) and not any(
+    return _is_plain_string(value, 1, 500) and not contains_unicode_controls(value) and not contains_candidate_like_name(value) and not any(
         pattern.search(value)
-        for pattern in (_URL, _HTML, _IDENTITY, _CONTACT, _PRIVATE_ANALYTICS, _SECRET)
+        for pattern in (
+            _URL,
+            _HTML,
+            _IDENTITY,
+            _CONTACT,
+            _PRIVATE_ANALYTICS,
+            _SECRET,
+            _LOCAL_PATH,
+            _LOCAL_PATH_SEGMENT,
+            _LOCAL_FILE_URI,
+            _SOURCE_FILE,
+        )
     )
 
 
