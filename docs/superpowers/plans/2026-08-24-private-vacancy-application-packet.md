@@ -37,7 +37,7 @@ This remains one coherent increment. The fact matrix is the packet's required ev
 - Use existing bounded snapshot, duplicate-key JSON, safe prose, schema loader, atomic writer, and generic diagnostic patterns; do not create a second general framework.
 - Do not import v1/v2/v3 product modules in ways that weaken package-only installed execution or the verified private snapshot import boundary.
 - No alias, substring, fuzzy, or prose-semantic matching. Only exact normalized signals and exact closed gate tokens may bind evidence.
-- No candidate identity/contact/private analytics/credentials/HTML/source paths/snapshots/raw source prose in generated candidate-matrix/packet artifacts, HTML, receipt, diagnostics, client delivery, or attestation. Canonical `sources.json` may contain only the exact synthetic public URLs required by the existing target-research schema; no generated output may project them.
+- No candidate identity/contact/private analytics/credentials/HTML/source paths/raw source prose in generated candidate-matrix/packet artifacts, HTML, receipt, diagnostics, client delivery, or attestation. Candidate facts are structural only: no narrative field is accepted, and signals come from the exact versioned catalog. Schema-required IDs and integrity digests may exist only in private JSON artifacts and never in HTML, receipt, client delivery, or attestation. Canonical `sources.json` may contain only the exact synthetic public URLs required by the existing target-research schema; no generated output may project them.
 - `ready_for_manual_authorization` means private draft review only; `external_action_authorized=false` always.
 - No JavaScript, forms, buttons, external links/assets, upload/export/apply controls, tracking pixel, or external action.
 - Keep recruiter practice/reply-triage precedence above the packet route.
@@ -52,23 +52,23 @@ This remains one coherent increment. The fact matrix is the packet's required ev
 
 **Files:**
 
-- Create: `plugins/professional-growth-coach/schemas/candidate-fact-matrix-v1.schema.json`
-- Create: `plugins/professional-growth-coach/scripts/build_candidate_fact_matrix_v1.py`
-- Create: `plugins/professional-growth-coach/scripts/validate_candidate_fact_matrix_v1.py`
-- Create: `tests/test_candidate_fact_matrix_v1.py`
+- Modify: `plugins/professional-growth-coach/schemas/candidate-fact-matrix-v1.schema.json`
+- Modify: `plugins/professional-growth-coach/scripts/build_candidate_fact_matrix_v1.py`
+- Modify: `plugins/professional-growth-coach/scripts/validate_candidate_fact_matrix_v1.py`
+- Modify: `tests/test_candidate_fact_matrix_v1.py`
 - Modify: `plugins/professional-growth-coach/tests/run_static_checks.py`
 - Modify: `tests/test_plugin_structure.py`
 - Modify: `tests/test_full_plugin.py`
 
 ### 1.1 Write the focused contract matrix first
 
-- [ ] Add tests for the exact six top-level fields, exact source/fact row fields, closed objects, bounds, contiguous IDs, locale/timestamp agreement, ordering, uniqueness, weakest evidence propagation, forbidden zero-signal conditional, constraint-only contradiction, and full-artifact source recomputation.
+- [ ] Add tests for the exact seven top-level fields including `signal_vocabulary`, exact source/fact row fields without narrative prose, closed objects, bounds, contiguous IDs, locale/timestamp agreement, ordering, uniqueness, weakest evidence propagation, forbidden zero-binding conditional, constraint-only contradiction, and full-artifact source recomputation.
 - [ ] Add source-type/evidence-state compatibility tests: only `verified_record` may be `verified`; candidate-authored/profile/CV/portfolio/interview sources reject a caller upgrade to verified.
-- [ ] Add positive tests for safe security vocabulary (`authentication`, `certificate_management`, `key_rotation`, professional certificate names).
-- [ ] Add negative tests for identity/contact/private analytics/authentication secrets, URLs, HTML, controls, duplicate-key JSON, recursive/oversized/exception mappings, mutability after capture, crossed locale/timestamp, unknown source ordinals, and tampered snapshots.
+- [ ] Add positive tests for every exact `candidate-claim-signal-v1` requirement and eligibility-gate token. Prove domain separation explicitly: a gate-only token such as `language` is accepted only with `kind=eligibility_gate`, rejected as a candidate requirement binding, and a public vacancy requirement using that unmapped token becomes `missing`/`revise_first` in Task 2.
+- [ ] Add negative tests for the prior `fact_text` and any other narrative field, unknown/crossed/unordered/duplicate signal bindings, identity/contact/private-analytics fields at any depth, duplicate-key JSON, recursive/oversized/exception mappings, mutability after capture, crossed locale/timestamp, unknown source ordinals, and tampered snapshots.
 - [ ] Name the production behavior that would make each test fail; use real builders/validators rather than mocks.
 
-Run the focused class and confirm RED because the three production files do not exist:
+Update the focused class first and confirm RED because the existing Task 1 files still implement the superseded narrative `fact_text`/untyped `signals` contract:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest -v tests.test_candidate_fact_matrix_v1
@@ -78,8 +78,9 @@ PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest -v tests.test_candidate_fact_ma
 
 - [ ] Mirror the existing bounded snapshot/canonical JSON patterns used by `build_career_next_action_eligibility_v1.py` without importing mutable caller objects after capture.
 - [ ] Expose explicit builder, validator, and snapshot functions named consistently with existing v1 modules.
-- [ ] Assign `FS-###` and `F-###` only after input validation; preserve source/fact order and lexicographic signal order.
+- [ ] Assign `FS-###` and `F-###` only after input validation; preserve source/fact order and order signal bindings by `kind`, then `signal`.
 - [ ] Recompute evidence state using `unknown < inferred < candidate_reported < verified` and generate `snap-candidate-facts-sha256-...` from the canonical raw input.
+- [ ] Accept no candidate prose. Validate only closed structural facts and the exact finite, typed `candidate-claim-signal-v1` catalog; Task 2 is solely responsible for localized template text.
 - [ ] Return fixed generic diagnostics and never echo a source value or exception.
 - [ ] Register the schema and scripts in the package/static inventories, including callable-interface checks.
 
@@ -118,6 +119,7 @@ git commit -m "feat: add candidate fact matrix contract"
 - [ ] Build test helpers from existing canonical target-research, dossier, market, gap-response, gap-assessment, provider, and eligibility builders; never hand-author derived eligibility/packet output.
 - [ ] Test exact top-level/row fields, bounds, IDs, joins, common locale/date, target binding, source snapshots, and no second vacancy selector.
 - [ ] Exercise all six ordered coverage/confidence rules, including usable verified `signal_relation=unknown` with and without admissible support.
+- [ ] Exercise catalog membership and kind separation: only `kind=requirement` can match vacancy requirements; only `kind=eligibility_gate` can trigger stop; an unmapped vacancy requirement is missing/revise-first without candidate-input echo.
 - [ ] Exercise `use`, `revise`, and `omit`; ensure required partial/missing/conflicting/review-required rows create null-draft claim-review rows and `revision_claim_ids` equals every revise/omit row.
 - [ ] Exercise readiness precedence: verified gate contradiction -> `stop`; any required non-supported evidence -> `revise_first`; complete admissible evidence -> `ready_for_manual_authorization`.
 - [ ] Assert verified gate contradictions trigger stop only when the constraint is clear and non-superseded; conflicting and superseded constraints do not trigger stop.
@@ -137,7 +139,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest -v tests.test_private_vacancy_a
 - [ ] Capture exactly `{eligibility_group, candidate_fact_group}` once, freeze it, run the existing eligibility validator on its seven values, run the new fact validator on its two values, and project only from that frozen group.
 - [ ] Return an opaque immutable `ValidatedPrivateVacancyPacket` snapshot that carries the frozen composite and projected artifact; its constructor is private to the validator and no artifact-only validation entry point exists.
 - [ ] Resolve the selected active vacancy, title, organization display label, requirements, and gate tokens through exact existing joins.
-- [ ] Implement the spec's ordered total coverage/confidence table, admissible fact definition, deterministic surface caps/order, closed ES/EN copy tables, claim review, readiness precedence, stop suppression, handoff, tracking proposal, approval boundary, and four snapshot bindings.
+- [ ] Implement the spec's ordered total coverage/confidence table, admissible fact definition, deterministic surface caps/order, closed ES/EN copy tables keyed only by surface/fact type/catalog signal, claim review, readiness precedence, stop suppression, handoff, tracking proposal, approval boundary, and four snapshot bindings.
 - [ ] Do not accept any caller-authored derived copy or target selector.
 
 ### 2.3 Generate and pin the six canonical scenario directories
@@ -226,7 +228,7 @@ git commit -m "feat: write private application packet"
 - [ ] Assert exact one `<h1>`, one focusable `main#main-content`, labelled section/article landmarks, stable unique IDs, definition lists, semantic requirement/draft lists, and one real claim-review table with caption/thead/scoped headers/localized names.
 - [ ] Assert exactly one readiness decision; visible state text independent of color; ES/EN deterministic copy; DOM order equals spec §8.
 - [ ] Assert stop output suppresses draft materials, claim table, handoff detail, and proposed tracking detail while retaining bounded stop reasons and explicit no-action boundary.
-- [ ] Assert all dynamic text is escaped and HTML contains no candidate/source/snapshot IDs, paths, URLs, raw enums, forms, buttons, scripts, external links/resources, upload/export/apply controls, caller-authored derived prose, or unprojected source prose. Exact validated `fact_text` used by closed templates remains allowed.
+- [ ] Assert all dynamic text is escaped and HTML contains no candidate/source/snapshot IDs, paths, URLs, raw enums, forms, buttons, scripts, external links/resources, upload/export/apply controls, caller-authored derived prose, source prose, candidate signal bindings, or integrity digests. Only closed localized templates, catalog labels, and validated public vacancy display metadata are allowed.
 - [ ] Assert CSP, noindex/referrer metadata, dark mode, forced-colors, reduced-motion, mobile, print, print atomicity, and repeated private/no-action boundary rules are present statically.
 - [ ] Pin the existing historical v1/v2/no-market HTML bytes in the same run.
 
@@ -319,8 +321,8 @@ git commit -m "feat: route private application packets"
 
 - [ ] Assert every new schema/script/asset/fixture/test path is in the exact appropriate inventory and that missing, extra, symlink, FIFO, socket, device, and non-regular paths fail.
 - [ ] Add an exact set of six canonical `sources.json` recognizers. Require the exact root shape, bounds, synthetic provenance, source recomputation of both artifacts, and exact sibling equality.
-- [ ] Add near misses for unregistered path, nested private values, mutated fact prose, crossed group, coordinated rebuild, tampered sibling, extra/missing key, and unsafe file type; each must fall back to the generic scanner and report only sanitized path/rule/count.
-- [ ] Ensure safe projections still scan candidate fact text, target research, and packet copy rather than discarding source content.
+- [ ] Add near misses for unregistered path, nested private values, an attempted narrative/prose field, mutated closed fact structure, crossed group, coordinated rebuild, tampered sibling, extra/missing key, and unsafe file type; each must fall back to the generic scanner and report only sanitized path/rule/count.
+- [ ] Ensure safe projections scan the complete closed candidate-fact structure, the bounded public target-research projection, and generated packet copy; candidate narrative is absent by contract rather than discarded by a recognizer.
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest -v tests.test_repository_privacy tests.test_plugin_structure tests.test_full_plugin.FullPluginIntegrationTests.test_static_checker_exists_and_passes

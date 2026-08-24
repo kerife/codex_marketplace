@@ -84,6 +84,7 @@ candidate_fact_group
 schema_version
 locale
 case_scope
+signal_vocabulary
 sources
 facts
 source_snapshot
@@ -94,6 +95,7 @@ Rules:
 - `schema_version = "candidate-fact-matrix-v1"`.
 - `locale` is `es` or `en`.
 - `case_scope = "single_candidate"`; no candidate identifier is emitted.
+- `signal_vocabulary = "candidate-claim-signal-v1"`.
 - all objects are closed (`additionalProperties: false`).
 - arrays are bounded, non-empty where specified, and use unique stable IDs.
 - strings are trimmed, length-bounded, control-character-free, and must not contain URLs or HTML.
@@ -129,27 +131,25 @@ Each `facts[]` row contains exactly:
 
 ```text
 fact_id
-fact_text
 fact_type
 evidence_state
 source_ids
-signals
+signal_bindings
 signal_relation
 conflict_state
 confidentiality
 ```
 
 - `fact_id`: `F-001` through `F-100`, contiguous in deterministic source order.
-- `fact_text`: sanitized candidate-authored or verified text, never model-expanded.
 - `fact_type`: `skill | experience | outcome | credential | portfolio_evidence | work_preference | constraint`.
 - `evidence_state`: the weakest supporting state across `source_ids`.
 - `source_ids`: 1–5 valid source IDs, ordered and unique.
-- `signals`: normalized tokens matching `^[a-z][a-z0-9_]{1,63}$`, ordered and unique. They may name a vacancy requirement signal or one of the closed eligibility-gate tokens; the fact-matrix builder does not need a vacancy artifact and does not assert that a token is present in the eventual target.
+- `signal_bindings`: 0–20 closed `{kind, signal}` rows, ordered by `kind` and then `signal`, unique by the complete pair. `kind` is `requirement | eligibility_gate`. Requirement signals use the exact finite `candidate-claim-signal-v1` catalog: `authentication | certificate_management | incident_response | key_rotation | kubernetes | linux | observability | python | terraform`. Eligibility-gate signals use the existing seven-token enum: `work_authorization | country_geography | work_arrangement | language | seniority | experience_floor | employment_arrangement`. The explicit kind prevents a vacancy requirement such as `language` from joining a gate constraint.
 - `signal_relation`: `supports | contradicts | unknown`.
 - `conflict_state`: `clear | conflicting | superseded`.
 - `confidentiality`: `usable | review_required | forbidden`.
 
-For `usable` and `review_required`, `signals` contains 1–20 entries. For `forbidden`, `signals` is exactly empty, `signal_relation=unknown`, and the fact can never enter a claim or draft. `signal_relation=contradicts` is allowed only for `fact_type=constraint`; it becomes a readiness blocker only with `evidence_state=verified`. A candidate-reported fact may be usable, but its downstream confidence cannot exceed `medium` and its evidence state is never upgraded.
+For `usable` and `review_required`, `signal_bindings` contains 1–20 entries. For `forbidden`, `signal_bindings` is exactly empty, `signal_relation=unknown`, and the fact can never enter a claim or draft. `signal_relation=contradicts` is allowed only for `fact_type=constraint`; it becomes a readiness blocker only with `evidence_state=verified`. A candidate-reported fact may be usable, but its downstream confidence cannot exceed `medium` and its evidence state is never upgraded.
 
 ### 5.4 Fact-matrix builder input and behavior
 
@@ -172,15 +172,14 @@ Normative raw-input contract:
 | `sources[].source_type` | enum from §5.2 | closed row |
 | `sources[].evidence_state` | enum from §5.2 | closed row |
 | `facts` | array, 1–100 rows | fact order is authoritative; duplicate canonical rows reject |
-| `facts[].fact_text` | string, 1–500 Unicode scalar values | trimmed; no controls, URL, HTML, identity/contact/private-analytics/authentication-secret material |
 | `facts[].fact_type` | enum from §5.3 | scalar |
 | `facts[].source_ordinals` | array, 1–5 integers in `1..len(sources)` | ascending and unique |
-| `facts[].signals` | array, 0–20 normalized signal strings of 2–64 characters | lexicographically sorted and unique; zero only for forbidden facts |
+| `facts[].signal_bindings` | array, 0–20 closed `{kind, signal}` rows from the §5.3 versioned catalog | `kind`, then `signal`; unique complete pairs; zero only for forbidden facts |
 | `facts[].signal_relation` | enum from §5.3 | scalar |
 | `facts[].conflict_state` | enum from §5.3 | scalar |
 | `facts[].confidentiality` | enum from §5.3 | scalar |
 
-Every source row has exactly `source_type` and `evidence_state`; every raw fact row has exactly the seven listed fact keys. `source_ordinals` becomes the ordered output `source_ids`. Output source rows preserve input order and receive contiguous `FS-001..FS-020`; output facts preserve input order and receive contiguous `F-001..F-100`.
+Every source row has exactly `source_type` and `evidence_state`; every raw fact row has exactly the six listed fact keys. The raw builder input contains no narrative field: evidence notes remain in the private source documents and are never accepted, snapshotted, logged, or projected by this contract. `source_ordinals` becomes the ordered output `source_ids`. Output source rows preserve input order and receive contiguous `FS-001..FS-020`; output facts preserve input order and receive contiguous `F-001..F-100`.
 
 Evidence ordering is explicit: `unknown < inferred < candidate_reported < verified`. Output `facts[].evidence_state` is the minimum state across the referenced sources.
 
@@ -188,10 +187,11 @@ The builder assigns all IDs, validates normalized signal tokens, computes weakes
 
 - duplicate or discontinuous IDs after reconstruction;
 - unknown source references;
-- forbidden facts with signals or a non-unknown relation;
+- forbidden facts with signal bindings or a non-unknown relation;
 - a non-constraint fact with `signal_relation=contradicts`;
 - identity/contact/private-analytics fields at any depth;
-- identity markers, contact data, authentication-secret material, URLs, or HTML inside any prose scalar value, including `fact_text`;
+- any narrative or caller-authored derived-prose field, including the prior `fact_text` shape;
+- any signal outside the exact versioned catalog, crossed signal kind, unordered pair, or duplicate binding;
 - crossed locale or capture timestamps;
 - mutable, exception-throwing, oversized, recursive, or duplicate-key inputs.
 
@@ -228,7 +228,7 @@ Rules:
 - `schema_version = "private-vacancy-application-packet-v1"`.
 - `locale` equals all three validated sources and `as_of_date` equals the common eligibility/target-research date.
 - all objects are closed and all arrays follow the normative bounds below.
-- every visible string is localized and derived from closed copy tables, validated vacancy title/organization labels, or validated fact/signal text.
+- every visible string is localized and derived from closed copy tables, validated public vacancy title/organization/requirement metadata, or the closed candidate-signal catalog; no candidate-authored prose is projected.
 
 Normative packet bounds and IDs:
 
@@ -285,7 +285,7 @@ confidence
 - `coverage`: `supported | partial | missing | conflicting | review_required`.
 - `confidence`: `high | medium | low | unknown`.
 
-Matching is literal after the existing normalized-signal validation. The builder does not create aliases, use substring matching, or infer semantic entailment. Candidate-reported-only support caps confidence at `medium`; inferred-only support is `review_required` or weaker.
+Matching is literal after the existing normalized-signal validation and requires `kind=requirement`. A selected-vacancy requirement outside `candidate-claim-signal-v1` has no admissible candidate binding and follows the existing `missing`/`revise_first` path without reflecting candidate input. The builder does not create aliases, use substring matching, or infer semantic entailment. Candidate-reported-only support caps confidence at `medium`; inferred-only support is `review_required` or weaker.
 
 Priority is a closed mapping from the existing target-vacancy contract: `must_have -> required`, `preferred -> preferred`, and `responsibility_only -> contextual`. Supporting matches require `signal_relation=supports`; an exact `contradicts` match is represented as conflicting evidence, never as support.
 
@@ -338,7 +338,7 @@ requirement_ids
 evidence_state
 ```
 
-Draft copy is built from fixed localized sentence templates plus exact validated `fact_text` and `signal` values. The builder never accepts caller-authored derived prose. This makes linkage testable without claiming that a validator understands arbitrary language.
+Draft copy is built only from fixed localized sentence templates keyed by `surface`, `fact_type`, and the matched catalog signal. The visible signal label comes from a closed ES/EN copy table; the builder never accepts or projects candidate-authored prose. These are bounded application scaffolds for private review, not model-expanded accomplishment claims.
 
 Only facts with `confidentiality=usable`, `conflict_state=clear`, and `signal_relation=supports` may produce draft text. Candidate-reported facts remain labeled `candidate_reported`. Missing, inferred-only, conflicting, superseded, review-required, contradicting, or forbidden facts cannot become affirmative draft claims.
 
@@ -350,9 +350,9 @@ Projection occurs before ID assignment:
 
 | Surface | Exact cardinality and selection | References and text source |
 |---|---|---|
-| `cv_bullets` | one row for each of the first 20 supported requirements in vacancy order | exactly the first admissible fact for that requirement; closed locale template using that fact text and requirement signal |
-| `recruiter_summary` | exactly one row when at least one required requirement is supported, otherwise zero | first five supported required requirements; first admissible fact for each, deduplicated in fact order; closed locale template in that same order |
-| `message_angle` | exactly one row when any requirement is supported, otherwise zero | prefer the first supported requirement in vacancy order whose signal equals the eligibility-selected signal; otherwise the first supported required requirement; otherwise the first supported requirement; reference its first admissible fact; closed locale template |
+| `cv_bullets` | one row for each of the first 20 supported requirements in vacancy order | exactly the first admissible fact for that requirement; closed locale template keyed by `fact_type` and the matched catalog signal label |
+| `recruiter_summary` | exactly one row when at least one required requirement is supported, otherwise zero | first five supported required requirements; first admissible fact for each, deduplicated in fact order; closed locale template and catalog labels in that same order |
+| `message_angle` | exactly one row when any requirement is supported, otherwise zero | prefer the first supported requirement in vacancy order whose catalog signal equals the eligibility-selected signal; otherwise the first supported required requirement; otherwise the first supported requirement; reference its first admissible fact; closed locale template |
 
 IDs are assigned only after the surface-specific cap and selection rules run. Each draft's `requirement_ids` and `fact_ids` are exactly the selected references above. Its `evidence_state` is the weakest referenced fact state under the §5.4 ordering.
 
@@ -527,7 +527,7 @@ The JSON writer is atomic:
 
 The CLI writes no partial stdout or destination file on failure. Invalid source, schema, rendering, filesystem, timeout, duplicate-key, mutable-input, or ordinary exception boundaries return a fixed generic diagnostic and never echo source values, private paths, exception messages, IDs, or draft content.
 
-Runtime value scanning occurs before projection and again on the closed artifact. Enum/token/ID fields are governed only by their closed schema. Prose fields reject identity markers, email/phone/address-like contact data, URLs, HTML, raw private analytics, controls, and authentication-secret material. Authentication-secret material means any of:
+Runtime value scanning occurs before projection and again on the closed artifact. The candidate fact input contains no prose field; its enum/token/ID fields are governed by their closed schema and finite signal catalog. Packet prose is generated only from closed copy tables and validated public vacancy metadata, then scanned for identity markers, email/phone/address-like contact data, URLs, HTML, raw private analytics, controls, and authentication-secret material. Authentication-secret material means any of:
 
 - an assignment of a value to `password`, `passwd`, `api_key`, `access_key`, `refresh_token`, `bearer_token`, `client_secret`, or `private_key`, allowing case and space/hyphen/underscore variants;
 - a `Bearer` value of eight or more token characters;
@@ -649,7 +649,7 @@ Every new production, schema, asset, fixture, and test path is registered in exa
 - validate bounds and synthetic provenance;
 - rebuild both artifacts from source inputs;
 - compare exact canonical sibling outputs;
-- scan safe projections of candidate fact text, vacancy research, and packet copy;
+- scan the closed candidate fact projection, bounded public vacancy-research projection, and generated packet copy;
 - fall back to the generic scanner for any unregistered, nested, mutated, or coordinately rebuilt near miss.
 
 There is no broad ignore, suffix allowlist, or path-prefix exclusion.
@@ -667,7 +667,7 @@ There is no broad ignore, suffix allowlist, or path-prefix exclusion.
 The focused TDD suite must prove at least:
 
 1. candidate fact matrix exact fields, bounds, stable IDs, evidence-state propagation, confidentiality, and identity-free output;
-2. forbidden fact zero-signal conditional and no downstream use;
+2. forbidden fact zero-binding conditional and no downstream use;
 3. exact-signal matching with no alias, substring, or prose inference;
 4. candidate-reported support retained and capped at medium confidence;
 5. verified constraint contradiction yields `stop`;
@@ -682,7 +682,7 @@ The focused TDD suite must prove at least:
 14. mutable, duplicate-key, recursive, oversized, exception-throwing, and hostile mappings fail closed;
 15. builder and validator each capture their composite input group once;
 16. JSON writer and CLI produce no partial output and generic/no-echo diagnostics;
-17. hostile value-level identity/contact/authentication-secret/URL/HTML cases fail generically with no echo or partial output while the named safe security terms remain accepted;
+17. the candidate fact input rejects every narrative or unknown field, while hostile identity/contact/authentication-secret/URL/HTML values in remaining packet sources fail generically with no echo or partial output and the closed signal catalog remains accepted;
 18. root packet routing wins only at its defined precedence and emits the exact identity-free client delivery;
 19. HTML has exact DOM/ARIA structure, no forbidden controls/content, and safe escaping;
 20. dark/forced-colors/reduced-motion/print rules are statically present;
