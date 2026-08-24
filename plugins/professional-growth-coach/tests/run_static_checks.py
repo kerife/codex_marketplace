@@ -263,6 +263,25 @@ PRIVATE_VACANCY_APPLICATION_PACKET_FIXTURE_PATHS = tuple(
         "application-packet",
     )
 )
+PRIVATE_VACANCY_APPLICATION_PACKET_RELEASE_PATHS = (
+    "schemas/candidate-fact-matrix-v1.schema.json",
+    "schemas/private-vacancy-application-packet-v1.schema.json",
+    "scripts/build_candidate_fact_matrix_v1.py",
+    "scripts/validate_candidate_fact_matrix_v1.py",
+    "scripts/build_private_vacancy_application_packet_v1.py",
+    "scripts/validate_private_vacancy_application_packet_v1.py",
+    "scripts/write_private_vacancy_application_packet_v1.py",
+    "scripts/render_private_vacancy_application_packet_v1.py",
+    "scripts/private_vacancy_packet_identity.py",
+    "assets/private-vacancy-application-packet-v1.html",
+    "assets/private-vacancy-application-packet-v1.css",
+    "tests/test_candidate_fact_matrix_v1.py",
+    "tests/test_private_vacancy_application_packet_v1.py",
+    "tests/test_write_private_vacancy_application_packet_v1.py",
+    "tests/test_render_private_vacancy_application_packet_v1.py",
+    "tests/test_private_vacancy_application_packet_routing.py",
+    *PRIVATE_VACANCY_APPLICATION_PACKET_FIXTURE_PATHS,
+)
 MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/candidate-market-alignment-v1.schema.json",
     "schemas/candidate-market-alignment-v2.schema.json",
@@ -316,6 +335,7 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "tests/test_private_vacancy_application_packet_v1.py",
     "tests/test_write_private_vacancy_application_packet_v1.py",
     "tests/test_render_private_vacancy_application_packet_v1.py",
+    "tests/test_private_vacancy_application_packet_routing.py",
     "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
     "tests/evals/with-skill/fixtures/target-vacancy-research/limited-four-en.json",
     "tests/evals/with-skill/fixtures/target-vacancy-research/unavailable-es.json",
@@ -933,6 +953,43 @@ def _fixture_alignment(
     }
 
 
+def validate_private_vacancy_packet_fixture_inventory(
+    repo_root: Path,
+) -> list[str]:
+    """Require the six canonical packet directories and three regular siblings."""
+
+    relative_root = Path(
+        "tests/evals/with-skill/fixtures/private-vacancy-application-packet-v1"
+    )
+    root = repo_root / relative_root
+    expected_files = {
+        "application-packet.json",
+        "candidate-fact-matrix.json",
+        "sources.json",
+    }
+    invalid = [f"{relative_root}: private packet fixture inventory is invalid"]
+    try:
+        if not stat.S_ISDIR(root.lstat().st_mode):
+            return invalid
+        scenario_entries = tuple(root.iterdir())
+        if {entry.name for entry in scenario_entries} != set(
+            PRIVATE_VACANCY_APPLICATION_PACKET_SCENARIOS
+        ):
+            return invalid
+        for scenario in PRIVATE_VACANCY_APPLICATION_PACKET_SCENARIOS:
+            directory = root / scenario
+            if not stat.S_ISDIR(directory.lstat().st_mode):
+                return invalid
+            file_entries = tuple(directory.iterdir())
+            if {entry.name for entry in file_entries} != expected_files:
+                return invalid
+            if any(not stat.S_ISREG(entry.lstat().st_mode) for entry in file_entries):
+                return invalid
+    except (OSError, UnicodeError):
+        return invalid
+    return []
+
+
 def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[str]:
     """Validate market package inventory, exact provenance, and offline composition."""
 
@@ -940,6 +997,8 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
     safe_paths: set[str] = set()
     fixture_root = repo_root / "tests/evals/with-skill/fixtures"
     repository_fixtures = fixture_root.is_dir()
+    if repository_fixtures:
+        errors.extend(validate_private_vacancy_packet_fixture_inventory(repo_root))
     for relative_path in MARKET_DOSSIER_PACKAGE_PATHS:
         plugin_local_test = relative_path == "tests/fixtures/vacancy-first-smoke/sources.json"
         if relative_path.startswith("tests/") and not plugin_local_test and not repository_fixtures:

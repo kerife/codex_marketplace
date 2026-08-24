@@ -8,12 +8,14 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
 import unittest
 from contextlib import contextmanager
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -75,6 +77,38 @@ EXPECTED_STARTER_PROMPTS: tuple[str, ...] = (
 SKILL_NAME_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 INSTALLABLE_VERSION_PATTERN = re.compile(
     r"^(?:0\.1\.0|0\.2\.0)(?:\+codex\.(?:\d{14}|local-\d{8}-\d{6}))?$"
+)
+PRIVATE_VACANCY_PACKET_SCENARIOS = (
+    "ready-es",
+    "ready-en",
+    "revise-missing-es",
+    "revise-review-en",
+    "stop-constraint-es",
+    "stop-constraint-en",
+)
+PRIVATE_VACANCY_PACKET_FIXTURE_PATHS = tuple(
+    f"tests/evals/with-skill/fixtures/private-vacancy-application-packet-v1/{scenario}/{name}.json"
+    for scenario in PRIVATE_VACANCY_PACKET_SCENARIOS
+    for name in ("sources", "candidate-fact-matrix", "application-packet")
+)
+PRIVATE_VACANCY_PACKET_RELEASE_PATHS = (
+    "schemas/candidate-fact-matrix-v1.schema.json",
+    "schemas/private-vacancy-application-packet-v1.schema.json",
+    "scripts/build_candidate_fact_matrix_v1.py",
+    "scripts/validate_candidate_fact_matrix_v1.py",
+    "scripts/build_private_vacancy_application_packet_v1.py",
+    "scripts/validate_private_vacancy_application_packet_v1.py",
+    "scripts/write_private_vacancy_application_packet_v1.py",
+    "scripts/render_private_vacancy_application_packet_v1.py",
+    "scripts/private_vacancy_packet_identity.py",
+    "assets/private-vacancy-application-packet-v1.html",
+    "assets/private-vacancy-application-packet-v1.css",
+    "tests/test_candidate_fact_matrix_v1.py",
+    "tests/test_private_vacancy_application_packet_v1.py",
+    "tests/test_write_private_vacancy_application_packet_v1.py",
+    "tests/test_render_private_vacancy_application_packet_v1.py",
+    "tests/test_private_vacancy_application_packet_routing.py",
+    *PRIVATE_VACANCY_PACKET_FIXTURE_PATHS,
 )
 
 
@@ -2034,6 +2068,93 @@ raise SystemExit(64)
             os.mkfifo(css)
             errors = checker.validate_market_dossier_package(plugin, root)
             self.assertTrue(any("regular package file" in error for error in errors), errors)
+
+    def test_private_packet_release_inventory_is_exact_complete_and_registered(self) -> None:
+        """Break caught: a Task 1-5 file ships outside the closed package inventory."""
+
+        checker = load_static_checker()
+
+        self.assertEqual(
+            PRIVATE_VACANCY_PACKET_RELEASE_PATHS,
+            checker.PRIVATE_VACANCY_APPLICATION_PACKET_RELEASE_PATHS,
+        )
+        self.assertEqual(
+            PRIVATE_VACANCY_PACKET_FIXTURE_PATHS,
+            checker.PRIVATE_VACANCY_APPLICATION_PACKET_FIXTURE_PATHS,
+        )
+        self.assertTrue(
+            set(PRIVATE_VACANCY_PACKET_RELEASE_PATHS)
+            <= set(checker.MARKET_DOSSIER_PACKAGE_PATHS)
+        )
+        self.assertEqual(
+            [],
+            checker.validate_private_vacancy_packet_fixture_inventory(REPO_ROOT),
+        )
+
+    def test_private_packet_fixture_inventory_rejects_missing_extra_and_unsafe_types(
+        self,
+    ) -> None:
+        """Break caught: exact fixture discovery follows or opens a non-regular path."""
+
+        checker = load_static_checker()
+        fixture_relative = Path(
+            "tests/evals/with-skill/fixtures/private-vacancy-application-packet-v1"
+        )
+        source = REPO_ROOT / fixture_relative
+        expected_error = (
+            f"{fixture_relative}: private packet fixture inventory is invalid"
+        )
+
+        def copied_root() -> tuple[tempfile.TemporaryDirectory[str], Path, Path]:
+            temporary = tempfile.TemporaryDirectory(dir="/tmp")
+            root = Path(temporary.name)
+            destination = root / fixture_relative
+            destination.parent.mkdir(parents=True)
+            shutil.copytree(source, destination)
+            return temporary, root, destination
+
+        for label in ("missing", "extra", "symlink", "fifo", "socket", "device"):
+            with self.subTest(file_type=label):
+                temporary, root, fixture_root = copied_root()
+                try:
+                    target = fixture_root / "ready-es" / "sources.json"
+                    if label == "missing":
+                        target.unlink()
+                        errors = checker.validate_private_vacancy_packet_fixture_inventory(root)
+                    elif label == "extra":
+                        (fixture_root / "ready-es" / "unexpected.json").write_text(
+                            "{}", encoding="utf-8"
+                        )
+                        errors = checker.validate_private_vacancy_packet_fixture_inventory(root)
+                    elif label == "symlink":
+                        target.unlink()
+                        target.symlink_to(source / "ready-es" / "sources.json")
+                        errors = checker.validate_private_vacancy_packet_fixture_inventory(root)
+                    elif label == "fifo":
+                        target.unlink()
+                        os.mkfifo(target)
+                        errors = checker.validate_private_vacancy_packet_fixture_inventory(root)
+                    else:
+                        target_mode = stat.S_IFSOCK if label == "socket" else stat.S_IFCHR
+                        original_lstat = Path.lstat
+
+                        def nonregular_lstat(path: Path):
+                            if path == target:
+                                return os.stat_result(
+                                    (target_mode | 0o600, 0, 0, 1, 0, 0, 0, 0, 0, 0)
+                                )
+                            return original_lstat(path)
+
+                        with mock.patch.object(
+                            Path,
+                            "lstat",
+                            autospec=True,
+                            side_effect=nonregular_lstat,
+                        ):
+                            errors = checker.validate_private_vacancy_packet_fixture_inventory(root)
+                    self.assertEqual([expected_error], errors)
+                finally:
+                    temporary.cleanup()
 
     def test_market_package_checker_is_total_for_malformed_regular_schema(self) -> None:
         checker = load_static_checker()

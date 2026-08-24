@@ -968,6 +968,25 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "application-packet",
             )
         )
+        private_packet_release_paths = (
+            "schemas/candidate-fact-matrix-v1.schema.json",
+            "schemas/private-vacancy-application-packet-v1.schema.json",
+            "scripts/build_candidate_fact_matrix_v1.py",
+            "scripts/validate_candidate_fact_matrix_v1.py",
+            "scripts/build_private_vacancy_application_packet_v1.py",
+            "scripts/validate_private_vacancy_application_packet_v1.py",
+            "scripts/write_private_vacancy_application_packet_v1.py",
+            "scripts/render_private_vacancy_application_packet_v1.py",
+            "scripts/private_vacancy_packet_identity.py",
+            "assets/private-vacancy-application-packet-v1.html",
+            "assets/private-vacancy-application-packet-v1.css",
+            "tests/test_candidate_fact_matrix_v1.py",
+            "tests/test_private_vacancy_application_packet_v1.py",
+            "tests/test_write_private_vacancy_application_packet_v1.py",
+            "tests/test_render_private_vacancy_application_packet_v1.py",
+            "tests/test_private_vacancy_application_packet_routing.py",
+            *private_packet_fixture_paths,
+        )
         self.assertEqual(
             eligibility_conditions,
             checker_module.CAREER_NEXT_ACTION_ELIGIBILITY_CONDITIONS,
@@ -983,6 +1002,10 @@ class FullPluginIntegrationTests(unittest.TestCase):
         self.assertEqual(
             private_packet_fixture_paths,
             checker_module.PRIVATE_VACANCY_APPLICATION_PACKET_FIXTURE_PATHS,
+        )
+        self.assertEqual(
+            private_packet_release_paths,
+            checker_module.PRIVATE_VACANCY_APPLICATION_PACKET_RELEASE_PATHS,
         )
         self.assertEqual(
             (
@@ -1039,14 +1062,19 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "scripts/build_private_vacancy_application_packet_v1.py",
                 "scripts/validate_private_vacancy_application_packet_v1.py",
                 "scripts/write_private_vacancy_application_packet_v1.py",
+                "scripts/render_private_vacancy_application_packet_v1.py",
                 "scripts/private_vacancy_packet_identity.py",
                 "assets/career-market-learning-dossier-v1.css",
                 "assets/career-learning-eligibility-v1.css",
+                "assets/private-vacancy-application-packet-v1.html",
+                "assets/private-vacancy-application-packet-v1.css",
                 "tests/fixtures/vacancy-first-smoke/sources.json",
                 "tests/test_learning_eligibility_v3.py",
                 "tests/test_candidate_fact_matrix_v1.py",
                 "tests/test_private_vacancy_application_packet_v1.py",
                 "tests/test_write_private_vacancy_application_packet_v1.py",
+                "tests/test_render_private_vacancy_application_packet_v1.py",
+                "tests/test_private_vacancy_application_packet_routing.py",
                 "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
                 "tests/evals/with-skill/fixtures/target-vacancy-research/limited-four-en.json",
                 "tests/evals/with-skill/fixtures/target-vacancy-research/unavailable-es.json",

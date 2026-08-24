@@ -9,6 +9,7 @@ import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -91,6 +92,47 @@ CAREER_LEARNING_V3_SOURCE_PATHS = tuple(
         "selection-required-es",
         "unavailable-es",
     )
+)
+PRIVATE_VACANCY_PACKET_SCENARIOS = (
+    "ready-es",
+    "ready-en",
+    "revise-missing-es",
+    "revise-review-en",
+    "stop-constraint-es",
+    "stop-constraint-en",
+)
+PRIVATE_VACANCY_PACKET_SOURCE_PATHS = tuple(
+    Path(
+        "tests/evals/with-skill/fixtures/private-vacancy-application-packet-v1/"
+        f"{scenario}/sources.json"
+    )
+    for scenario in PRIVATE_VACANCY_PACKET_SCENARIOS
+)
+PRIVATE_VACANCY_PACKET_SOURCE_SHA256 = {
+    PRIVATE_VACANCY_PACKET_SOURCE_PATHS[0]: "cd3993dcd94c910c300280063da8ed7846bfd3d6abf77365c2c2d03c74a143ee",
+    PRIVATE_VACANCY_PACKET_SOURCE_PATHS[1]: "f89598f5349a029eac02097c91c016c06d123203ba41b4e04f96c1d6c14900e1",
+    PRIVATE_VACANCY_PACKET_SOURCE_PATHS[2]: "f8298e5fca2619d7cee1fb9950021d70f55b4a02497486105370498c553f8433",
+    PRIVATE_VACANCY_PACKET_SOURCE_PATHS[3]: "95047ea58b3c3084699c4a304ce98ebc40ae8203b04bf76039d09ee69ae44220",
+    PRIVATE_VACANCY_PACKET_SOURCE_PATHS[4]: "33eb5814815250de9b1403f88efad9fdc9f057ba2f4ed398f105b30bef71751b",
+    PRIVATE_VACANCY_PACKET_SOURCE_PATHS[5]: "ea0c4bbaa15ee2aaf749501cbb4f669e9dadd3fe05cf9b08b69a48a262a6cc96",
+}
+PRIVATE_VACANCY_PACKET_SOURCE_INVENTORY_PATHS = (
+    Path("plugins/professional-growth-coach/schemas/candidate-fact-matrix-v1.schema.json"),
+    Path("plugins/professional-growth-coach/schemas/private-vacancy-application-packet-v1.schema.json"),
+    Path("plugins/professional-growth-coach/scripts/build_candidate_fact_matrix_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/validate_candidate_fact_matrix_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/build_private_vacancy_application_packet_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/validate_private_vacancy_application_packet_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/write_private_vacancy_application_packet_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/render_private_vacancy_application_packet_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/private_vacancy_packet_identity.py"),
+    Path("plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.html"),
+    Path("plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.css"),
+    Path("tests/test_candidate_fact_matrix_v1.py"),
+    Path("tests/test_private_vacancy_application_packet_v1.py"),
+    Path("tests/test_write_private_vacancy_application_packet_v1.py"),
+    Path("tests/test_render_private_vacancy_application_packet_v1.py"),
+    Path("tests/test_private_vacancy_application_packet_routing.py"),
 )
 RECRUITER_PRACTICE_FIXTURE_PATH = (
     REPO_ROOT
@@ -754,13 +796,23 @@ class RepositoryPrivacyTests(unittest.TestCase):
             set(scanner.tracked_eval_paths(REPO_ROOT))
             | set(INVENTORY_PATHS)
             | set(DOSSIER_SOURCE_INVENTORY_PATHS)
+            | set(PRIVATE_VACANCY_PACKET_SOURCE_INVENTORY_PATHS)
             | set(scanner.staged_release_artifact_paths(REPO_ROOT))
         )
         self.assertEqual(expected, set(scanner.scan_paths(REPO_ROOT)))
         self.assertEqual(5, len(INVENTORY_PATHS))
         self.assertEqual(
             set(DOSSIER_SOURCE_INVENTORY_PATHS),
-            set(scanner.DOSSIER_SOURCE_INVENTORY_PATHS),
+            set(scanner.DOSSIER_SOURCE_INVENTORY_PATHS)
+            - set(PRIVATE_VACANCY_PACKET_SOURCE_INVENTORY_PATHS),
+        )
+        self.assertEqual(
+            PRIVATE_VACANCY_PACKET_SOURCE_INVENTORY_PATHS,
+            scanner.PRIVATE_VACANCY_PACKET_SOURCE_INVENTORY_PATHS,
+        )
+        self.assertTrue(
+            set(PRIVATE_VACANCY_PACKET_SOURCE_INVENTORY_PATHS)
+            <= set(scanner.DOSSIER_SOURCE_INVENTORY_PATHS)
         )
 
     def test_dossier_source_inventory_uses_non_overbroad_source_scanning(self) -> None:
@@ -1251,6 +1303,289 @@ class RepositoryPrivacyTests(unittest.TestCase):
             with self.subTest(path=str(relative_path)):
                 text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
                 self.assertEqual({}, scanner.scan_text(relative_path, text))
+
+    def test_canonical_private_packet_sources_rebuild_exact_complete_safe_projections(
+        self,
+    ) -> None:
+        """Break caught: a packet source is trusted without all source-bound outputs."""
+
+        scanner = load_scanner()
+        self.assertEqual(
+            frozenset(PRIVATE_VACANCY_PACKET_SOURCE_PATHS),
+            scanner.PRIVATE_VACANCY_PACKET_SOURCE_PATHS,
+        )
+        self.assertEqual(
+            PRIVATE_VACANCY_PACKET_SOURCE_SHA256,
+            scanner.PRIVATE_VACANCY_PACKET_SOURCE_SHA256,
+        )
+        self.assertEqual(6, len(scanner.PRIVATE_VACANCY_PACKET_SOURCE_PATHS))
+
+        for relative_path in PRIVATE_VACANCY_PACKET_SOURCE_PATHS:
+            with self.subTest(path=str(relative_path)):
+                text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+                payload = json.loads(text)
+                projection = scanner._safe_private_vacancy_packet_sources_scan_value(
+                    relative_path,
+                    text,
+                    payload,
+                )
+                expected_matrix = json.loads(
+                    (REPO_ROOT / relative_path.with_name("candidate-fact-matrix.json")).read_text(
+                        encoding="utf-8"
+                    )
+                )
+                expected_packet = json.loads(
+                    (REPO_ROOT / relative_path.with_name("application-packet.json")).read_text(
+                        encoding="utf-8"
+                    )
+                )
+                expected_research_projection = scanner._safe_target_research_scan_value(
+                    json.dumps(payload["eligibility_group"]["research"], ensure_ascii=False),
+                    payload["eligibility_group"]["research"],
+                )
+
+                self.assertIsNotNone(projection)
+                self.assertEqual(
+                    [
+                        {"validated_candidate_fact_matrix": expected_matrix},
+                        {
+                            "validated_public_target_research": expected_research_projection
+                        },
+                        {"generated_private_packet": expected_packet},
+                    ],
+                    projection,
+                )
+                self.assertEqual({}, scanner.scan_text(relative_path, text))
+
+    def test_private_packet_source_near_misses_use_generic_no_echo_scanning(self) -> None:
+        """Break caught: a near miss bypasses generic privacy rules."""
+
+        scanner = load_scanner()
+        relative_path = PRIVATE_VACANCY_PACKET_SOURCE_PATHS[0]
+        text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+        payload = json.loads(text)
+        crossed = json.loads(
+            (REPO_ROOT / PRIVATE_VACANCY_PACKET_SOURCE_PATHS[1]).read_text(
+                encoding="utf-8"
+            )
+        )
+        marker = "candidate_name: Synthetic Private Person"
+
+        near_misses: list[tuple[str, Path, dict[str, object], str]] = []
+        nested_private = copy.deepcopy(payload)
+        nested_private["eligibility_group"]["research"]["search_scope"][
+            "candidate_name"
+        ] = "Synthetic Private Person"
+        near_misses.append(("nested private", relative_path, nested_private, "NAME_FIELD"))
+
+        attempted_prose = copy.deepcopy(payload)
+        attempted_prose["candidate_fact_group"]["source_group"]["facts"][0][
+            "narrative"
+        ] = marker
+        near_misses.append(("attempted prose", relative_path, attempted_prose, "NAME_FIELD"))
+
+        mutated_fact = copy.deepcopy(payload)
+        mutated_fact["candidate_fact_group"]["candidate_fact_matrix"]["facts"][0][
+            "fact_id"
+        ] = "F-999"
+        near_misses.append(
+            (
+                "mutated closed fact",
+                relative_path,
+                mutated_fact,
+                "SINGLING_OUT_STRUCTURED_COMBINATION",
+            )
+        )
+
+        crossed_group = copy.deepcopy(payload)
+        crossed_group["eligibility_group"] = crossed["eligibility_group"]
+        near_misses.append(
+            (
+                "crossed group",
+                relative_path,
+                crossed_group,
+                "SINGLING_OUT_STRUCTURED_COMBINATION",
+            )
+        )
+
+        extra_key = copy.deepcopy(payload)
+        extra_key["unexpected"] = marker
+        near_misses.append(("extra root key", relative_path, extra_key, "NAME_FIELD"))
+
+        missing_key = copy.deepcopy(payload)
+        del missing_key["candidate_fact_group"]
+        near_misses.append(
+            (
+                "missing root key",
+                relative_path,
+                missing_key,
+                "SINGLING_OUT_STRUCTURED_COMBINATION",
+            )
+        )
+
+        near_misses.append(
+            (
+                "unregistered path",
+                Path(
+                    "tests/evals/with-skill/fixtures/"
+                    "private-vacancy-application-packet-v1-copy/ready-es/sources.json"
+                ),
+                payload,
+                "SINGLING_OUT_STRUCTURED_COMBINATION",
+            )
+        )
+
+        for label, path, value, rule in near_misses:
+            with self.subTest(condition=label):
+                violations = scanner.scan_text(path, json.dumps(value, ensure_ascii=False))
+                self.assertGreater(violations[rule], 0)
+                diagnostics = "\n".join(
+                    scanner.format_finding(path, rule_id, count)
+                    for rule_id, count in sorted(violations.items())
+                )
+                self.assertNotIn(marker, diagnostics)
+                self.assertNotIn("Synthetic Private Person", diagnostics)
+                for line in diagnostics.splitlines():
+                    self.assertRegex(line, r"^[^:]+: [A-Z0-9_]+: count=\d+$")
+
+    def test_private_packet_coordinated_rebuild_and_tampered_sibling_fall_back(
+        self,
+    ) -> None:
+        """Break caught: rebuilding siblings can turn a modified group canonical."""
+
+        scanner = load_scanner()
+        relative_path = PRIVATE_VACANCY_PACKET_SOURCE_PATHS[0]
+        text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+        payload = json.loads(text)
+        contract = scanner._load_private_vacancy_packet_privacy_contract()
+        self.assertIsNotNone(contract)
+
+        coordinated = copy.deepcopy(payload)
+        coordinated["candidate_fact_group"]["source_group"][
+            "captured_at"
+        ] = "2026-08-23T00:00:00Z"
+        rebuilt_matrix = contract["build_candidate_fact_matrix_v1"](
+            coordinated["candidate_fact_group"]["source_group"]
+        )
+        coordinated["candidate_fact_group"]["candidate_fact_matrix"] = rebuilt_matrix
+        rebuilt_packet = contract["build_private_vacancy_application_packet_v1"](
+            coordinated
+        )
+
+        def coordinated_sibling(path: Path, maximum: int) -> object:
+            del maximum
+            return (
+                rebuilt_matrix
+                if path.name == "candidate-fact-matrix.json"
+                else rebuilt_packet
+            )
+
+        with mock.patch.object(
+            scanner,
+            "_read_private_packet_fixture_json",
+            side_effect=coordinated_sibling,
+        ):
+            coordinated_violations = scanner.scan_text(
+                relative_path,
+                json.dumps(coordinated, ensure_ascii=False),
+            )
+        self.assertGreater(
+            coordinated_violations["SINGLING_OUT_STRUCTURED_COMBINATION"],
+            0,
+        )
+
+        canonical_matrix = json.loads(
+            (REPO_ROOT / relative_path.with_name("candidate-fact-matrix.json")).read_text(
+                encoding="utf-8"
+            )
+        )
+        tampered_matrix = copy.deepcopy(canonical_matrix)
+        tampered_matrix["facts"][0]["fact_id"] = "F-999"
+        canonical_packet = json.loads(
+            (REPO_ROOT / relative_path.with_name("application-packet.json")).read_text(
+                encoding="utf-8"
+            )
+        )
+
+        def tampered_sibling(path: Path, maximum: int) -> object:
+            del maximum
+            return tampered_matrix if path.name == "candidate-fact-matrix.json" else canonical_packet
+
+        with mock.patch.object(
+            scanner,
+            "_read_private_packet_fixture_json",
+            side_effect=tampered_sibling,
+        ):
+            tampered_violations = scanner.scan_text(relative_path, text)
+        self.assertGreater(
+            tampered_violations["SINGLING_OUT_STRUCTURED_COMBINATION"],
+            0,
+        )
+
+    def test_private_packet_unsafe_siblings_fall_back_without_opening_streams(self) -> None:
+        """Break caught: fixture recognition follows links or blocks on stream files."""
+
+        scanner = load_scanner()
+        relative_path = PRIVATE_VACANCY_PACKET_SOURCE_PATHS[0]
+        text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+        source_root = REPO_ROOT / relative_path.parent
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_root = Path(temporary_directory)
+            copied_root = temporary_root / relative_path.parent
+            copied_root.parent.mkdir(parents=True)
+            shutil.copytree(source_root, copied_root)
+            sibling = copied_root / "candidate-fact-matrix.json"
+
+            def assert_fallback() -> None:
+                with mock.patch.object(scanner, "REPOSITORY_ROOT", temporary_root):
+                    violations = scanner.scan_text(relative_path, text)
+                self.assertGreater(
+                    violations["SINGLING_OUT_STRUCTURED_COMBINATION"],
+                    0,
+                )
+
+            sibling.unlink()
+            sibling.symlink_to(REPO_ROOT / relative_path.with_name("candidate-fact-matrix.json"))
+            assert_fallback()
+
+            sibling.unlink()
+            os.mkfifo(sibling)
+            assert_fallback()
+
+            sibling.unlink()
+            assert_fallback()
+
+            sibling.mkdir()
+            assert_fallback()
+
+        for label in ("socket", "device"):
+            with self.subTest(file_type=label):
+                with mock.patch.object(
+                    scanner,
+                    "_read_private_packet_fixture_json",
+                    return_value=None,
+                ):
+                    violations = scanner.scan_text(relative_path, text)
+                self.assertGreater(
+                    violations["SINGLING_OUT_STRUCTURED_COMBINATION"],
+                    0,
+                )
+                diagnostics = "\n".join(
+                    scanner.format_finding(relative_path, rule_id, count)
+                    for rule_id, count in sorted(violations.items())
+                )
+                for line in diagnostics.splitlines():
+                    self.assertRegex(line, r"^[^:]+: [A-Z0-9_]+: count=\d+$")
+
+        with tempfile.TemporaryDirectory() as short_directory:
+            fifo = Path(short_directory) / "fixture.fifo"
+            os.mkfifo(fifo)
+            self.assertIsNone(scanner._read_bounded_regular_json(fifo, 64 * 1024))
+
+        self.assertIsNone(
+            scanner._read_bounded_regular_json(Path("/dev/null"), 64 * 1024)
+        )
 
     def test_learning_v3_source_projection_is_exact_path_and_fail_closed(self) -> None:
         scanner = load_scanner()

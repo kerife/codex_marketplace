@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import importlib.util
 import json
 import re
@@ -25,6 +26,25 @@ STAGED_RELEASE_ARTIFACT_ROOTS = frozenset(
     {Path(".professional-growth-coach-artifacts"), Path(".superpowers")}
 )
 MAX_STAGED_ARTIFACT_BYTES = 1024 * 1024
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+PRIVATE_VACANCY_PACKET_SOURCE_INVENTORY_PATHS = (
+    Path("plugins/professional-growth-coach/schemas/candidate-fact-matrix-v1.schema.json"),
+    Path("plugins/professional-growth-coach/schemas/private-vacancy-application-packet-v1.schema.json"),
+    Path("plugins/professional-growth-coach/scripts/build_candidate_fact_matrix_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/validate_candidate_fact_matrix_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/build_private_vacancy_application_packet_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/validate_private_vacancy_application_packet_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/write_private_vacancy_application_packet_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/render_private_vacancy_application_packet_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/private_vacancy_packet_identity.py"),
+    Path("plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.html"),
+    Path("plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.css"),
+    Path("tests/test_candidate_fact_matrix_v1.py"),
+    Path("tests/test_private_vacancy_application_packet_v1.py"),
+    Path("tests/test_write_private_vacancy_application_packet_v1.py"),
+    Path("tests/test_render_private_vacancy_application_packet_v1.py"),
+    Path("tests/test_private_vacancy_application_packet_routing.py"),
+)
 DOSSIER_SOURCE_INVENTORY_PATHS = (
     Path("plugins/professional-growth-coach/schemas/executive-career-dossier-v1.schema.json"),
     Path("plugins/professional-growth-coach/scripts/validate_executive_career_dossier.py"),
@@ -58,6 +78,7 @@ DOSSIER_SOURCE_INVENTORY_PATHS = (
     Path("scripts/verify_installed_plugin_release.py"),
     Path("scripts/run_installed_learning_eligibility_v3_smokes.py"),
     Path("plugins/professional-growth-coach/tests/run_static_checks.py"),
+    *PRIVATE_VACANCY_PACKET_SOURCE_INVENTORY_PATHS,
 )
 INVENTORY_PATHS = (
     Path("docs/superpowers/plans/2026-08-05-job-search-coach-plugin.md"),
@@ -143,7 +164,7 @@ MARKET_DOSSIER_V2_PRIVACY_BOUNDARY = (
     "public_vacancy_metadata_and_identity_free_evidence_references_only"
 )
 MARKET_SCRIPTS_ROOT = (
-    Path(__file__).resolve().parents[1] / "plugins/professional-growth-coach/scripts"
+    REPOSITORY_ROOT / "plugins/professional-growth-coach/scripts"
 )
 CAREER_NEXT_ACTION_ELIGIBILITY_CONDITIONS = (
     "unavailable",
@@ -191,6 +212,65 @@ CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_FIELDS = frozenset(
 )
 CAREER_LEARNING_V3_SOURCE_FIELDS = (
     CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_FIELDS | {"eligibility"}
+)
+PRIVATE_VACANCY_PACKET_SCENARIOS = (
+    "ready-es",
+    "ready-en",
+    "revise-missing-es",
+    "revise-review-en",
+    "stop-constraint-es",
+    "stop-constraint-en",
+)
+PRIVATE_VACANCY_PACKET_SOURCE_PATHS = frozenset(
+    Path(
+        "tests/evals/with-skill/fixtures/private-vacancy-application-packet-v1/"
+        f"{scenario}/sources.json"
+    )
+    for scenario in PRIVATE_VACANCY_PACKET_SCENARIOS
+)
+PRIVATE_VACANCY_PACKET_FIXTURE_PATHS = frozenset(
+    path.with_name(name)
+    for path in PRIVATE_VACANCY_PACKET_SOURCE_PATHS
+    for name in (
+        "sources.json",
+        "candidate-fact-matrix.json",
+        "application-packet.json",
+    )
+)
+PRIVATE_VACANCY_PACKET_SOURCE_SHA256 = {
+    Path(
+        "tests/evals/with-skill/fixtures/private-vacancy-application-packet-v1/"
+        "ready-es/sources.json"
+    ): "cd3993dcd94c910c300280063da8ed7846bfd3d6abf77365c2c2d03c74a143ee",
+    Path(
+        "tests/evals/with-skill/fixtures/private-vacancy-application-packet-v1/"
+        "ready-en/sources.json"
+    ): "f89598f5349a029eac02097c91c016c06d123203ba41b4e04f96c1d6c14900e1",
+    Path(
+        "tests/evals/with-skill/fixtures/private-vacancy-application-packet-v1/"
+        "revise-missing-es/sources.json"
+    ): "f8298e5fca2619d7cee1fb9950021d70f55b4a02497486105370498c553f8433",
+    Path(
+        "tests/evals/with-skill/fixtures/private-vacancy-application-packet-v1/"
+        "revise-review-en/sources.json"
+    ): "95047ea58b3c3084699c4a304ce98ebc40ae8203b04bf76039d09ee69ae44220",
+    Path(
+        "tests/evals/with-skill/fixtures/private-vacancy-application-packet-v1/"
+        "stop-constraint-es/sources.json"
+    ): "33eb5814815250de9b1403f88efad9fdc9f057ba2f4ed398f105b30bef71751b",
+    Path(
+        "tests/evals/with-skill/fixtures/private-vacancy-application-packet-v1/"
+        "stop-constraint-en/sources.json"
+    ): "ea0c4bbaa15ee2aaf749501cbb4f669e9dadd3fe05cf9b08b69a48a262a6cc96",
+}
+PRIVATE_VACANCY_PACKET_SOURCE_FIELDS = frozenset(
+    {"eligibility_group", "candidate_fact_group"}
+)
+PRIVATE_VACANCY_PACKET_ELIGIBILITY_FIELDS = frozenset(
+    CAREER_NEXT_ACTION_ELIGIBILITY_SOURCE_FIELDS | {"eligibility"}
+)
+PRIVATE_VACANCY_PACKET_FACT_FIELDS = frozenset(
+    {"candidate_fact_matrix", "source_group"}
 )
 MARKET_DOSSIER_V2_SYNTHETIC_SOURCES = {
     Path(
@@ -773,6 +853,35 @@ def _has_known_synthetic_eligibility_provenance(value: object) -> bool:
     )
 
 
+def _has_known_synthetic_private_packet_provenance(value: object) -> bool:
+    if not isinstance(value, dict):
+        return False
+    research = value.get("research")
+    if not isinstance(research, dict):
+        return False
+    normalized = copy.deepcopy(research)
+    vacancies = normalized.get("vacancies")
+    if not isinstance(vacancies, list):
+        return False
+    for vacancy in vacancies:
+        if not isinstance(vacancy, dict):
+            return False
+        requirements = vacancy.get("requirements")
+        if not isinstance(requirements, list):
+            return False
+        for requirement in requirements:
+            if not isinstance(requirement, dict):
+                return False
+            paraphrase = requirement.get("source_paraphrase")
+            if paraphrase not in {
+                "Synthetic test requirement.",
+                "Synthetic public requirement.",
+            }:
+                return False
+            requirement["source_paraphrase"] = "Synthetic test requirement."
+    return _has_known_synthetic_market_provenance(normalized)
+
+
 def _safe_career_next_action_eligibility_sources_scan_value(
     path: Path, text: str, value: object
 ) -> dict[str, object] | None:
@@ -877,6 +986,147 @@ def _safe_career_next_action_eligibility_sources_scan_value(
         ),
         "eligibility": projected,
     }
+
+
+@lru_cache(maxsize=1)
+def _load_private_vacancy_packet_privacy_contract() -> dict[str, object] | None:
+    previous_path = list(sys.path)
+    sys.path.insert(0, str(MARKET_SCRIPTS_ROOT))
+    modules: dict[str, object] = {}
+    try:
+        for name in (
+            "private_input_loader",
+            "build_candidate_fact_matrix_v1",
+            "build_private_vacancy_application_packet_v1",
+        ):
+            path = MARKET_SCRIPTS_ROOT / f"{name}.py"
+            specification = importlib.util.spec_from_file_location(
+                f"job_search_coach_private_packet_privacy_{name}", path
+            )
+            if specification is None or specification.loader is None:
+                return None
+            module = importlib.util.module_from_spec(specification)
+            sys.modules[specification.name] = module
+            specification.loader.exec_module(module)
+            modules[name] = module
+    except Exception:
+        return None
+    finally:
+        sys.path[:] = previous_path
+    reader = getattr(modules["private_input_loader"], "read_bounded_bytes", None)
+    fact_builder = getattr(
+        modules["build_candidate_fact_matrix_v1"],
+        "build_candidate_fact_matrix_v1",
+        None,
+    )
+    packet_builder = getattr(
+        modules["build_private_vacancy_application_packet_v1"],
+        "build_private_vacancy_application_packet_v1",
+        None,
+    )
+    if not all(callable(value) for value in (reader, fact_builder, packet_builder)):
+        return None
+    return {
+        "read_bounded_bytes": reader,
+        "build_candidate_fact_matrix_v1": fact_builder,
+        "build_private_vacancy_application_packet_v1": packet_builder,
+    }
+
+
+def _read_bounded_regular_text(path: Path, maximum: int) -> str | None:
+    contract = _load_private_vacancy_packet_privacy_contract()
+    if contract is None:
+        return None
+    try:
+        raw = contract["read_bounded_bytes"](path, maximum)
+        if type(raw) is not bytes:
+            return None
+        return raw.decode("utf-8")
+    except Exception:
+        return None
+
+
+def _read_bounded_regular_json(path: Path, maximum: int) -> dict[str, object] | None:
+    text = _read_bounded_regular_text(path, maximum)
+    if text is None:
+        return None
+    try:
+        value = json.loads(text, object_pairs_hook=_unique_json_object)
+    except (UnicodeError, json.JSONDecodeError, ValueError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _read_private_packet_fixture_json(
+    path: Path, maximum: int
+) -> dict[str, object] | None:
+    return _read_bounded_regular_json(REPOSITORY_ROOT / path, maximum)
+
+
+def _safe_private_vacancy_packet_sources_scan_value(
+    path: Path, text: str, value: object
+) -> list[dict[str, object]] | None:
+    expected_digest = PRIVATE_VACANCY_PACKET_SOURCE_SHA256.get(path)
+    if (
+        expected_digest is None
+        or hashlib.sha256(text.encode("utf-8")).hexdigest() != expected_digest
+        or not isinstance(value, dict)
+        or set(value) != PRIVATE_VACANCY_PACKET_SOURCE_FIELDS
+        or len(text.encode("utf-8")) > 64 * 1024
+        or not _json_depth_is_bounded(value, 12)
+    ):
+        return None
+    eligibility_group = value.get("eligibility_group")
+    fact_group = value.get("candidate_fact_group")
+    if (
+        not isinstance(eligibility_group, dict)
+        or set(eligibility_group) != PRIVATE_VACANCY_PACKET_ELIGIBILITY_FIELDS
+        or not isinstance(fact_group, dict)
+        or set(fact_group) != PRIVATE_VACANCY_PACKET_FACT_FIELDS
+        or not _has_known_synthetic_private_packet_provenance(eligibility_group)
+    ):
+        return None
+    before = copy.deepcopy(value)
+    contract = _load_private_vacancy_packet_privacy_contract()
+    if contract is None:
+        return None
+    try:
+        rebuilt_matrix = contract["build_candidate_fact_matrix_v1"](
+            fact_group["source_group"]
+        )
+        rebuilt_packet = contract["build_private_vacancy_application_packet_v1"](
+            value
+        )
+    except Exception:
+        return None
+    sibling_matrix = _read_private_packet_fixture_json(
+        path.with_name("candidate-fact-matrix.json"), 64 * 1024
+    )
+    sibling_packet = _read_private_packet_fixture_json(
+        path.with_name("application-packet.json"), 64 * 1024
+    )
+    if (
+        value != before
+        or rebuilt_matrix != fact_group.get("candidate_fact_matrix")
+        or rebuilt_matrix != sibling_matrix
+        or rebuilt_packet != sibling_packet
+        or not isinstance(rebuilt_matrix, dict)
+        or not isinstance(rebuilt_packet, dict)
+        or not _json_depth_is_bounded(rebuilt_matrix, 8)
+        or not _json_depth_is_bounded(rebuilt_packet, 10)
+    ):
+        return None
+    research = eligibility_group.get("research")
+    research_projection = _safe_target_research_scan_value(
+        json.dumps(research, ensure_ascii=False), research
+    )
+    if research_projection is None:
+        return None
+    return [
+        {"validated_candidate_fact_matrix": copy.deepcopy(rebuilt_matrix)},
+        {"validated_public_target_research": research_projection},
+        {"generated_private_packet": copy.deepcopy(rebuilt_packet)},
+    ]
 
 
 def _is_exact_synthetic_market_v2_fixture(
@@ -1234,6 +1484,10 @@ def scan_text(path: Path, text: str) -> Counter[str]:
                     )
                 )
             if safe_scan_value is None:
+                safe_scan_value = _safe_private_vacancy_packet_sources_scan_value(
+                    path, text, dossier_candidate
+                )
+            if safe_scan_value is None:
                 safe_scan_value = _safe_recruiter_practice_scan_value(
                     text, dossier_candidate
                 )
@@ -1535,11 +1789,18 @@ def main(argv: list[str] | None = None) -> int:
     staged_paths = set(staged_records)
     for path in scan_paths(repo_root, staged_paths):
         try:
-            text = (
-                read_staged_release_artifact_text(repo_root, staged_records[path])
-                if path in staged_paths
-                else (repo_root / path).read_text(encoding="utf-8")
-            )
+            if path in staged_paths:
+                text = read_staged_release_artifact_text(
+                    repo_root, staged_records[path]
+                )
+            elif path in PRIVATE_VACANCY_PACKET_FIXTURE_PATHS:
+                text = _read_bounded_regular_text(repo_root / path, 512 * 1024)
+                if text is None:
+                    raise StagedArtifactReadError(
+                        "private packet fixture is not a bounded regular file"
+                    )
+            else:
+                text = (repo_root / path).read_text(encoding="utf-8")
         except (OSError, UnicodeError, subprocess.CalledProcessError, StagedArtifactReadError):
             failures[(path, "SCAN_INPUT_UNREADABLE")] += 1
             continue
