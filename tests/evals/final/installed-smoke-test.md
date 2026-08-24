@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `e9414f2fb101fa0aa76eb0a7173aeae807f32866`
+source_commit: `0421b7185ea5674fad15dd39e2a2e98eaad43080`
 
-source_tree: `3a0eec05f365888a3825f2482a577d52d00598aa`
+source_tree: `062005dcaf747238203b531dffe323c67472e9ab`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260824020329`
+installed_cache_version: `0.2.0+codex.20260824080346`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `1458825375258afe42d09ff88ab47fb8f3605135a86a1041bf839c7aef3555f1`
+source_aggregate_sha256: `6e1757507c6729b536de9bf9ef90a88490f59e2b4a5208c52dce1b0116f02c46`
 
-cache_aggregate_sha256: `1458825375258afe42d09ff88ab47fb8f3605135a86a1041bf839c7aef3555f1`
+cache_aggregate_sha256: `6e1757507c6729b536de9bf9ef90a88490f59e2b4a5208c52dce1b0116f02c46`
 
 source_bytecode_count: `0`
 
@@ -62,7 +62,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster timestamp: 2026-08-24T02:03:29Z.
+- Cachebuster timestamp: 2026-08-24T08:03:46Z.
 - Commit A changed only the plugin manifest, was pushed to remote `main`, and
   was verified by fetch plus a live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -74,14 +74,24 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- The official source release runner completed successfully with exit 0;
-  skill and plugin validation both passed.
-- Plugin package discovery: 223/223 tests passed in 141.149 seconds.
-- Repository root discovery: 1408/1408 tests passed in 3347.310 seconds.
+- The pre-A source matrix passed 618/618 tests in 3257.971 seconds after
+  mechanically deferring exactly the checked-in installed-attestation binding
+  test. That binding correctly rejected the prior release because this release
+  changed the plugin tree; the prior attestation was not rewritten early.
+- Skill and plugin validation both passed.
+- Plugin package discovery: 223/223 tests passed in 140.421 seconds.
+- Repository root discovery passed 1407/1407 tests in 3421.209 seconds with the
+  same single installed-attestation binding test deferred. The documented
+  locked `VALIDATION_PYTHON` override was used; a preceding run without that
+  environment variable had one environment-only missing-interpreter failure,
+  whose focused rerun passed before the complete successful rerun.
 - Static validation passed private-schema, dossier-handoff, and package checks.
 - Repository privacy passed without findings or sensitive-value echo.
-- Post-cachebuster structure/full-plugin verification passed 270/270 tests in
-  1306.624 seconds; post-cachebuster static validation also passed.
+- Post-cachebuster structure/full-plugin verification passed 269/269 tests in
+  1321.816 seconds with exactly the same binding test deferred;
+  post-cachebuster static validation also passed.
+- The unfiltered real binding test and canonical release runner are post-B
+  publication gates and are not claimed by this pre-B attestation text.
 - A fresh validation-environment bootstrap was blocked by the established
   persistent-install sandbox policy. Every gate used the documented, verified
   locked CPython 3.11.15 arm64 environment with PyYAML 6.0.3.
