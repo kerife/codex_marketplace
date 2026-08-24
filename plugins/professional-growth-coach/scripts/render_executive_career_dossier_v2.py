@@ -382,10 +382,11 @@ WEEKLY_COPY = {
         "deliverable": "Entregable privado",
         "done_when": "Listo cuando",
         "selection_help": (
-            "Formato de selección: Vn + señal. Revisa la ",
+            "Primero, elige una vacante Vn en la ",
             "clave de vacantes",
-            " y la ",
+            ". Después, para esa misma vacante activa, elige una señal en la ",
             "matriz de señales",
+            "",
         ),
     },
     "en": {
@@ -408,10 +409,11 @@ WEEKLY_COPY = {
         "deliverable": "Private deliverable",
         "done_when": "Done when",
         "selection_help": (
-            "Selection format: Vn + signal. Review the ",
+            "First, choose a vacancy Vn in the ",
             "vacancy key",
-            " and ",
+            ". Then choose a signal in the ",
             "signal matrix",
+            " for that same active vacancy",
         ),
     },
 }
@@ -1340,12 +1342,14 @@ def _render_weekly_decision_card(
     selection_help_markup = ""
     described_by = "weekly-decision-evidence weekly-decision-boundary"
     if eligibility.get("state") == "selection_required":
-        help_intro, vacancy_key, help_join, signal_matrix = labels["selection_help"]
+        help_intro, vacancy_key, help_join, signal_matrix, help_suffix = labels[
+            "selection_help"
+        ]
         selection_help_markup = (
             '<p id="weekly-decision-selection-help" '
             'class="weekly-decision-selection-help">'
             f'{help_intro}<a href="#market-vacancy-key-title">{vacancy_key}</a>'
-            f'{help_join}<a href="#market-matrix-title">{signal_matrix}</a>.</p>'
+            f'{help_join}<a href="#market-matrix-title">{signal_matrix}</a>{help_suffix}.</p>'
         )
         described_by = (
             "weekly-decision-evidence weekly-decision-selection-help "

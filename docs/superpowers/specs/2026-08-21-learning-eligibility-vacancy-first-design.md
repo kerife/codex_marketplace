@@ -307,6 +307,12 @@ fields are null. `selection_required` renders only the fixed selection question,
 action, deliverable, done-when, and boundary rows. `unavailable` renders no
 weekly-decision card.
 
+For `selection_required`, the localized help states the ordered decision before
+its existing internal navigation: choose one public `Vn` in the vacancy key,
+then choose a signal in the signal matrix for that same active vacancy. It
+retains exactly the localized vacancy-key link followed by the localized
+signal-matrix link.
+
 Provider grouping is exact. The provider input is present if and only if
 `source_provider_research_snapshot` is non-null. It is forbidden for
 unavailable, selection-required, partial, and every confirmed non-knowledge

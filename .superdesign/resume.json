@@ -17,12 +17,12 @@
         "plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py:559:1540"
       ],
       "fingerprints": {
-        ".superdesign/design-system.md": "966f7c0377ecbecc21e9d0c41efc6f888950321f53238aace525cdb590e08cee",
+        ".superdesign/design-system.md": "a94e65c658df8547089fd607ca481cf487ba10a6df37eeaf4961fe63834b4dfa",
         "plugins/professional-growth-coach/assets/executive-career-dossier-v1.html": "5edfadb7cd83fc7566c781a4e797126996069cf96d5077f01a4169ae5cb6e7de",
         "plugins/professional-growth-coach/assets/executive-career-dossier-v1.css": "27f74cc8640dd3ff58c2b2940dfbd8a75ccf41fb94f011b77e5bb894da5a6be1",
         "plugins/professional-growth-coach/assets/executive-career-dossier-v2.css": "d59e61afceed5d4be6420d8704124a3a283d0400461bd31db9c06f230517f96f",
         "plugins/professional-growth-coach/assets/career-market-learning-dossier-v1.css": "a107319a972bc030b13122713d69ee511e895edd266ca08b1045c592dcc6d573",
-        "plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py": "6f977fa17f24352cf6ca9ef040468e430fa2f1f73008e3e9e99fee1281e7bd3e"
+        "plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py": "2589b272cb4d12b27b7a015cee63c534d2ee3551247c9f6c3cfd8c49c3ca1de7"
       },
       "components": [],
       "drafts": {
@@ -32,7 +32,7 @@
           "currentVersion": 6
         }
       },
-      "updatedAt": "2026-08-23T08:53:29Z"
+      "updatedAt": "2026-08-24T04:10:10Z"
     }
   }
 }

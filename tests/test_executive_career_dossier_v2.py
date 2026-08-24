@@ -1474,12 +1474,13 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
 
         expected_help = {
             "es": (
-                "Formato de selección: Vn + señal.",
-                "Revisa la clave de vacantes y la matriz de señales.",
+                "Primero, elige una vacante Vn en la clave de vacantes. "
+                "Después, para esa misma vacante activa, elige una señal en "
+                "la matriz de señales.",
             ),
             "en": (
-                "Selection format: Vn + signal.",
-                "Review the vacancy key and signal matrix.",
+                "First, choose a vacancy Vn in the vacancy key. Then choose "
+                "a signal in the signal matrix for that same active vacancy.",
             ),
         }
         expected_links = {
