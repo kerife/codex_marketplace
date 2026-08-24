@@ -11,7 +11,9 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import unittest
+from io import BytesIO
 from unittest.mock import patch
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -271,7 +273,167 @@ def validate_vacancy_first_attestation(
     return [] if valid else ["release attestation contract is invalid"]
 
 
+def _git_attestation_output(repo_root: Path, *arguments: str) -> bytes:
+    result = subprocess.run(
+        ["git", *arguments],
+        cwd=repo_root,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise AssertionError("release attestation contract is invalid")
+    return result.stdout
+
+
+def immutable_git_archive_inventory(repo_root: Path, source_commit: str) -> tuple[int, str]:
+    archive = _git_attestation_output(
+        repo_root,
+        "archive",
+        "--format=tar",
+        source_commit,
+        "plugins/professional-growth-coach",
+    )
+    prefix = "plugins/professional-growth-coach/"
+    entries: list[tuple[str, str]] = []
+    try:
+        with tarfile.open(fileobj=BytesIO(archive), mode="r:") as tar:
+            for member in tar:
+                if member.isdir():
+                    continue
+                if not member.isfile() or not member.name.startswith(prefix):
+                    raise ValueError
+                relative = member.name.removeprefix(prefix)
+                if not relative or relative.startswith("/") or ".." in Path(relative).parts:
+                    raise ValueError
+                payload = tar.extractfile(member)
+                if payload is None:
+                    raise ValueError
+                entries.append((relative, hashlib.sha256(payload.read()).hexdigest()))
+        if not entries or len({relative for relative, _ in entries}) != len(entries):
+            raise ValueError
+    except (OSError, tarfile.TarError, ValueError):
+        raise AssertionError("release attestation contract is invalid") from None
+    entries.sort()
+    aggregate = hashlib.sha256()
+    for relative, digest in entries:
+        aggregate.update(relative.encode("utf-8"))
+        aggregate.update(b"\0")
+        aggregate.update(digest.encode("ascii"))
+        aggregate.update(b"\n")
+    return len(entries), aggregate.hexdigest()
+
+
+def validate_real_vacancy_first_attestation(text: str, repo_root: Path) -> list[str]:
+    try:
+        parsed = parse_vacancy_first_attestation(text)
+        source_commit = parsed["source_commit"]
+        if re.fullmatch(r"[0-9a-f]{40}", source_commit) is None:
+            raise ValueError
+        resolved_commit = _git_attestation_output(
+            repo_root, "rev-parse", "--verify", f"{source_commit}^{{commit}}"
+        ).decode("ascii").strip()
+        if resolved_commit != source_commit:
+            raise ValueError
+        if subprocess.run(
+            ["git", "merge-base", "--is-ancestor", resolved_commit, "HEAD"],
+            cwd=repo_root,
+            capture_output=True,
+            check=False,
+        ).returncode != 0:
+            raise ValueError
+        source_tree = _git_attestation_output(
+            repo_root, "rev-parse", f"{resolved_commit}:plugins/professional-growth-coach"
+        ).decode("ascii").strip()
+        head_tree = _git_attestation_output(
+            repo_root, "rev-parse", "HEAD:plugins/professional-growth-coach"
+        ).decode("ascii").strip()
+        if source_tree != head_tree:
+            raise ValueError
+        manifest = json.loads(
+            _git_attestation_output(
+                repo_root,
+                "show",
+                f"{resolved_commit}:plugins/professional-growth-coach/.codex-plugin/plugin.json",
+            ).decode("utf-8")
+        )
+        version = manifest.get("version") if isinstance(manifest, dict) else None
+        if not isinstance(version, str):
+            raise ValueError
+        file_count, archive_aggregate = immutable_git_archive_inventory(repo_root, resolved_commit)
+    except (AssertionError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+        return ["release attestation contract is invalid"]
+    return validate_vacancy_first_attestation(
+        text,
+        expected_source_commit=resolved_commit,
+        expected_plugin_tree=source_tree,
+        expected_version=version,
+        expected_file_count=file_count,
+        expected_source_aggregate_sha256=archive_aggregate,
+        expected_cache_aggregate_sha256=archive_aggregate,
+    )
+
+
 class FullPluginIntegrationTests(unittest.TestCase):
+    def test_checked_in_attestation_is_bound_to_immutable_git_archive_evidence(self) -> None:
+        attestation_path = REPO_ROOT / "tests" / "evals" / "final" / "installed-smoke-test.md"
+        text = attestation_path.read_text(encoding="utf-8")
+        parsed = parse_vacancy_first_attestation(text)
+
+        self.assertEqual([], validate_real_vacancy_first_attestation(text, REPO_ROOT))
+
+        head_tree = subprocess.run(
+            ["git", "rev-parse", "HEAD:plugins/professional-growth-coach"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            check=True,
+            text=True,
+        ).stdout.strip()
+        stale_commit = next(
+            commit
+            for commit in subprocess.run(
+                ["git", "rev-list", "--all"],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                check=True,
+                text=True,
+            ).stdout.splitlines()
+            if subprocess.run(
+                ["git", "rev-parse", f"{commit}:plugins/professional-growth-coach"],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                check=True,
+                text=True,
+            ).stdout.strip()
+            != head_tree
+        )
+
+        def with_fields(**changes: str) -> str:
+            values = {**parsed, **changes}
+            return "\n".join(f"{key}: `{value}`" for key, value in values.items())
+
+        wrong_digest = (
+            "0" if parsed["source_aggregate_sha256"][0] != "0" else "1"
+        ) + parsed["source_aggregate_sha256"][1:]
+        cases = {
+            "unresolved-commit": with_fields(source_commit="0" * 40),
+            "wrong-tree": with_fields(source_tree="0" * 40),
+            "stale-source-commit": with_fields(source_commit=stale_commit),
+            "wrong-manifest-version": with_fields(
+                installed_cache_version="0.2.0+codex.20260823154006"
+            ),
+            "file-count-mismatch": with_fields(source_file_count="0"),
+            "equal-but-wrong-aggregates": with_fields(
+                source_aggregate_sha256=wrong_digest,
+                cache_aggregate_sha256=wrong_digest,
+            ),
+        }
+        for label, mutated in cases.items():
+            with self.subTest(case=label):
+                self.assertEqual(
+                    ["release attestation contract is invalid"],
+                    validate_real_vacancy_first_attestation(mutated, REPO_ROOT),
+                )
+
     def test_vacancy_first_attestation_parser_requires_complete_fresh_task_7_evidence(self) -> None:
         version = "0.2.0+codex.20260822000000"
         source_commit = "a" * 40
