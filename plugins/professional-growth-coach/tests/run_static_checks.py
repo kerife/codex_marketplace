@@ -246,6 +246,23 @@ CAREER_LEARNING_DECISION_V3_FIXTURE_PATHS = tuple(
     )
     for name in ("sources", "learning")
 )
+PRIVATE_VACANCY_APPLICATION_PACKET_SCENARIOS = (
+    "ready-es",
+    "ready-en",
+    "revise-missing-es",
+    "revise-review-en",
+    "stop-constraint-es",
+    "stop-constraint-en",
+)
+PRIVATE_VACANCY_APPLICATION_PACKET_FIXTURE_PATHS = tuple(
+    f"tests/evals/with-skill/fixtures/private-vacancy-application-packet-v1/{scenario}/{name}.json"
+    for scenario in PRIVATE_VACANCY_APPLICATION_PACKET_SCENARIOS
+    for name in (
+        "sources",
+        "candidate-fact-matrix",
+        "application-packet",
+    )
+)
 MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/candidate-market-alignment-v1.schema.json",
     "schemas/candidate-market-alignment-v2.schema.json",
@@ -259,6 +276,7 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/candidate-gap-assessment-v1.schema.json",
     "schemas/career-next-action-eligibility-v1.schema.json",
     "schemas/candidate-fact-matrix-v1.schema.json",
+    "schemas/private-vacancy-application-packet-v1.schema.json",
     "scripts/semantic_provenance_snapshot.py",
     "scripts/validate_target_vacancy_research.py",
     "scripts/derive_candidate_market_alignment_v2.py",
@@ -283,11 +301,14 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "scripts/validate_career_next_action_eligibility_v1.py",
     "scripts/build_candidate_fact_matrix_v1.py",
     "scripts/validate_candidate_fact_matrix_v1.py",
+    "scripts/build_private_vacancy_application_packet_v1.py",
+    "scripts/validate_private_vacancy_application_packet_v1.py",
     "assets/career-market-learning-dossier-v1.css",
     "assets/career-learning-eligibility-v1.css",
     "tests/fixtures/vacancy-first-smoke/sources.json",
     "tests/test_learning_eligibility_v3.py",
     "tests/test_candidate_fact_matrix_v1.py",
+    "tests/test_private_vacancy_application_packet_v1.py",
     "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
     "tests/evals/with-skill/fixtures/target-vacancy-research/limited-four-en.json",
     "tests/evals/with-skill/fixtures/target-vacancy-research/unavailable-es.json",
@@ -313,6 +334,7 @@ MARKET_DOSSIER_PACKAGE_PATHS = (
     "tests/evals/with-skill/fixtures/candidate-gap-assessment-v1/unavailable-es.json",
     *CAREER_NEXT_ACTION_ELIGIBILITY_FIXTURE_PATHS,
     *CAREER_LEARNING_DECISION_V3_FIXTURE_PATHS,
+    *PRIVATE_VACANCY_APPLICATION_PACKET_FIXTURE_PATHS,
 )
 EXECUTIVE_DOSSIER_OFFLINE_TOKENS = (
     "http://",
@@ -844,6 +866,8 @@ def _load_market_package_modules(plugin_root: Path) -> dict[str, object]:
             "validate_career_next_action_eligibility_v1",
             "build_candidate_fact_matrix_v1",
             "validate_candidate_fact_matrix_v1",
+            "build_private_vacancy_application_packet_v1",
+            "validate_private_vacancy_application_packet_v1",
             "render_executive_career_dossier_v2",
         ):
             path = scripts_root / f"{name}.py"
@@ -931,6 +955,7 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
         "schemas/candidate-gap-assessment-v1.schema.json": "source_gap_response_snapshot",
         "schemas/career-next-action-eligibility-v1.schema.json": "source_gap_assessment_snapshot",
         "schemas/candidate-fact-matrix-v1.schema.json": "source_snapshot",
+        "schemas/private-vacancy-application-packet-v1.schema.json": "source_snapshot",
     }
     for relative_path, required_field in schema_requirements.items():
         if relative_path not in safe_paths:
@@ -1061,6 +1086,16 @@ def validate_market_dossier_package(plugin_root: Path, repo_root: Path) -> list[
             "validate_candidate_fact_matrix_v1",
             "load_candidate_fact_matrix_v1",
             "_validate_candidate_fact_matrix_from_frozen",
+        ),
+        "build_private_vacancy_application_packet_v1": (
+            "build_private_vacancy_application_packet_v1",
+            "_project_private_vacancy_packet_from_frozen",
+        ),
+        "validate_private_vacancy_application_packet_v1": (
+            "validate_private_vacancy_application_packet_v1",
+            "load_private_vacancy_application_packet_v1",
+            "ValidatedPrivateVacancyPacket",
+            "_validate_private_vacancy_packet_from_frozen",
         ),
         "render_executive_career_dossier_v2": ("render_dossier_html",),
     }

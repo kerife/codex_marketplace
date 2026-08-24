@@ -1,0 +1,163 @@
+{
+  "approval_boundary": {
+    "allowed_next_step": "manual_private_review",
+    "artifact_state": "private_draft",
+    "authorization_required": true,
+    "prohibited_actions": [
+      "external_edit",
+      "upload",
+      "export",
+      "share",
+      "submit",
+      "publish",
+      "message",
+      "connect",
+      "apply",
+      "schedule",
+      "calendar_create",
+      "purchase",
+      "enroll"
+    ]
+  },
+  "as_of_date": "2026-08-13",
+  "claim_review": [
+    {
+      "claim_id": "C-001",
+      "confidence": "high",
+      "decision": "use",
+      "draft_id": "D-CV-001",
+      "fact_ids": [
+        "F-001"
+      ],
+      "requirement_ids": [
+        "V-003-R-01"
+      ],
+      "review_note": "Use only after private manual review."
+    },
+    {
+      "claim_id": "C-002",
+      "confidence": "high",
+      "decision": "use",
+      "draft_id": "D-RS-001",
+      "fact_ids": [
+        "F-001"
+      ],
+      "requirement_ids": [
+        "V-003-R-01"
+      ],
+      "review_note": "Use only after private manual review."
+    },
+    {
+      "claim_id": "C-003",
+      "confidence": "high",
+      "decision": "use",
+      "draft_id": "D-MA-001",
+      "fact_ids": [
+        "F-001"
+      ],
+      "requirement_ids": [
+        "V-003-R-01"
+      ],
+      "review_note": "Use only after private manual review."
+    }
+  ],
+  "draft_materials": {
+    "cv_bullets": [
+      {
+        "draft_id": "D-CV-001",
+        "evidence_state": "verified",
+        "fact_ids": [
+          "F-001"
+        ],
+        "requirement_ids": [
+          "V-003-R-01"
+        ],
+        "text": "Private experience evidence supports Terraform; review before use."
+      }
+    ],
+    "message_angle": [
+      {
+        "draft_id": "D-MA-001",
+        "evidence_state": "verified",
+        "fact_ids": [
+          "F-001"
+        ],
+        "requirement_ids": [
+          "V-003-R-01"
+        ],
+        "text": "Private angle: highlight Terraform with experience evidence; do not send without authorization."
+      }
+    ],
+    "recruiter_summary": [
+      {
+        "draft_id": "D-RS-001",
+        "evidence_state": "verified",
+        "fact_ids": [
+          "F-001"
+        ],
+        "requirement_ids": [
+          "V-003-R-01"
+        ],
+        "text": "Private summary: Terraform, supported by experience evidence; review before use."
+      }
+    ]
+  },
+  "first_interview_prep_handoff": {
+    "fact_ids": [
+      "F-001"
+    ],
+    "interview_stage": "unknown",
+    "next_private_step": "State the interview stage before manually entering interview preparation.",
+    "requirement_ids": [
+      "V-003-R-01"
+    ],
+    "state": "available",
+    "vacancy_id": "V-003"
+  },
+  "locale": "en",
+  "readiness": {
+    "blocking_gate_tokens": [],
+    "blocking_requirement_ids": [],
+    "external_action_authorized": false,
+    "headline": "Ready for private manual review",
+    "manual_review_required": true,
+    "rationale": "Required items have supported claims; every external action remains unauthorized.",
+    "revision_claim_ids": [],
+    "state": "ready_for_manual_authorization"
+  },
+  "requirement_evidence": [
+    {
+      "confidence": "high",
+      "coverage": "supported",
+      "fact_ids": [
+        "F-001"
+      ],
+      "priority": "required",
+      "requirement_id": "V-003-R-01",
+      "signal": "terraform"
+    }
+  ],
+  "schema_version": "private-vacancy-application-packet-v1",
+  "source_snapshot": {
+    "aggregate": "snap-private-vacancy-packet-sources-v1-sha256-a5fcfa142bcbe557e49a295690090dfe559d1ba97e0aa41687047b83806412de",
+    "candidate_fact_matrix": "snap-candidate-fact-matrix-v1-sha256-75bcfd02bb9c63c53f5ed4b56e5690d35406de1bdb4488e7951e30ea338a5e6e",
+    "eligibility": "snap-next-action-eligibility-v1-sha256-0d354c24eff1cfbcf37ef5db780ae9707ab73346c9b5cee742674057a41ea347",
+    "target_vacancy_research": "snap-market-sha256-54f75316a9266ccd2c46261c4818ac875b0e4d74d669e0eb6397b494a13b866b"
+  },
+  "target_binding": {
+    "eligibility_state": "insufficient_gap_evidence",
+    "next_safe_action": "prepare_private_vacancy_packet",
+    "organization_label": "Fixture Employer C",
+    "vacancy_id": "V-003",
+    "vacancy_title": "Fixture DevOps Role C"
+  },
+  "tracking_proposal": {
+    "auto_start": false,
+    "event_kind": "application_packet_drafted",
+    "manual_reentry_required": true,
+    "outcome_state": "draft_only",
+    "record_state": "proposed",
+    "vacancy_id": "V-003"
+  },
+  "unsupported_or_missing_claims": []
+}

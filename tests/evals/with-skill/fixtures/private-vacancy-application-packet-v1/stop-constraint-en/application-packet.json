@@ -1,0 +1,85 @@
+{
+  "approval_boundary": {
+    "allowed_next_step": "manual_private_review",
+    "artifact_state": "private_draft",
+    "authorization_required": true,
+    "prohibited_actions": [
+      "external_edit",
+      "upload",
+      "export",
+      "share",
+      "submit",
+      "publish",
+      "message",
+      "connect",
+      "apply",
+      "schedule",
+      "calendar_create",
+      "purchase",
+      "enroll"
+    ]
+  },
+  "as_of_date": "2026-08-13",
+  "claim_review": [],
+  "draft_materials": {
+    "cv_bullets": [],
+    "message_angle": [],
+    "recruiter_summary": []
+  },
+  "first_interview_prep_handoff": {
+    "fact_ids": [],
+    "interview_stage": "unknown",
+    "next_private_step": "Interview preparation remains suppressed.",
+    "requirement_ids": [],
+    "state": "suppressed",
+    "vacancy_id": "V-003"
+  },
+  "locale": "en",
+  "readiness": {
+    "blocking_gate_tokens": [
+      "country_geography"
+    ],
+    "blocking_requirement_ids": [],
+    "external_action_authorized": false,
+    "headline": "Stop preparation",
+    "manual_review_required": true,
+    "rationale": "A verified current constraint contradicts an exact vacancy condition.",
+    "revision_claim_ids": [],
+    "state": "stop"
+  },
+  "requirement_evidence": [
+    {
+      "confidence": "high",
+      "coverage": "supported",
+      "fact_ids": [
+        "F-001"
+      ],
+      "priority": "required",
+      "requirement_id": "V-003-R-01",
+      "signal": "terraform"
+    }
+  ],
+  "schema_version": "private-vacancy-application-packet-v1",
+  "source_snapshot": {
+    "aggregate": "snap-private-vacancy-packet-sources-v1-sha256-a2ee53fcb0ba382018d57e0589e201e8052ae8bfb7c50e6dd645504a1b3abd87",
+    "candidate_fact_matrix": "snap-candidate-fact-matrix-v1-sha256-0d1c5b2a1f15da617cacee798d74a31294a7c33031bf1d5f29365e964bc9a1eb",
+    "eligibility": "snap-next-action-eligibility-v1-sha256-0d354c24eff1cfbcf37ef5db780ae9707ab73346c9b5cee742674057a41ea347",
+    "target_vacancy_research": "snap-market-sha256-54f75316a9266ccd2c46261c4818ac875b0e4d74d669e0eb6397b494a13b866b"
+  },
+  "target_binding": {
+    "eligibility_state": "insufficient_gap_evidence",
+    "next_safe_action": "prepare_private_vacancy_packet",
+    "organization_label": "Fixture Employer C",
+    "vacancy_id": "V-003",
+    "vacancy_title": "Fixture DevOps Role C"
+  },
+  "tracking_proposal": {
+    "auto_start": false,
+    "event_kind": "none",
+    "manual_reentry_required": true,
+    "outcome_state": "not_started",
+    "record_state": "not_proposed",
+    "vacancy_id": "V-003"
+  },
+  "unsupported_or_missing_claims": []
+}

@@ -1,0 +1,47 @@
+{
+  "case_scope": "single_candidate",
+  "facts": [
+    {
+      "confidentiality": "forbidden",
+      "conflict_state": "clear",
+      "evidence_state": "inferred",
+      "fact_id": "F-001",
+      "fact_type": "portfolio_evidence",
+      "signal_bindings": [],
+      "signal_relation": "unknown",
+      "source_ids": [
+        "FS-003"
+      ]
+    }
+  ],
+  "locale": "es",
+  "schema_version": "candidate-fact-matrix-v1",
+  "signal_vocabulary": "candidate-claim-signal-v1",
+  "source_snapshot": "snap-candidate-facts-sha256-487e728249497d8e801bb391a20e5e622f682480ad25853cc51f42d5dbfdc1e4",
+  "sources": [
+    {
+      "captured_at": "2026-08-24T12:30:45Z",
+      "evidence_state": "verified",
+      "source_id": "FS-001",
+      "source_type": "verified_record"
+    },
+    {
+      "captured_at": "2026-08-24T12:30:45Z",
+      "evidence_state": "candidate_reported",
+      "source_id": "FS-002",
+      "source_type": "cv"
+    },
+    {
+      "captured_at": "2026-08-24T12:30:45Z",
+      "evidence_state": "inferred",
+      "source_id": "FS-003",
+      "source_type": "portfolio"
+    },
+    {
+      "captured_at": "2026-08-24T12:30:45Z",
+      "evidence_state": "unknown",
+      "source_id": "FS-004",
+      "source_type": "candidate_statement"
+    }
+  ]
+}

@@ -924,6 +924,22 @@ class FullPluginIntegrationTests(unittest.TestCase):
             )
             for name in ("sources", "learning")
         )
+        private_packet_fixture_paths = tuple(
+            f"tests/evals/with-skill/fixtures/private-vacancy-application-packet-v1/{scenario}/{name}.json"
+            for scenario in (
+                "ready-es",
+                "ready-en",
+                "revise-missing-es",
+                "revise-review-en",
+                "stop-constraint-es",
+                "stop-constraint-en",
+            )
+            for name in (
+                "sources",
+                "candidate-fact-matrix",
+                "application-packet",
+            )
+        )
         self.assertEqual(
             eligibility_conditions,
             checker_module.CAREER_NEXT_ACTION_ELIGIBILITY_CONDITIONS,
@@ -935,6 +951,10 @@ class FullPluginIntegrationTests(unittest.TestCase):
         self.assertEqual(
             learning_v3_fixture_paths,
             checker_module.CAREER_LEARNING_DECISION_V3_FIXTURE_PATHS,
+        )
+        self.assertEqual(
+            private_packet_fixture_paths,
+            checker_module.PRIVATE_VACANCY_APPLICATION_PACKET_FIXTURE_PATHS,
         )
         self.assertEqual(
             (
@@ -963,6 +983,7 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "schemas/candidate-gap-assessment-v1.schema.json",
                 "schemas/career-next-action-eligibility-v1.schema.json",
                 "schemas/candidate-fact-matrix-v1.schema.json",
+                "schemas/private-vacancy-application-packet-v1.schema.json",
                 "scripts/semantic_provenance_snapshot.py",
                 "scripts/validate_target_vacancy_research.py",
                 "scripts/derive_candidate_market_alignment_v2.py",
@@ -987,11 +1008,14 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "scripts/validate_career_next_action_eligibility_v1.py",
                 "scripts/build_candidate_fact_matrix_v1.py",
                 "scripts/validate_candidate_fact_matrix_v1.py",
+                "scripts/build_private_vacancy_application_packet_v1.py",
+                "scripts/validate_private_vacancy_application_packet_v1.py",
                 "assets/career-market-learning-dossier-v1.css",
                 "assets/career-learning-eligibility-v1.css",
                 "tests/fixtures/vacancy-first-smoke/sources.json",
                 "tests/test_learning_eligibility_v3.py",
                 "tests/test_candidate_fact_matrix_v1.py",
+                "tests/test_private_vacancy_application_packet_v1.py",
                 "tests/evals/with-skill/fixtures/target-vacancy-research/complete-five-es.json",
                 "tests/evals/with-skill/fixtures/target-vacancy-research/limited-four-en.json",
                 "tests/evals/with-skill/fixtures/target-vacancy-research/unavailable-es.json",
@@ -1017,6 +1041,7 @@ class FullPluginIntegrationTests(unittest.TestCase):
                 "tests/evals/with-skill/fixtures/candidate-gap-assessment-v1/unavailable-es.json",
                 *eligibility_fixture_paths,
                 *learning_v3_fixture_paths,
+                *private_packet_fixture_paths,
             ),
             checker_module.MARKET_DOSSIER_PACKAGE_PATHS,
         )

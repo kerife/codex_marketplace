@@ -1,0 +1,104 @@
+{
+  "approval_boundary": {
+    "allowed_next_step": "manual_private_review",
+    "artifact_state": "private_draft",
+    "authorization_required": true,
+    "prohibited_actions": [
+      "external_edit",
+      "upload",
+      "export",
+      "share",
+      "submit",
+      "publish",
+      "message",
+      "connect",
+      "apply",
+      "schedule",
+      "calendar_create",
+      "purchase",
+      "enroll"
+    ]
+  },
+  "as_of_date": "2026-08-13",
+  "claim_review": [
+    {
+      "claim_id": "C-001",
+      "confidence": "unknown",
+      "decision": "omit",
+      "draft_id": null,
+      "fact_ids": [],
+      "requirement_ids": [
+        "V-003-R-01"
+      ],
+      "review_note": "Omitir hasta obtener evidencia utilizable."
+    }
+  ],
+  "draft_materials": {
+    "cv_bullets": [],
+    "message_angle": [],
+    "recruiter_summary": []
+  },
+  "first_interview_prep_handoff": {
+    "fact_ids": [],
+    "interview_stage": "unknown",
+    "next_private_step": "La preparación de entrevista permanece suprimida.",
+    "requirement_ids": [],
+    "state": "suppressed",
+    "vacancy_id": "V-003"
+  },
+  "locale": "es",
+  "readiness": {
+    "blocking_gate_tokens": [],
+    "blocking_requirement_ids": [
+      "V-003-R-01"
+    ],
+    "external_action_authorized": false,
+    "headline": "Revisar antes de autorizar",
+    "manual_review_required": true,
+    "rationale": "Falta evidencia utilizable o hay afirmaciones que deben revisarse u omitirse antes de una revisión privada final.",
+    "revision_claim_ids": [
+      "C-001"
+    ],
+    "state": "revise_first"
+  },
+  "requirement_evidence": [
+    {
+      "confidence": "unknown",
+      "coverage": "missing",
+      "fact_ids": [],
+      "priority": "required",
+      "requirement_id": "V-003-R-01",
+      "signal": "terraform"
+    }
+  ],
+  "schema_version": "private-vacancy-application-packet-v1",
+  "source_snapshot": {
+    "aggregate": "snap-private-vacancy-packet-sources-v1-sha256-826c4e3c900325ee801e957df76945189366e2efa7d3a96c6e20192d2d7be423",
+    "candidate_fact_matrix": "snap-candidate-fact-matrix-v1-sha256-1a73fc322244fc4b925fcd1790a6af151cb9935459ce1e1bb694d67c1e894a6e",
+    "eligibility": "snap-next-action-eligibility-v1-sha256-7860081ebc51265d8957f9f96fba158e6bd8d1fc2bc9c92470a68e07da5e13ba",
+    "target_vacancy_research": "snap-market-sha256-0c8908fc398919a0b17489fbbca7a4c870e850b89409992cdf38141dc4b49c1c"
+  },
+  "target_binding": {
+    "eligibility_state": "insufficient_gap_evidence",
+    "next_safe_action": "prepare_private_vacancy_packet",
+    "organization_label": "Fixture Employer C",
+    "vacancy_id": "V-003",
+    "vacancy_title": "Fixture DevOps Role C"
+  },
+  "tracking_proposal": {
+    "auto_start": false,
+    "event_kind": "application_packet_drafted",
+    "manual_reentry_required": true,
+    "outcome_state": "draft_only",
+    "record_state": "proposed",
+    "vacancy_id": "V-003"
+  },
+  "unsupported_or_missing_claims": [
+    {
+      "next_private_step": "Verificar evidencia privada o eliminar la afirmación.",
+      "reason": "missing_evidence",
+      "requirement_id": "V-003-R-01",
+      "signal": "terraform"
+    }
+  ]
+}

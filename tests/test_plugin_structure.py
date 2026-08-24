@@ -2048,6 +2048,14 @@ raise SystemExit(64)
             ("validate_career_market_learning_dossier.py", "validate_market_dossier"),
             ("build_candidate_fact_matrix_v1.py", "build_candidate_fact_matrix_v1"),
             ("validate_candidate_fact_matrix_v1.py", "validate_candidate_fact_matrix_v1"),
+            (
+                "build_private_vacancy_application_packet_v1.py",
+                "build_private_vacancy_application_packet_v1",
+            ),
+            (
+                "validate_private_vacancy_application_packet_v1.py",
+                "validate_private_vacancy_application_packet_v1",
+            ),
             ("render_executive_career_dossier_v2.py", "render_dossier_html"),
         )
         with tempfile.TemporaryDirectory() as temporary_directory:

@@ -1,0 +1,85 @@
+{
+  "approval_boundary": {
+    "allowed_next_step": "manual_private_review",
+    "artifact_state": "private_draft",
+    "authorization_required": true,
+    "prohibited_actions": [
+      "external_edit",
+      "upload",
+      "export",
+      "share",
+      "submit",
+      "publish",
+      "message",
+      "connect",
+      "apply",
+      "schedule",
+      "calendar_create",
+      "purchase",
+      "enroll"
+    ]
+  },
+  "as_of_date": "2026-08-13",
+  "claim_review": [],
+  "draft_materials": {
+    "cv_bullets": [],
+    "message_angle": [],
+    "recruiter_summary": []
+  },
+  "first_interview_prep_handoff": {
+    "fact_ids": [],
+    "interview_stage": "unknown",
+    "next_private_step": "La preparación de entrevista permanece suprimida.",
+    "requirement_ids": [],
+    "state": "suppressed",
+    "vacancy_id": "V-003"
+  },
+  "locale": "es",
+  "readiness": {
+    "blocking_gate_tokens": [
+      "country_geography"
+    ],
+    "blocking_requirement_ids": [],
+    "external_action_authorized": false,
+    "headline": "Detener preparación",
+    "manual_review_required": true,
+    "rationale": "Una restricción verificada y vigente contradice una condición exacta de la vacante.",
+    "revision_claim_ids": [],
+    "state": "stop"
+  },
+  "requirement_evidence": [
+    {
+      "confidence": "high",
+      "coverage": "supported",
+      "fact_ids": [
+        "F-001"
+      ],
+      "priority": "required",
+      "requirement_id": "V-003-R-01",
+      "signal": "terraform"
+    }
+  ],
+  "schema_version": "private-vacancy-application-packet-v1",
+  "source_snapshot": {
+    "aggregate": "snap-private-vacancy-packet-sources-v1-sha256-4862b2a5edf213d60521e5c39691cc944695b460a96fc8337c96079551979ea2",
+    "candidate_fact_matrix": "snap-candidate-fact-matrix-v1-sha256-00324b74bcbef0839556d46a77e6e5b579edb995e85a7ced19d847881d1be7f8",
+    "eligibility": "snap-next-action-eligibility-v1-sha256-7860081ebc51265d8957f9f96fba158e6bd8d1fc2bc9c92470a68e07da5e13ba",
+    "target_vacancy_research": "snap-market-sha256-0c8908fc398919a0b17489fbbca7a4c870e850b89409992cdf38141dc4b49c1c"
+  },
+  "target_binding": {
+    "eligibility_state": "insufficient_gap_evidence",
+    "next_safe_action": "prepare_private_vacancy_packet",
+    "organization_label": "Fixture Employer C",
+    "vacancy_id": "V-003",
+    "vacancy_title": "Fixture DevOps Role C"
+  },
+  "tracking_proposal": {
+    "auto_start": false,
+    "event_kind": "none",
+    "manual_reentry_required": true,
+    "outcome_state": "not_started",
+    "record_state": "not_proposed",
+    "vacancy_id": "V-003"
+  },
+  "unsupported_or_missing_claims": []
+}
