@@ -17,7 +17,7 @@
         "plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py:559:1540"
       ],
       "fingerprints": {
-        ".superdesign/design-system.md": "a94e65c658df8547089fd607ca481cf487ba10a6df37eeaf4961fe63834b4dfa",
+        ".superdesign/design-system.md": "831cb747c67bc869953ec2bf044df08f7442c2a68f39c1f4f9b8ec5a1be127eb",
         "plugins/professional-growth-coach/assets/executive-career-dossier-v1.html": "5edfadb7cd83fc7566c781a4e797126996069cf96d5077f01a4169ae5cb6e7de",
         "plugins/professional-growth-coach/assets/executive-career-dossier-v1.css": "27f74cc8640dd3ff58c2b2940dfbd8a75ccf41fb94f011b77e5bb894da5a6be1",
         "plugins/professional-growth-coach/assets/executive-career-dossier-v2.css": "d59e61afceed5d4be6420d8704124a3a283d0400461bd31db9c06f230517f96f",
@@ -32,7 +32,7 @@
           "currentVersion": 6
         }
       },
-      "updatedAt": "2026-08-24T04:10:10Z"
+      "updatedAt": "2026-08-24T04:52:00Z"
     }
   }
 }

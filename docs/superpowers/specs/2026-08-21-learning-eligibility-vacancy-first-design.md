@@ -313,6 +313,11 @@ then choose a signal in the signal matrix for that same active vacancy. It
 retains exactly the localized vacancy-key link followed by the localized
 signal-matrix link.
 
+Its exact normalized visible copy is:
+
+- ES: `Primero, elige una vacante Vn en la clave de vacantes. Después, para esa misma vacante activa, elige una señal en la matriz de señales.`
+- EN: `First, choose a vacancy Vn in the vacancy key. Then choose a signal in the signal matrix for that same active vacancy.`
+
 Provider grouping is exact. The provider input is present if and only if
 `source_provider_research_snapshot` is non-null. It is forbidden for
 unavailable, selection-required, partial, and every confirmed non-knowledge

@@ -1473,16 +1473,24 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     self._in_help = False
 
         expected_help = {
-            "es": (
-                "Primero, elige una vacante Vn en la clave de vacantes. "
-                "Después, para esa misma vacante activa, elige una señal en "
-                "la matriz de señales.",
-            ),
-            "en": (
-                "First, choose a vacancy Vn in the vacancy key. Then choose "
-                "a signal in the signal matrix for that same active vacancy.",
-            ),
+            "es": "Primero, elige una vacante Vn en la clave de vacantes. "
+            "Después, para esa misma vacante activa, elige una señal en la "
+            "matriz de señales.",
+            "en": "First, choose a vacancy Vn in the vacancy key. Then choose "
+            "a signal in the signal matrix for that same active vacancy.",
         }
+
+        def assert_exact_help(locale: str, actual: str) -> None:
+            self.assertEqual(expected_help[locale], actual)
+
+        for locale, expected in expected_help.items():
+            with self.subTest(locale=locale, mutation="leading copy"):
+                with self.assertRaises(AssertionError):
+                    assert_exact_help(locale, f"Unexpected prefix. {expected}")
+            with self.subTest(locale=locale, mutation="trailing copy"):
+                with self.assertRaises(AssertionError):
+                    assert_exact_help(locale, f"{expected} Unexpected suffix.")
+
         expected_links = {
             "es": (
                 ("clave de vacantes", "#market-vacancy-key-title"),
@@ -1508,8 +1516,7 @@ class ExecutiveCareerDossierV2RendererTests(unittest.TestCase):
                     links = SelectionHelpLinkParser()
                     links.feed(region)
                     help_text = " ".join("".join(links.text).split())
-                    for expected in expected_help[locale]:
-                        self.assertIn(expected, help_text)
+                    assert_exact_help(locale, help_text)
                     self.assertEqual(expected_links[locale], tuple(links.links))
                     self.assertIn(
                         'aria-describedby="weekly-decision-evidence '

@@ -113,6 +113,12 @@ Only `selection_required` adds exactly two internal navigation links, to the
 vacancy key and signal matrix. Its localized help first directs the customer to
 choose one public Vn, then a signal belonging to that same active vacancy; the
 card has no external links or controls.
+
+The exact normalized selection help is:
+
+- ES: `Primero, elige una vacante Vn en la clave de vacantes. Después, para esa misma vacante activa, elige una señal en la matriz de señales.`
+- EN: `First, choose a vacancy Vn in the vacancy key. Then choose a signal in the signal matrix for that same active vacancy.`
+
 Provider-selection state renders the complete non-ranked L1–Ln list. The card
 uses stable labelled/described relationships, one-column mobile wrapping,
 atomic print rules, dark tokens, forced system colors, and reduced-motion-safe
