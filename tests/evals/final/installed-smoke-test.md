@@ -12,27 +12,27 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `0421b7185ea5674fad15dd39e2a2e98eaad43080`
+source_commit: `6d45d4bb0916446cb956d50caf63d1d52c97feda`
 
-source_tree: `062005dcaf747238203b531dffe323c67472e9ab`
+source_tree: `199639e7128494ecc2a0625ce5952792ef262e9e`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260824080346`
+installed_cache_version: `0.2.0+codex.20260825051725`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
-source_file_count: `151`
+source_file_count: `162`
 
-installed_file_count: `151`
+installed_file_count: `162`
 
 sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `6e1757507c6729b536de9bf9ef90a88490f59e2b4a5208c52dce1b0116f02c46`
+source_aggregate_sha256: `9715c4228f9b3321747226d2302694d990749222ca607d083d587dcc2b8359aa`
 
-cache_aggregate_sha256: `6e1757507c6729b536de9bf9ef90a88490f59e2b4a5208c52dce1b0116f02c46`
+cache_aggregate_sha256: `9715c4228f9b3321747226d2302694d990749222ca607d083d587dcc2b8359aa`
 
 source_bytecode_count: `0`
 
@@ -50,6 +50,18 @@ installed_semantic_accepted_smokes: `39/39`
 
 installed_semantic_rejected_smokes: `9/9`
 
+installed_packet_accepted_smokes: `6/6`
+
+installed_packet_rejected_smokes: `12/12`
+
+installed_packet_accepted_case_ids: `packet_ready_es,packet_ready_en,packet_revise_missing_es,packet_revise_review_en,packet_stop_constraint_es,packet_stop_constraint_en`
+
+installed_packet_rejected_case_ids: `packet_wrong_action,packet_crossed_research,packet_crossed_fact_source,packet_tampered_matrix,packet_tampered_packet,packet_alias_signal,packet_substring_signal,packet_caller_prose,packet_private_value,packet_confidential_claim,packet_hostile_mapping,packet_writer_cli_partial`
+
+installed_packet_artifact_provenance: `validated_installed_builder_output_only`
+
+installed_packet_renderer_provenance: `validated_installed_renderer_output_only`
+
 installed_import_boundary: `verified_private_snapshot_only`
 
 installed_output_atomicity: `passed_generic_no_echo`
@@ -62,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster timestamp: 2026-08-24T08:03:46Z.
+- Cachebuster timestamp: 2026-08-25T05:17:25Z.
 - Commit A changed only the plugin manifest, was pushed to remote `main`, and
   was verified by fetch plus a live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -74,22 +86,23 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- The pre-A source matrix passed 618/618 tests in 3257.971 seconds after
-  mechanically deferring exactly the checked-in installed-attestation binding
-  test. That binding correctly rejected the prior release because this release
-  changed the plugin tree; the prior attestation was not rewritten early.
+- The pre-A source matrix passed 333/333 tests in 3576.499 seconds. The
+  checked-in installed-attestation binding was tested separately and correctly
+  rejected the prior release with its one fixed stale-contract diagnostic; the
+  prior attestation was not rewritten early.
 - Skill and plugin validation both passed.
-- Plugin package discovery: 223/223 tests passed in 140.421 seconds.
-- Repository root discovery passed 1407/1407 tests in 3421.209 seconds with the
+- Plugin package discovery passed 223/223 tests; the final pre-A official run
+  completed that phase in 144.015 seconds.
+- Repository root discovery passed 1478/1478 tests in 4332.487 seconds with the
   same single installed-attestation binding test deferred. The documented
-  locked `VALIDATION_PYTHON` override was used; a preceding run without that
-  environment variable had one environment-only missing-interpreter failure,
-  whose focused rerun passed before the complete successful rerun.
+  locked `VALIDATION_PYTHON` override was used.
 - Static validation passed private-schema, dossier-handoff, and package checks.
 - Repository privacy passed without findings or sensitive-value echo.
-- Post-cachebuster structure/full-plugin verification passed 269/269 tests in
-  1321.816 seconds with exactly the same binding test deferred;
-  post-cachebuster static validation also passed.
+- Post-cachebuster structure/full-plugin verification passed all 275 non-stale
+  tests in 2413.866 seconds; the only failure was the same exact binding test
+  deferred until this attestation update. The final post-cachebuster official
+  run passed package 223/223 in 146.054 seconds and root 1478/1478 in 4411.091
+  seconds; post-cachebuster static and privacy validation also passed.
 - The unfiltered real binding test and canonical release runner are post-B
   publication gates and are not claimed by this pre-B attestation text.
 - A fresh validation-environment bootstrap was blocked by the established
@@ -100,7 +113,7 @@ external_action_state: `not_executed`
 
 - Source was extracted from commit A with `git archive`; no mutable-worktree
   content comparison was used.
-- Source and cache each contained 151 non-empty sorted POSIX relative files.
+- Source and cache each contained 162 non-empty sorted POSIX relative files.
   Every path and lowercase per-file SHA-256 matched, and the aggregate digest
   over `path + NUL + file hash + LF` matched on both sides.
 - `diff -qr` was silent. Source and cache contained no `.pyc`, `.pyo`,
@@ -134,6 +147,11 @@ external_action_state: `not_executed`
   untrusted prior module-search path. Only the snapshot and resolved locked
   runtime/site roots remained eligible. Controller import state was restored
   after the run.
+- The private vacancy packet matrix accepted all 6 closed ES/EN readiness cases
+  and rejected all 12 crossed, tampered, alias, substring, prose, private-value,
+  hostile-mapping, and partial-output cases. JSON and HTML were derived only
+  from the installed builder and renderer through one verified private
+  snapshot; invalid CLI/writer cases left no partial output.
 
 ## Historical compatibility
 
@@ -147,7 +165,7 @@ external_action_state: `not_executed`
 ## Scope boundary
 
 - Superdesign evidence is structural source/canvas evidence from the approved
-  selection-required navigation-help direction. **Visual QA not run**: no
+  private vacancy-packet direction. **Visual QA not run**: no
   empirical browser, print-preview, or assistive-technology QA is claimed.
 - No LinkedIn/profile edit, recruiter connection, message, application,
   purchase, enrollment, upload, or other external career action was executed.
