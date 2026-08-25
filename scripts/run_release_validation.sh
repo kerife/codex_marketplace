@@ -85,15 +85,16 @@ else
   ROOT_TEST_FILTER='import sys, unittest
 from pathlib import Path
 root = Path(sys.argv[1]).resolve()
+tests_root = root / "tests"
 sys.path.insert(0, str(root))
-target = "tests.test_full_plugin.FullPluginIntegrationTests.test_checked_in_attestation_is_bound_to_immutable_git_archive_evidence"
+target = "test_full_plugin.FullPluginIntegrationTests.test_checked_in_attestation_is_bound_to_immutable_git_archive_evidence"
 def flatten(suite):
     for item in suite:
         if isinstance(item, unittest.TestSuite):
             yield from flatten(item)
         else:
             yield item
-discovered = unittest.defaultTestLoader.discover(str(root / "tests"), pattern="test*.py", top_level_dir=str(root))
+discovered = unittest.defaultTestLoader.discover(str(tests_root), pattern="test*.py", top_level_dir=str(tests_root))
 tests = tuple(flatten(discovered))
 matches = tuple(test for test in tests if test.id() == target)
 if len(matches) != 1:

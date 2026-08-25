@@ -2017,6 +2017,10 @@ raise SystemExit(64)
             "tests.test_full_plugin.FullPluginIntegrationTests."
             "test_checked_in_attestation_is_bound_to_immutable_git_archive_evidence"
         )
+        root_selector = (
+            "test_full_plugin.FullPluginIntegrationTests."
+            "test_checked_in_attestation_is_bound_to_immutable_git_archive_evidence"
+        )
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             trace = root / "release-runner-trace.jsonl"
@@ -2029,6 +2033,7 @@ raise SystemExit(64)
                 "with Path(os.environ['RELEASE_RUNNER_TRACE']).open('a', encoding='utf-8') as stream:\n"
                 "    stream.write(json.dumps(args) + '\\n')\n"
                 f"selector = {selector!r}\n"
+                f"root_selector = {root_selector!r}\n"
                 "if selector in args:\n"
                 "    if os.environ.get('FAKE_ATTESTATION_GREEN') == '1':\n"
                 "        raise SystemExit(0)\n"
@@ -2046,8 +2051,52 @@ raise SystemExit(64)
                 "        'FAILED (failures=1)\\n'\n"
                 "    )\n"
                 "    raise SystemExit(1)\n"
-                "if args[:2] == ['-B', '-c'] and len(args) > 2 and selector in args[2]:\n"
-                "    raise SystemExit(47 if os.environ.get('FAKE_ADDITIONAL_FAILURE') == '1' else 0)\n"
+                "if (args[:2] == ['-B', '-c'] and len(args) > 3 "
+                "and 'unittest.defaultTestLoader.discover' in args[2]):\n"
+                "    import types\n"
+                "    class FakeTest:\n"
+                "        def __init__(self, identity):\n"
+                "            self.identity = identity\n"
+                "        def id(self):\n"
+                "            return self.identity\n"
+                "    class FakeSuite:\n"
+                "        def __init__(self, tests=()):\n"
+                "            self.tests = tuple(tests)\n"
+                "        def __iter__(self):\n"
+                "            return iter(self.tests)\n"
+                "    try:\n"
+                "        match_count = int(os.environ.get('FAKE_STALE_MATCH_COUNT', '1'))\n"
+                "    except ValueError:\n"
+                "        raise SystemExit(46)\n"
+                "    expected_other = ('test_alpha.AlphaTests.test_one', "
+                "'test_beta.BetaTests.test_two')\n"
+                "    source_tests = tuple(FakeTest(root_selector) for _ in range(match_count))\n"
+                "    source_tests += tuple(FakeTest(identity) for identity in expected_other)\n"
+                "    expected_root = Path(args[3]).resolve()\n"
+                "    def discover(start_dir, pattern='test*.py', top_level_dir=None):\n"
+                "        if (Path(start_dir).resolve() != expected_root / 'tests' "
+                "or pattern != 'test*.py' "
+                "or Path(top_level_dir).resolve() != expected_root / 'tests'):\n"
+                "            raise SystemExit(48)\n"
+                "        return FakeSuite((FakeSuite(source_tests),))\n"
+                "    class FakeRunner:\n"
+                "        def __init__(self, verbosity=1):\n"
+                "            if verbosity != 1:\n"
+                "                raise SystemExit(49)\n"
+                "        def run(self, suite):\n"
+                "            if tuple(test.id() for test in suite) != expected_other:\n"
+                "                raise SystemExit(50)\n"
+                "            succeeded = os.environ.get('FAKE_ADDITIONAL_FAILURE') != '1'\n"
+                "            return types.SimpleNamespace(wasSuccessful=lambda: succeeded)\n"
+                "    fake_unittest = types.ModuleType('unittest')\n"
+                "    fake_unittest.TestSuite = FakeSuite\n"
+                "    fake_unittest.defaultTestLoader = types.SimpleNamespace(discover=discover)\n"
+                "    fake_unittest.TextTestRunner = FakeRunner\n"
+                "    sys.modules['unittest'] = fake_unittest\n"
+                "    code = args[2]\n"
+                "    sys.argv = ['root-test-filter', args[3]]\n"
+                "    exec(compile(code, '<root-test-filter>', 'exec'), {})\n"
+                "    raise SystemExit(51)\n"
                 "raise SystemExit(0)\n",
                 encoding="utf-8",
             )
@@ -2112,7 +2161,7 @@ raise SystemExit(64)
                 any(
                     args[:2] == ["-B", "-c"]
                     and len(args) > 2
-                    and selector in args[2]
+                    and root_selector in args[2]
                     for args in stale_invocations
                 ),
                 stale_invocations,
@@ -2134,6 +2183,23 @@ raise SystemExit(64)
                 stale_invocations,
             )
 
+            for match_count in ("0", "2"):
+                with self.subTest(stale_match_count=match_count):
+                    mismatched, mismatched_invocations = run_case(
+                        ALLOW_STALE_INSTALLED_ATTESTATION="1",
+                        FAKE_STALE_MATCH_COUNT=match_count,
+                    )
+                    self.assertNotEqual(0, mismatched.returncode)
+                    self.assertEqual(
+                        1,
+                        sum(
+                            args[:2] == ["-B", "-c"]
+                            and len(args) > 2
+                            and root_selector in args[2]
+                            for args in mismatched_invocations
+                        ),
+                    )
+
             additional, additional_invocations = run_case(
                 ALLOW_STALE_INSTALLED_ATTESTATION="1",
                 FAKE_ADDITIONAL_FAILURE="1",
@@ -2143,7 +2209,7 @@ raise SystemExit(64)
                 any(
                     args[:2] == ["-B", "-c"]
                     and len(args) > 2
-                    and selector in args[2]
+                    and root_selector in args[2]
                     for args in additional_invocations
                 )
             )
@@ -2166,7 +2232,7 @@ raise SystemExit(64)
                 any(
                     args[:2] == ["-B", "-c"]
                     and len(args) > 2
-                    and selector in args[2]
+                    and root_selector in args[2]
                     for args in green_invocations
                 )
             )
