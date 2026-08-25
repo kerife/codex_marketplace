@@ -557,6 +557,9 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
             original_matrix = smoke.run_installed_semantic_matrix
             original_subprocess = smoke.subprocess.run
             observed: dict[str, object] = {}
+            static_calls: list[
+                tuple[Path, list[str], dict[str, str]]
+            ] = []
             previous_path = list(sys.path)
             previous_modules = tuple(sys.modules.items())
 
@@ -591,9 +594,9 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
                 }
 
             def static_subprocess(*args, **kwargs):
-                observed["static_cwd"] = kwargs["cwd"]
-                observed["static_command"] = args[0]
-                observed["static_environment"] = kwargs["env"]
+                command = args[0]
+                if command[-1].endswith("run_static_checks.py"):
+                    static_calls.append((kwargs["cwd"], command, kwargs["env"]))
                 return original_subprocess(*args, **kwargs)
 
             smoke.capture_verified_private_snapshots = mutate_after_capture
@@ -608,14 +611,16 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
 
         self.assertEqual(39, receipt["accepted"])
         self.assertEqual("vacancy-first-smoke-sources-v1", observed["source_schema"])
-        self.assertEqual(observed["semantic_root"], observed["static_cwd"])
-        self.assertEqual(sys.executable, observed["static_command"][0])
-        self.assertEqual(["-I", "-B"], observed["static_command"][1:3])
+        self.assertEqual(1, len(static_calls))
+        static_cwd, static_command, static_environment = static_calls[0]
+        self.assertEqual(observed["semantic_root"], static_cwd)
+        self.assertEqual(sys.executable, static_command[0])
+        self.assertEqual(["-I", "-B"], static_command[1:3])
         self.assertEqual(
             {"PATH": os.defpath, "PYTHONDONTWRITEBYTECODE": "1"},
-            observed["static_environment"],
+            static_environment,
         )
-        self.assertNotIn("PYTHONPATH", observed["static_environment"])
+        self.assertNotIn("PYTHONPATH", static_environment)
         self.assertEqual(previous_path, sys.path)
         current_modules = tuple(sys.modules.items())
         self.assertEqual(
