@@ -25,6 +25,7 @@ ASSET_NAMES = (
     "private-recruiter-reply-triage-v1.css",
     "private-recruiter-followthrough-checkpoint-v1.css",
     "private-recruiter-conversion-outcome-v1.css",
+    "private-vacancy-application-packet-v1.css",
 )
 EXPECTED_THEME_ASSET_NAMES = {
     "career-learning-eligibility-v1.css",
@@ -35,6 +36,7 @@ EXPECTED_THEME_ASSET_NAMES = {
     "private-recruiter-reply-triage-v1.css",
     "private-recruiter-followthrough-checkpoint-v1.css",
     "private-recruiter-conversion-outcome-v1.css",
+    "private-vacancy-application-packet-v1.css",
 }
 HTML_ASSET_NAMES = (
     "executive-career-dossier-v1.html",
@@ -42,6 +44,7 @@ HTML_ASSET_NAMES = (
     "private-recruiter-reply-triage-v1.html",
     "private-recruiter-followthrough-checkpoint-v1.html",
     "private-recruiter-conversion-outcome-v1.html",
+    "private-vacancy-application-packet-v1.html",
 )
 EXPECTED_LAYOUT_SOURCES = {
     f"plugins/professional-growth-coach/assets/{name}" for name in HTML_ASSET_NAMES

@@ -2282,6 +2282,7 @@ raise SystemExit(64)
                 "RELEASE_RUNNER_TRACE": str(trace),
                 "VALIDATION_PYTHON": str(fake_python),
             }
+            environment.pop("ALLOW_STALE_INSTALLED_ATTESTATION", None)
             result = subprocess.run(
                 ["bash", str(RELEASE_RUNNER_PATH)],
                 cwd=REPO_ROOT,

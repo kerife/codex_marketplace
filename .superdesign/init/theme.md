@@ -1831,9 +1831,7 @@ dd { margin: .15rem 0 0; font-weight: 600; }
 }
 ```
 
-## Private vacancy application packet stylesheet
-
-Source: `plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.css`
+### `plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.css`
 
 ```css
 :root {
