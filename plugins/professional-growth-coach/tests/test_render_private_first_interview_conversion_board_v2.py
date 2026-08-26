@@ -119,7 +119,7 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
             self.assertIn(hook, css)
         print_block = css.split("@media print", 1)[1].split("@media (prefers-reduced-motion", 1)[0]
         for token in (
-            "--paper: #fff", "--surface: #fff", "--ink: #000", "--muted: #000",
+            "--paper: #fff", "--surface: #fff", "--ink: #000", "--muted: #536158",
             "--forest: #000", "--coral: #000", "--gold: #000", "color-scheme: light",
         ):
             self.assertIn(token, print_block)
