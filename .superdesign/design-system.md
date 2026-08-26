@@ -201,3 +201,12 @@ forced-colors treatment for both trust and approval boundaries, and
 reduced-motion handling. Browser visual QA, printed-page QA, and
 assistive-technology QA are not run or claimed; evidence is deterministic
 DOM/CSS testing only.
+
+The practice handoff keeps the board static and proof-first. A ready board
+uses the coral practice checkpoint treatment and a later-request cue; clarify
+uses a forest-soft checkpoint that asks for the missing fact; pause uses a
+paper checkpoint that signals manual review; stop omits the checkpoint and all
+preparation detail. State modifiers are carried in a non-executable data
+attribute so CSS can distinguish them without exposing raw enums as copy.
+Print, dark, forced-colors, reduced-motion, and offline contracts remain
+unchanged. Visual/browser/assistive-technology QA is not run or claimed.

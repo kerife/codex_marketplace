@@ -24,6 +24,10 @@ h3 { margin: 0; font-size: 1.12rem; line-height: 1.2; }
 .board-main > section + section { margin-top: 1.5rem; }
 .board-decision { padding: clamp(1.15rem, 3vw, 2rem); background: var(--forest); border-left: 4px solid var(--gold); color: #fff; }
 .board-decision-cockpit { box-shadow: 0 .65rem 1.75rem rgb(23 62 48 / .14); }
+.board-decision-cockpit[data-board-state="ready"] { border-left-color: var(--gold); }
+.board-decision-cockpit[data-board-state="clarify"] { border-left-color: var(--coral); }
+.board-decision-cockpit[data-board-state="pause"] { border-left-color: var(--gold); box-shadow: 0 .65rem 1.75rem rgb(185 81 58 / .12); }
+.board-decision-cockpit[data-board-state="stop"] { border-left-color: var(--coral); box-shadow: none; }
 .board-decision h2 { color: #fff; }
 .board-decision p { max-width: 72ch; }
 .board-decision dl, .board-facts { display: grid; grid-template-columns: minmax(10rem, .35fr) minmax(0, 1fr); gap: .55rem 1rem; margin: 1rem 0 0; }
@@ -50,6 +54,9 @@ h3 { margin: 0; font-size: 1.12rem; line-height: 1.2; }
 .board-risk-card dt, .board-day dt, .board-review dt, .board-branch dt { margin-top: .6rem; color: var(--muted); font-size: .8rem; font-weight: 700; }
 .board-risk-card dd, .board-day dd, .board-review dd, .board-branch dd { margin: .1rem 0 0; }
 .board-practice-gate { background: var(--coral-soft); border-left: 4px solid var(--coral); }
+.board-practice-gate[data-board-state="ready"] { border-left-color: var(--coral); }
+.board-practice-gate[data-board-state="clarify"] { background: var(--forest-soft); border-left-color: var(--gold); }
+.board-practice-gate[data-board-state="pause"] { background: var(--paper); border-left-color: var(--gold); }
 .board-practice-gate p { max-width: 72ch; }
 .board-practice-question { margin: .85rem 0 0; font-size: 1.05rem; }
 .board-practice-instruction { margin: 1rem 0 0; font-weight: 700; }

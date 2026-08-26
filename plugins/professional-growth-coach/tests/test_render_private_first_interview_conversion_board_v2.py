@@ -137,6 +137,29 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
         stop_output = renderer.render_private_first_interview_conversion_board_v2(self._proof(source=stop_source))
         self.assertNotIn('<section class="board-practice-gate"', stop_output)
 
+    def test_practice_gate_invites_later_response_only_for_ready_state(self):
+        cases = (
+            ("ready", "Respond only in a later explicit request."),
+            ("clarify", "Clarify before practicing."),
+            ("pause", "Practice is paused."),
+        )
+        for state, expected in cases:
+            with self.subTest(state=state):
+                proof = self._proof()
+                artifact_json, source_json, metadata_json = builder._validator._identity._validation_payload_json(proof)
+                artifact = copy.deepcopy(json.loads(artifact_json))
+                artifact["decision"][0]["state"] = state
+                forged = builder._validator._identity._issue_validated_private_first_interview_conversion_board_v2(
+                    json.dumps(artifact, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+                    source_json,
+                    metadata_json,
+                )
+                output = renderer._render_artifact(artifact)
+                self.assertIn(f'data-board-state="{state}"', output)
+                self.assertIn(expected, output)
+                if state != "ready":
+                    self.assertNotIn("later explicit request", output)
+
     def test_composition_only_trust_copy_is_distinct_and_no_provenance_value_leaks(self):
         source = _source()
         source["source_snapshot"] = "snap-private-first-interview-v1-sha256-" + "a" * 64
@@ -180,6 +203,7 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
             "prefers-reduced-motion: reduce", "main:focus-visible", "minmax(",
             ".board-trust-strip", ".board-approval-boundary", "grid-template-columns: 1fr",
             ".board-decision-cockpit", ".board-cockpit-prompt", ".board-practice-gate",
+            '[data-board-state="ready"]', '[data-board-state="clarify"]', '[data-board-state="pause"]',
         ):
             self.assertIn(hook, css)
         print_block = css.split("@media print", 1)[1].split("@media (prefers-reduced-motion", 1)[0]

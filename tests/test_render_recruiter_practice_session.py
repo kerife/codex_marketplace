@@ -246,6 +246,28 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
         self.assertNotIn("originó esta práctica", independent_html)
         self.assertNotIn("originated this practice", independent_html)
 
+    def test_board_handoff_has_distinct_private_origin_copy(self) -> None:
+        session = copy.deepcopy(self.awaiting_session)
+        session["schema_version"] = "recruiter-practice-session-v2"
+        session["ui_locale"] = "en"
+        session["content_locale"] = "en"
+        session.pop("locale")
+        session["handoff_context"] = {
+            "source": "private_first_interview_conversion_board",
+            "source_snapshot": "snap-practice-board-sha256-" + "a" * 64,
+            "question_rank": 1,
+            "question_id": "Q-001",
+            "requirement_id": "R-001",
+            "fact_ids": ["F-001"],
+            "draft_only": True,
+            "external_actions_authorized": False,
+        }
+        rendered = self.renderer.render_session_html(session)
+        self.assertIn("This question came from a private first-interview board", rendered)
+        self.assertIn('practice-handoff--board', rendered)
+        self.assertNotIn("source_snapshot", rendered)
+        self.assertNotIn("snap-practice-board", rendered)
+
     def test_next_action_copy_distinguishes_sourced_and_independent_pre_feedback_sessions(self) -> None:
         expected_sourced = {
             ("es", "ready_to_practice"): "Lee la pregunta y prepara tu respuesta; después regresa a la conversación privada de Codex que originó esta práctica. Esta página no guarda tu respuesta.",

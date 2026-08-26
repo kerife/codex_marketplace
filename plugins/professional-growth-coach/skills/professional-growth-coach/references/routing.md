@@ -134,6 +134,21 @@ proof, rehearsal, week, and tracking surfaces.
 The `private-first-interview-conversion-board-v1` route remains frozen legacy compatibility only. Do not select v1 for new requests; use v2 above. Existing
 v1 artifacts and historical checks remain supported without modification.
 
+### Private first-interview practice handoff
+
+Only a `ready` v2 board may use
+`private-first-interview-practice-handoff-v1`. Pass the exact opaque
+`ValidatedPrivateFirstInterviewConversionBoardV2`; do not accept a rendered
+artifact, raw source rows, or caller-supplied provenance. Revalidate the board
+before projection and create exactly one `recruiter-practice-session-v2` in
+`awaiting_answer` with its score still `unknown`, `observed_answer=null`, and
+`local_save_mode=disabled`. The new handoff source is internal proof metadata;
+never render its snapshot, digest, or IDs. `clarify`, `pause`, and `stop` fail
+closed without a session or response invitation. A later explicit private
+request may supply one ephemeral answer to the existing categorical-feedback
+flow; it never creates a numeric readiness score, predicts an interview, or
+authorizes external action.
+
 ## Multi-module routing
 
 Outside the normal local LinkedIn artifact branch, use a multi-module ordered plan when one self-service or coach mode request contains several safe workstreams, such as LinkedIn audit plus CV rewrite plus imminent interview preparation. The router contract still gets exactly one `selected_module`: choose the first module that should run safely after evidence and authorization gates. Then add an `ordered plan` with one line per later module. In the artifact branch, keep later-module planning internal and end the client chat after the verified link.

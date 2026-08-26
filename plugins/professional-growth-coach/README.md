@@ -120,6 +120,14 @@ solicitud posterior explícita. No envíes, compartas ni publiques esa respuesta
 Las etiquetas visibles traducen los estados y ramas; los enums del artefacto no
 son instrucciones para el cliente.
 
+Cuando la decisión está en `ready`, el coach puede hacer un handoff manual a
+`private-first-interview-practice-handoff-v1`. El handoff acepta únicamente la
+prueba opaca y exacta del tablero, revalida su vínculo y produce una sesión
+`recruiter-practice-session-v2` en `awaiting_answer` con una sola pregunta,
+`score=unknown` y respuesta efímera. `clarify`, `pause` y `stop` no producen
+sesión. La sesión no auto-inicia preparación, no guarda respuestas y no envía,
+comparte, publica, agenda ni ejecuta otra acción externa.
+
 `private-first-interview-conversion-board-v1` is frozen legacy compatibility
 only. New requests must use v2.
 

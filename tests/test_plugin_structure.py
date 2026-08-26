@@ -139,6 +139,13 @@ PRIVATE_FIRST_INTERVIEW_BOARD_RELEASE_PATHS = (
     "tests/test_render_private_first_interview_conversion_board_v2.py",
     "tests/fixtures/private-first-interview-conversion-board-v2/accepted-es.json",
     "tests/fixtures/private-first-interview-conversion-board-v2/accepted-en.json",
+    "schemas/private-first-interview-practice-handoff-v1.schema.json",
+    "scripts/private_first_interview_practice_handoff_identity.py",
+    "scripts/validate_private_first_interview_practice_handoff.py",
+    "scripts/build_private_first_interview_practice_handoff.py",
+    "tests/test_private_first_interview_practice_handoff.py",
+    "tests/fixtures/private-first-interview-practice-handoff/accepted-es.json",
+    "tests/fixtures/private-first-interview-practice-handoff/accepted-en.json",
 )
 
 
@@ -220,6 +227,10 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
         self.assertIn("composition-only", combined)
         self.assertIn("private-first-interview-conversion-board-v2", combined)
         self.assertIn("board-trust-strip", combined)
+        self.assertIn("private-first-interview-practice-handoff-v1", combined)
+        self.assertIn("awaiting_answer", combined)
+        self.assertIn("score=unknown", combined)
+        self.assertIn("clarify`, `pause` y `stop`", combined)
         for forbidden in ("source_digest", "source_group_json", "upstream_attested"):
             self.assertNotIn(forbidden, combined)
 

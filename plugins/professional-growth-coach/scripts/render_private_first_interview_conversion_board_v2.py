@@ -87,6 +87,8 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         "response_structure": "Estructura de respuesta" if es else "Response structure",
         "score_before_response": "Puntuación antes de responder" if es else "Score before response",
         "later_request": "Responde solo en una solicitud posterior explícita." if es else "Respond only in a later explicit request.",
+        "practice_clarify": "Aclara antes de practicar. Nombra el hecho pendiente; todavía no se evaluará una respuesta." if es else "Clarify before practicing. Name the missing fact; no response will be evaluated yet.",
+        "practice_pause": "Práctica en pausa. Reanuda solo después de una revisión manual con un cambio útil." if es else "Practice is paused. Resume only after a manual review with a useful change.",
         "do_not_share_response": "No envíes, compartas ni publiques esta respuesta." if es else "Do not send, share, or publish this response.",
         "decision_states": {
             "ready": "Lista para revisión" if es else "Ready for review",
@@ -111,7 +113,7 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         f'<p class="board-state">{_e(state_label)}</p></header>'
     )
     decision_html = (
-        '<section class="board-decision board-decision-cockpit" aria-labelledby="decision-heading"><h2 id="decision-heading">'
+        f'<section class="board-decision board-decision-cockpit" data-board-state="{_e(state)}" aria-labelledby="decision-heading"><h2 id="decision-heading">'
         f'{_e(labels["cockpit"])}</h2><dl>{_paragraph(labels["state"], state_label)}'
         f'{_paragraph(labels["objective"], decision.get("objective"))}{_paragraph(labels["current"], decision.get("current_state"))}'
         f'{_paragraph(labels["next"], decision.get("next_safe_action"))}{_paragraph(labels["signal"], decision.get("signal"))}</dl>'
@@ -143,7 +145,13 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         rehearsal = artifact.get("rehearsal")
         if not isinstance(rehearsal, Mapping):
             raise PrivateFirstInterviewConversionBoardV2RenderError("private board artifact is unavailable")
-        practice_gate = f'<section class="board-practice-gate" aria-labelledby="practice-gate-heading"><h2 id="practice-gate-heading">{_e(labels["practice_gate"])}</h2><p class="board-practice-question"><strong>{_e(rehearsal.get("question"))}</strong></p><dl class="board-facts">{_paragraph(labels["response_structure"], rehearsal.get("response_structure"))}{_paragraph(labels["score_before_response"], rehearsal.get("pre_response_score"))}</dl><p class="board-practice-instruction">{_e(labels["later_request"])}</p><p class="board-boundary">{_e(labels["do_not_share_response"])}</p></section>'
+        if state == "ready":
+            practice_instruction = labels["later_request"]
+        elif state == "clarify":
+            practice_instruction = labels["practice_clarify"]
+        else:
+            practice_instruction = labels["practice_pause"]
+        practice_gate = f'<section class="board-practice-gate" data-board-state="{_e(state)}" aria-labelledby="practice-gate-heading"><h2 id="practice-gate-heading">{_e(labels["practice_gate"])}</h2><p class="board-practice-question"><strong>{_e(rehearsal.get("question"))}</strong></p><dl class="board-facts">{_paragraph(labels["response_structure"], rehearsal.get("response_structure"))}{_paragraph(labels["score_before_response"], rehearsal.get("pre_response_score"))}</dl><p class="board-practice-instruction">{_e(practice_instruction)}</p><p class="board-boundary">{_e(labels["do_not_share_response"])}</p></section>'
         week = _list_rows(artifact.get("week"), lambda row, i: f'<li class="board-day"><h3>{_e(labels["day"])} {_e(row.get("day"))}</h3><p><strong>{_e(row.get("private_action"))}</strong></p><dl>{_paragraph("Límite de evidencia" if es else "Evidence boundary", row.get("evidence_boundary"))}{_paragraph("Punto de revisión" if es else "Review checkpoint", row.get("review_checkpoint"))}{_paragraph("Señal observable" if es else "Observable signal", row.get("observable_signal"))}{_paragraph("Alternativa" if es else "Fallback", row.get("fallback"))}{_paragraph("Regla de parada" if es else "Stop rule", row.get("stop_rule"))}</dl></li>')
         reviews = _list_rows(artifact.get("daily_reviews"), lambda row, i: f'<li class="board-review"><h3>{_e(labels["day"])} {_e(row.get("day"))}</h3><p><strong>{_e(_branch_label(row))}</strong> · {_e(row.get("signal_quality"))}</p><dl>{_paragraph("Señal" if es else "Signal", row.get("observed_signal"))}{_paragraph("Registro" if es else "Evidence log", row.get("evidence_log"))}{_paragraph("Siguiente acción" if es else "Next action", row.get("next_safe_action"))}{_paragraph("Pregunta del coach" if es else "Coach question", row.get("coach_question"))}</dl></li>')
         sections.extend((f'<section class="board-ladder" aria-labelledby="ladder-heading"><h2 id="ladder-heading">{_e(labels["ladder"])}</h2><ol class="board-ladder-list">{ladder}</ol></section>', practice_gate, f'<section class="board-sequence" aria-labelledby="sequence-heading"><h2 id="sequence-heading">{_e(labels["sequence"])}</h2><ol>{sequence}</ol></section>', f'<section class="board-proof" aria-labelledby="proof-heading"><h2 id="proof-heading">{_e(labels["proof"])}</h2><ul class="board-proof-list">{proof}</ul></section>', f'<section class="board-risks" aria-labelledby="risks-heading"><h2 id="risks-heading">{_e(labels["risks"])}</h2><ul class="board-risk-list">{risks}</ul></section>', f'<section class="board-week" aria-labelledby="week-heading"><h2 id="week-heading">{_e(labels["week"])}</h2><ol class="board-week-list">{week}</ol></section>', f'<section class="board-reviews" aria-labelledby="reviews-heading"><h2 id="reviews-heading">{_e(labels["reviews"])}</h2><ol class="board-review-list">{reviews}</ol></section>'))

@@ -1,0 +1,7 @@
+{
+  "locale": "es",
+  "expected_schema_version": "recruiter-practice-session-v2",
+  "expected_state": "awaiting_answer",
+  "expected_score": "unknown",
+  "expected_source": "private_first_interview_conversion_board"
+}

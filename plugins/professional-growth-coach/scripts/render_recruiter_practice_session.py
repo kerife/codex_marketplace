@@ -108,6 +108,7 @@ COPY = {
         "handoff_title": "Origen de práctica",
         "handoff_text_dossier": "Esta pregunta proviene de un dossier de carrera y se practica en privado; no se realizó ninguna acción externa.",
         "handoff_text_reply": "Esta pregunta proviene de un triaje privado de respuesta de reclutador y se practica en privado; no se realizó ninguna acción externa.",
+        "handoff_text_board": "Esta pregunta proviene de un tablero privado de primera entrevista y se practica en privado; no se realizó ninguna acción externa.",
         "solid": "Sólido",
         "confirm": "Por confirmar",
         "do_not_assert": "No afirmar todavía",
@@ -153,6 +154,7 @@ COPY = {
         "handoff_title": "Practice source",
         "handoff_text_dossier": "This question came from a career dossier and is practiced privately; no external action was taken.",
         "handoff_text_reply": "This question came from a private recruiter-reply triage and is practiced privately; no external action was taken.",
+        "handoff_text_board": "This question came from a private first-interview board and is practiced privately; no external action was taken.",
         "solid": "Solid",
         "confirm": "Confirm",
         "do_not_assert": "Do not assert yet",
@@ -493,8 +495,12 @@ def _render_main(
     handoff = ""
     if sourced:
         source = _text(_mapping(session["handoff_context"])["source"])
-        text_key = "handoff_text_reply" if source == "private_recruiter_reply_triage" else "handoff_text_dossier"
-        source_class = "reply" if source == "private_recruiter_reply_triage" else "dossier"
+        if source == "private_recruiter_reply_triage":
+            text_key, source_class = "handoff_text_reply", "reply"
+        elif source == "private_first_interview_conversion_board":
+            text_key, source_class = "handoff_text_board", "board"
+        else:
+            text_key, source_class = "handoff_text_dossier", "dossier"
         handoff = f'''<aside class="practice-handoff practice-handoff--{source_class}" aria-labelledby="practice-handoff-title" aria-describedby="prompt-title practice-question-text"><h2 id="practice-handoff-title">{labels["handoff_title"]}</h2><p>{labels[text_key]}</p></aside>'''
     if state == "feedback_available":
         feedback_data = _mapping(session["feedback"])

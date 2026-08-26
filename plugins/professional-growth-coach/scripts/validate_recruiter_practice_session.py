@@ -413,10 +413,10 @@ def validate_session(value: object) -> list[str]:
             handoff_required = handoff_fields - {"claim_ids", "evidence_ids"}
         handoff = _closed(handoff, "handoff_context", handoff_fields, errors, required=handoff_required)
         if handoff is not None:
-            if not _enum(handoff.get("source"), {"executive_career_dossier", "private_recruiter_reply_triage"}): errors.append("handoff_context.source has invalid value")
+            if not _enum(handoff.get("source"), {"executive_career_dossier", "private_recruiter_reply_triage", "private_first_interview_conversion_board"}): errors.append("handoff_context.source has invalid value")
             source_snapshot = handoff.get("source_snapshot")
             snapshot_pattern = (
-                r"snap-(?:dossier-sha256-[0-9a-f]{64}|triage-(?:[0-9]{3}|sha256-[0-9a-f]{64}))"
+                r"snap-(?:dossier-sha256-[0-9a-f]{64}|triage-(?:[0-9]{3}|sha256-[0-9a-f]{64})|practice-board-sha256-[0-9a-f]{64})"
                 if schema_version == V2_SCHEMA_VERSION
                 else r"snap-(?:dossier-sha256-[0-9a-f]{64}|triage-[0-9]{3})"
             )
@@ -429,6 +429,8 @@ def validate_session(value: object) -> list[str]:
                 errors.append("handoff_context.source_snapshot must match executive_career_dossier source")
             elif handoff.get("source") == "private_recruiter_reply_triage" and not source_snapshot.startswith("snap-triage-"):
                 errors.append("handoff_context.source_snapshot must match private_recruiter_reply_triage source")
+            elif handoff.get("source") == "private_first_interview_conversion_board" and not source_snapshot.startswith("snap-practice-board-sha256-"):
+                errors.append("handoff_context.source_snapshot must match private_first_interview_conversion_board source")
             if isinstance(handoff.get("question_rank"), bool) or handoff.get("question_rank") != 1: errors.append("handoff_context.question_rank must be 1")
             if handoff.get("draft_only") is not True: errors.append("handoff_context.draft_only must be true")
             if handoff.get("external_actions_authorized") is not False: errors.append("handoff_context.external_actions_authorized must be false")
