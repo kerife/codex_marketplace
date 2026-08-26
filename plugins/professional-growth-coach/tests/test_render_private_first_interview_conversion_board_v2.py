@@ -366,6 +366,24 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
         self.assertNotIn("<form", template.lower())
         self.assertNotRegex(template, r"https?://")
 
+    def test_print_keeps_repeated_review_cards_atomic(self):
+        css = (ROOT / "assets" / "private-first-interview-conversion-board-v2.css").read_text(encoding="utf-8")
+        print_block = css.split("@media print", 1)[1].split("@media (prefers-reduced-motion", 1)[0]
+        card_selectors = (
+            ".board-sequence li",
+            ".board-proof-card",
+            ".board-risk-card",
+            ".board-day",
+            ".board-branch",
+            ".board-review",
+            ".board-reentry-recipe li",
+        )
+        for selector in card_selectors:
+            with self.subTest(selector=selector):
+                self.assertIn(selector, print_block)
+        self.assertIn("break-inside: avoid", print_block)
+        self.assertIn("page-break-inside: avoid", print_block)
+
 
 if __name__ == "__main__":
     unittest.main()
