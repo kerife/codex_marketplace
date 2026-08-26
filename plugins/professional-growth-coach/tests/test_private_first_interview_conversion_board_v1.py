@@ -9,6 +9,10 @@ FIXTURES = ROOT / "tests" / "fixtures" / "private-first-interview-conversion-boa
 SCHEMA_PATH = ROOT / "schemas" / "private-first-interview-conversion-board-v1.schema.json"
 sys.path.insert(0, str(ROOT / "scripts"))
 from validate_json_schema_subset import validate_schema_instance
+from private_first_interview_conversion_board_identity import (
+    ValidatedPrivateFirstInterviewConversionBoard,
+)
+import validate_private_first_interview_conversion_board_v1 as board_validator
 
 
 class PrivateFirstInterviewConversionBoardContractTests(unittest.TestCase):
@@ -126,6 +130,75 @@ class PrivateFirstInterviewConversionBoardContractTests(unittest.TestCase):
                 self.assertNotIn("@", text)
                 self.assertNotIn("raw recruiter", text)
                 self.assertNotIn("raw candidate", text)
+
+    def test_validator_accepts_raw_source_group_and_issues_exact_identity(self):
+        value = self._load_fixture("en")
+        proof = board_validator.validate_private_first_interview_conversion_board_v1(
+            value["source_group"]
+        )
+        self.assertIs(type(proof), ValidatedPrivateFirstInterviewConversionBoard)
+        self.assertEqual(value["source_group"], proof.source_group)
+        self.assertEqual("private-first-interview-conversion-board-v1", proof.artifact["schema_version"])
+
+    def test_validator_accepts_checked_in_es_and_en_composites(self):
+        for locale in ("es", "en"):
+            with self.subTest(locale=locale):
+                value = self._load_fixture(locale)
+                proof = board_validator.validate_private_first_interview_conversion_board_v1(value)
+                self.assertEqual(value, proof.artifact)
+
+    def test_source_crossing_and_projection_mutation_fail_closed(self):
+        value = self._load_fixture("en")
+        crossed = copy.deepcopy(value)
+        crossed["source_group"]["group_id"] = "group-synthetic-crossed"
+        with self.assertRaisesRegex(ValueError, "does not match validated sources"):
+            board_validator.validate_private_first_interview_conversion_board_v1(crossed)
+
+        changed_projection = copy.deepcopy(value)
+        changed_projection["decision"][0]["objective"] = "caller supplied final row"
+        with self.assertRaisesRegex(ValueError, "does not match validated sources"):
+            board_validator.validate_private_first_interview_conversion_board_v1(changed_projection)
+
+    def test_source_mutation_after_validation_does_not_mutate_frozen_proof(self):
+        source = self._load_fixture("en")["source_group"]
+        proof = board_validator.validate_private_first_interview_conversion_board_v1(source)
+        source["plan_days"][0]["action"] = "changed after validation"
+        self.assertEqual("Review role context privately", proof.source_group["plan_days"][0]["action"])
+        self.assertEqual("Review role context privately", proof.artifact["week"][0]["private_action"])
+
+    def test_validator_rejects_unsafe_prose_pii_secret_url_html_and_control_text(self):
+        cases = (
+            ("https://example.invalid/private",),
+            ("candidate Maria Brown",),
+            ("secret credential value",),
+            ("<script>alert(1)</script>",),
+            ("send this calendar event",),
+            ("fit score probability guarantee salary",),
+            ("unsafe\u200bcontrol",),
+        )
+        for (payload,) in cases:
+            with self.subTest(payload=payload):
+                source = self._load_fixture("en")["source_group"]
+                source["first_interview_7_day_plan"]["fact_summary"] = payload
+                with self.assertRaisesRegex(ValueError, "does not match validated sources"):
+                    board_validator.validate_private_first_interview_conversion_board_v1(source)
+
+    def test_forged_or_duck_typed_proof_is_not_accepted(self):
+        class Forged:
+            artifact = self._load_fixture("en")
+
+        with self.assertRaises(TypeError):
+            board_validator._identity._validation_payload_json(Forged())
+
+    def test_duplicate_keys_are_rejected_during_proof_revalidation(self):
+        value = self._load_fixture("en")
+        source_json = json.dumps(value["source_group"], ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        duplicate_json = '{"schema_version":"private-first-interview-conversion-board-v1","schema_version":"forged"}'
+        forged = board_validator._identity._issue_validated_private_first_interview_conversion_board(
+            duplicate_json, source_json
+        )
+        with self.assertRaisesRegex(ValueError, "does not match validated sources"):
+            board_validator._revalidate_validated_private_first_interview_conversion_board(forged)
 
 
 if __name__ == "__main__":
