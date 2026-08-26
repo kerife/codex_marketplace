@@ -43,6 +43,28 @@ experience cannot be replaced by learning, a lab, a course, or a certificate.
 The route produces a private draft and no external action: it never applies,
 edits a profile, sends a message, enrolls, purchases, or schedules.
 
+## Private learning proof sprint routing
+
+When the validated v3 learning decision contains exactly one
+`decision_code=build_bounded_proof` row, the root may hand the decision and one
+validated `candidate-fact-matrix-v1` to
+`build_validated_learning_proof_sprint_v1`. This is the only sprint input: do
+not accept caller-authored plan/day/reuse rows, a second vacancy selector, or
+an unbound project description. The builder derives the vacancy IDs,
+requirement IDs, and usable candidate fact IDs from those frozen sources and
+returns one opaque `learning-proof-sprint-v1` snapshot. A missing, conflicting,
+forbidden, unsupported, stale, or locale-mismatched source yields no sprint.
+
+Pass that same opaque snapshot to the JSON writer and private HTML renderer.
+Each consumer revalidates the complete source binding before serializing bytes
+or reading renderer assets. The artifact contains exactly one plan, five
+ordered checkpoints, and three reuse maps for `linkedin`, `application_packet`,
+and `interview`. The handoffs are manual re-entry cues only; they do not publish
+or upload a project, edit LinkedIn, create an application, send a message,
+schedule a calendar item, enroll, purchase, or start interview preparation.
+Client-visible delivery stays identity-free and ends with the localized
+no-external-action boundary.
+
 ## Recruiter-conversion observation routing
 
 An explicit conversion receipt is a candidate-supplied observation only, not a candidate identity claim, aggregate, causal explanation, score, fit, or outcome proof. Apply this exact mapping: `contact_received` and `reply_received` → `clarify_context_before_reply`; `referral_received` → `prepare_fact_checked_summary`; `screen_requested` and `interview_requested` → `route_to_prepare-role-interviews`; `stop_decision` → `record_stop_decision`. The mapped value is a manual next step only. It must not auto-start a module, create a module packet, send, schedule, or create a calendar item. Keep normal CSV/outcome measurement and ordinary recruiter-reply and LinkedIn routes unchanged when the receipt is absent.

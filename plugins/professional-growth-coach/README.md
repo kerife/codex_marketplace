@@ -54,6 +54,23 @@ learning group. Partial or crossed groups fail before output. These flags read
 local identity-free artifacts only; they do not apply, edit a profile, message,
 purchase, enroll, schedule, or publish.
 
+### Private learning proof sprint v1
+
+When a validated v3 decision selects `build_bounded_proof`, the learning module
+can derive a private `learning-proof-sprint-v1` from exactly one decision and one
+validated `candidate-fact-matrix-v1`. The builder derives vacancy, requirement,
+and usable fact IDs; callers cannot provide sprint rows or choose a second target.
+It emits exactly one plan, five ordered checkpoints, and three private reuse maps
+for LinkedIn, the application packet, and interview preparation. The JSON and HTML
+writers accept only the opaque validator snapshot, preserve mode `600`, and keep
+`external_action_authorized=false`.
+
+The offline renderer presents a semantic five-day timeline and three handoff cards
+in Spanish or English. It has responsive, print, dark-mode, forced-colors, and
+reduced-motion hooks, but no buttons, external links, forms, or automated handoff.
+The artifact is a review plan, not a published project, credential, interview
+prediction, application, message, upload, enrollment, purchase, or calendar action.
+
 ### Private vacancy application packet v1
 
 When recomputed eligibility selects `prepare_private_vacancy_packet`, the root

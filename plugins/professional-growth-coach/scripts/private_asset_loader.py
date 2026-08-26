@@ -26,6 +26,8 @@ CANONICAL_RENDERER_ASSETS = (
     "assets/private-recruiter-followthrough-checkpoint-v1.css",
     "assets/private-recruiter-conversion-outcome-v1.html",
     "assets/private-recruiter-conversion-outcome-v1.css",
+    "assets/learning-proof-sprint-v1.html",
+    "assets/learning-proof-sprint-v1.css",
 )
 
 

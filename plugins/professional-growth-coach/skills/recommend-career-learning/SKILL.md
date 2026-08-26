@@ -74,3 +74,10 @@ Include a `do_nothing_now` option when evidence is weak, cost/time is disproport
 ## Safety and action gates
 
 Drafting a plan is allowed. Confidence from a single source or one active vacancy must not exceed low confidence. Do not claim a certificate causes interviews, offers, salary increases, time-to-hire improvement, or hiring ROI. Use bounded hypothesis language. Never predict an interview. Never predict a job. Never predict an offer. Never predict salary. Never predict time-to-hire. Never predict ROI. An explicit refusal to predict is allowed, but do not follow the refusal with a percentage, hiring-speed range, weeks-sooner estimate, or other unsupported forecast. Do not enroll, purchase, schedule an exam, submit reimbursement, publish a portfolio artifact, message a provider, or share candidate work without exact action-and-target authorization immediately before execution. Portfolio or project recommendations still require candidate isolation, candidate-owned evidence project checks, ownership, documented rights-holder permission when applicable, public-disclosure permission, secrets review, customer data review, and confidentiality review.
+
+For an eligible `build_bounded_proof` decision, the optional private execution
+artifact is `learning-proof-sprint-v1`. Derive it from the validated v3 decision
+and one candidate-fact matrix, with exactly five ordered checkpoints and three
+reuse maps. Keep it draft-only and manual; a handoff is never permission to
+publish, share, upload, message, enroll, purchase, schedule, or start interview
+preparation.

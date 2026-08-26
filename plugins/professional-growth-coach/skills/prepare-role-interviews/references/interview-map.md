@@ -29,6 +29,15 @@ For every likely question, capture `question ID=Q-###`, `vacancy requirement ID=
 
 For recruiter screens, add exactly one `interview_asset_integration_plan=linkedin_learning_proof_to_screen_practice` row near the traceability matrix. This row is the bridge from profile, learning, and proof assets into private screen practice. Required fields are `source_profile_asset`, `source_learning_asset`, `source_proof_asset`, `target_stage=recruiter screen`, `target_question_ids`, `target_requirement_ids`, `candidate_fact_ids`, `asset_use_decision=use_private_practice_only|defer_until_verified|block`, `profile_claim_to_rehearse`, `proof_artifact_to_prepare`, `learning_gap_to_bridge`, `red_line_claims`, `practice_task`, `review_gate`, `outcome_boundary=not_an_interview_offer_salary_or_roi_prediction`, `draft_only=true`, and `no_external_action=true`. Use it to explicitly connect LinkedIn/profile wording, proof artifacts, and learning/portfolio gaps to the screen question without claiming unsupported experience. Do not publish, send, schedule, share, or treat an artifact as public proof without exact action-and-target authorization and the required ownership, secrets, confidentiality, and public-disclosure review.
 
+When a private `learning-proof-sprint-v1` map targets `interview`, use it only as
+manual input to a later, explicit preparation request. Recheck the vacancy and
+candidate fact inputs, preserve the sprint's artifact boundary, and wait for a
+candidate answer before scoring or revising it. The map never creates a practice
+session, transfers an answer, starts a module, schedules a screen, or claims an
+interview outcome. Keep the `linkedin` and `application_packet` maps private and
+out of interview copy unless the candidate reviews the exact claim and
+authorizes the exact action and target.
+
 | Stage | Map question to | Preparation boundary |
 | --- | --- | --- |
 | recruiter screen | motivation, scope, logistics | Never claim company process; ask it. |

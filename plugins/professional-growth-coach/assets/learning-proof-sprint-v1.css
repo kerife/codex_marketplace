@@ -1,0 +1,384 @@
+:root {
+  --paper: #f6f4ee;
+  --surface: #ffffff;
+  --ink: #1b1c1a;
+  --forest: #173e30;
+  --forest-soft: #dce5e0;
+  --coral: #b9513a;
+  --coral-soft: #f6e0da;
+  --decision-term: #dfbf70;
+  --line: #6f8175;
+  --muted: #46534d;
+  --measure: 72ch;
+  --serif: Georgia, "Times New Roman", Times, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { color-scheme: light; background: var(--paper); }
+
+.learning-proof-sprint-document {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.learning-proof-sprint-document :focus-visible {
+  outline: 3px solid var(--coral);
+  outline-offset: 3px;
+}
+
+.learning-proof-sprint-document .skip-link {
+  position: fixed;
+  z-index: 10;
+  top: .5rem;
+  left: .5rem;
+  transform: translateY(-200%);
+  padding: .75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--forest);
+  color: var(--forest);
+  font-weight: 700;
+}
+
+.learning-proof-sprint-document .skip-link:focus { transform: none; }
+
+.learning-proof-sprint-document .sprint-shell {
+  width: min(960px, calc(100% - 2rem));
+  margin-inline: auto;
+  padding-block: 2rem 3rem;
+}
+
+.learning-proof-sprint-document .sprint-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-block: 0 1.5rem;
+  border-bottom: 1px solid var(--forest);
+}
+
+.learning-proof-sprint-document .sprint-kicker,
+.learning-proof-sprint-document .sprint-label {
+  margin: 0;
+  color: var(--forest);
+  font-size: .8125rem;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.learning-proof-sprint-document h1,
+.learning-proof-sprint-document h2,
+.learning-proof-sprint-document h3,
+.learning-proof-sprint-document h4 { font-family: var(--serif); }
+
+.learning-proof-sprint-document h1 {
+  max-width: 18ch;
+  margin: .2rem 0 0;
+  font-size: clamp(2rem, 6vw, 3.25rem);
+  font-style: italic;
+  line-height: 1.04;
+}
+
+.learning-proof-sprint-document h2,
+.learning-proof-sprint-document h3,
+.learning-proof-sprint-document h4 { margin: 0; line-height: 1.16; }
+
+.learning-proof-sprint-document h2 { color: var(--forest); font-size: clamp(1.35rem, 3vw, 1.85rem); }
+.learning-proof-sprint-document h3 { font-size: clamp(1.15rem, 2.2vw, 1.45rem); }
+.learning-proof-sprint-document h4 { font-size: 1rem; }
+
+.learning-proof-sprint-document .sprint-intro {
+  max-width: var(--measure);
+  margin: .75rem 0 0;
+  color: var(--muted);
+}
+
+.learning-proof-sprint-document .sprint-status {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: .45rem .7rem;
+  border: 1px solid var(--forest);
+  background: var(--forest-soft);
+  color: var(--forest);
+  font-size: .875rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.learning-proof-sprint-document .sprint-plan,
+.learning-proof-sprint-document .sprint-timeline-section,
+.learning-proof-sprint-document .sprint-handoffs-section { padding-top: 2rem; }
+
+.learning-proof-sprint-document .section-heading { margin-bottom: 1rem; }
+.learning-proof-sprint-document .section-heading h2 { margin-top: .2rem; }
+
+.learning-proof-sprint-document .sprint-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+
+.learning-proof-sprint-document .sprint-plan-grid > div {
+  min-width: 0;
+  padding: 1rem;
+  background: var(--surface);
+}
+
+.learning-proof-sprint-document .sprint-plan-grid > div:last-child { grid-column: 1 / -1; }
+
+.learning-proof-sprint-document dt,
+.learning-proof-sprint-document .field-label {
+  color: var(--muted);
+  font-size: .8125rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+
+.learning-proof-sprint-document dd { margin: .35rem 0 0; }
+
+.learning-proof-sprint-document .sprint-timeline {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.learning-proof-sprint-document .sprint-timeline::before {
+  position: absolute;
+  top: 1rem;
+  bottom: 1rem;
+  left: 1.4rem;
+  width: 2px;
+  background: var(--forest);
+  content: "";
+}
+
+.learning-proof-sprint-document .sprint-day {
+  position: relative;
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  gap: 1rem;
+  min-width: 0;
+}
+
+.learning-proof-sprint-document .sprint-day-marker {
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  align-self: start;
+  width: 2.8rem;
+  height: 2.8rem;
+  border: 2px solid var(--forest);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--forest);
+  font-weight: 800;
+}
+
+.learning-proof-sprint-document .sprint-day-card,
+.learning-proof-sprint-document .sprint-handoff {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 1px 0 rgb(23 62 48 / 10%);
+}
+
+.learning-proof-sprint-document .sprint-day-card > * + *,
+.learning-proof-sprint-document .sprint-handoff > * + * { margin-top: .9rem; }
+
+.learning-proof-sprint-document .sprint-day-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--forest-soft);
+  padding-bottom: .65rem;
+}
+
+.learning-proof-sprint-document .sprint-day-label,
+.learning-proof-sprint-document .handoff-index {
+  margin: 0;
+  color: var(--forest);
+  font-size: .8125rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.learning-proof-sprint-document .sprint-day-facts,
+.learning-proof-sprint-document .sprint-handoff-facts { display: grid; gap: .75rem; margin: 0; }
+
+.learning-proof-sprint-document .sprint-day-facts > div,
+.learning-proof-sprint-document .sprint-handoff-facts > div { min-width: 0; }
+
+.learning-proof-sprint-document .sprint-proof-check,
+.learning-proof-sprint-document .sprint-acceptance {
+  padding: .8rem;
+  border-left: 4px solid var(--forest);
+  background: var(--forest-soft);
+}
+
+.learning-proof-sprint-document .sprint-risk-check,
+.learning-proof-sprint-document .sprint-blocked-claims {
+  padding: .8rem;
+  border-left: 4px solid var(--coral);
+  background: var(--coral-soft);
+}
+
+.learning-proof-sprint-document .sprint-proof-check p,
+.learning-proof-sprint-document .sprint-acceptance p,
+.learning-proof-sprint-document .sprint-risk-check p,
+.learning-proof-sprint-document .sprint-blocked-claims p,
+.learning-proof-sprint-document .sprint-safe-action p { margin: .3rem 0 0; }
+
+.learning-proof-sprint-document .sprint-safe-action {
+  margin: 0;
+  color: var(--forest);
+  font-weight: 700;
+}
+
+.learning-proof-sprint-document .sprint-handoffs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: handoff;
+}
+
+.learning-proof-sprint-document .sprint-handoff { border-top: 4px solid var(--forest); }
+.learning-proof-sprint-document .sprint-handoff:nth-child(2) { border-top-color: var(--decision-term); }
+.learning-proof-sprint-document .sprint-handoff:nth-child(3) { border-top-color: var(--coral); }
+
+.learning-proof-sprint-document .sprint-handoff-header {
+  display: flex;
+  align-items: baseline;
+  gap: .75rem;
+}
+
+.learning-proof-sprint-document .sprint-boundary {
+  margin-top: 2rem;
+  padding: 1rem;
+  border: 1px solid var(--coral);
+  border-left-width: 4px;
+  background: var(--coral-soft);
+}
+
+.learning-proof-sprint-document .sprint-boundary h2 { color: var(--ink); font-size: 1.2rem; }
+.learning-proof-sprint-document .sprint-boundary p { max-width: var(--measure); margin: .45rem 0 0; }
+
+.learning-proof-sprint-document .sprint-footer {
+  width: min(960px, calc(100% - 2rem));
+  margin-inline: auto;
+  padding-block: 1rem 2rem;
+  border-top: 1px solid var(--forest);
+  color: var(--muted);
+  font-size: .875rem;
+}
+
+.learning-proof-sprint-document .sprint-footer p { margin: .35rem 0 0; }
+
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --paper: #101521;
+    --surface: #182235;
+    --ink: #f3f6ff;
+    --muted: #b8c4d8;
+    --line: #5f718e;
+    --forest: #8fc9b0;
+    --forest-soft: #223b35;
+    --coral: #ff9f8d;
+    --coral-soft: #3f282d;
+    --decision-term: #f5d68a;
+  }
+  html,
+  .learning-proof-sprint-document { background: var(--paper); color: var(--ink); }
+}
+
+@media (max-width: 640px) {
+  .learning-proof-sprint-document .sprint-shell,
+  .learning-proof-sprint-document .sprint-footer { width: min(100% - 1rem, 960px); }
+  .learning-proof-sprint-document .sprint-header { align-items: start; flex-direction: column; }
+  .learning-proof-sprint-document .sprint-status { text-align: left; }
+  .learning-proof-sprint-document .sprint-plan-grid,
+  .learning-proof-sprint-document .sprint-handoffs { grid-template-columns: 1fr; }
+  .learning-proof-sprint-document .sprint-plan-grid > div:last-child { grid-column: auto; }
+  .learning-proof-sprint-document .sprint-day { grid-template-columns: 2.4rem minmax(0, 1fr); gap: .65rem; }
+  .learning-proof-sprint-document .sprint-day-marker { width: 2.3rem; height: 2.3rem; }
+  .learning-proof-sprint-document .sprint-timeline::before { left: 1.15rem; }
+  .learning-proof-sprint-document .sprint-day-header { align-items: start; flex-direction: column; gap: .25rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learning-proof-sprint-document *,
+  .learning-proof-sprint-document *::before,
+  .learning-proof-sprint-document *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .learning-proof-sprint-document .skip-link { background: Canvas; border-color: CanvasText; color: CanvasText; }
+  .learning-proof-sprint-document main:focus-visible { outline-color: Highlight; }
+  .learning-proof-sprint-document .sprint-plan-grid,
+  .learning-proof-sprint-document .sprint-day-card,
+  .learning-proof-sprint-document .sprint-handoff,
+  .learning-proof-sprint-document .sprint-boundary,
+  .learning-proof-sprint-document .sprint-proof-check,
+  .learning-proof-sprint-document .sprint-acceptance,
+  .learning-proof-sprint-document .sprint-risk-check,
+  .learning-proof-sprint-document .sprint-blocked-claims { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .learning-proof-sprint-document .sprint-kicker,
+  .learning-proof-sprint-document .sprint-label,
+  .learning-proof-sprint-document .sprint-day-label,
+  .learning-proof-sprint-document .sprint-safe-action,
+  .learning-proof-sprint-document h2 { color: CanvasText; }
+  .learning-proof-sprint-document .sprint-status { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .learning-proof-sprint-document .sprint-timeline::before { background: CanvasText; }
+  .learning-proof-sprint-document .sprint-day-marker { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .learning-proof-sprint-document .sprint-footer { color: CanvasText; border-color: CanvasText; }
+}
+
+@media (prefers-contrast: more) {
+  .learning-proof-sprint-document .sprint-day-card,
+  .learning-proof-sprint-document .sprint-handoff,
+  .learning-proof-sprint-document .sprint-boundary { border-width: 2px; box-shadow: none; }
+  .learning-proof-sprint-document .sprint-label,
+  .learning-proof-sprint-document .sprint-day-label { text-decoration: underline; text-decoration-thickness: .12em; }
+}
+
+@page { size: auto; margin: 14mm; }
+
+@media print {
+  .learning-proof-sprint-document { background: #fff; font-size: 11pt; }
+  .learning-proof-sprint-document .skip-link { display: none !important; }
+  .learning-proof-sprint-document .sprint-shell,
+  .learning-proof-sprint-document .sprint-footer { width: auto; }
+  .learning-proof-sprint-document .sprint-header { display: block; }
+  .learning-proof-sprint-document .sprint-status { display: inline-block; margin-top: .75rem; }
+  .learning-proof-sprint-document .sprint-plan-grid,
+  .learning-proof-sprint-document .sprint-day-card,
+  .learning-proof-sprint-document .sprint-handoff,
+  .learning-proof-sprint-document .sprint-boundary,
+  .learning-proof-sprint-document .sprint-footer { break-inside: avoid; page-break-inside: avoid; }
+  .learning-proof-sprint-document .sprint-day-card,
+  .learning-proof-sprint-document .sprint-handoff { box-shadow: none; }
+  .learning-proof-sprint-document .sprint-handoffs { grid-template-columns: 1fr; }
+  .learning-proof-sprint-document .sprint-day-marker { background: #fff; }
+}

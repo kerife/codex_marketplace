@@ -41,6 +41,33 @@ Require `artifact_type=private_vacancy_application_packet`, packet-matching vers
 
 Missing, crossed, stale, invalid, failed, or partial inputs produce no client artifact claim and no fallback packet. The legacy textual `application_claim_review_matrix` remains available only for ordinary text asset evaluation; do not treat it as the versioned schema, receipt, consent, or authorization. Its compatibility vocabulary remains `candidate_id`, `target_vacancy_id`, `matched_evidence`, `role_requirements`, `unsupported_or_missing_claims`, `recruiter_summary`, `message_angle`, `first_interview_prep_handoff`, `tracking_event`, `approval_gate`, `draft_only=true`, `consent=not_granted`, and `causality_boundary=no_outcome_guarantee`; none is a v1 client-delivery field. Root delivery exposes only the four client fields and the localized no-external-action line, never candidate/fact/source/snapshot IDs, bindings, raw source prose, paths other than the verified local artifact link, or receipt JSON.
 
+## Private learning proof sprint handoff
+
+The `learning-proof-sprint-v1` artifact is a separate private handoff, not an
+application packet. Build it only from one validated `career-learning-decision-v3`
+with `decision_code=build_bounded_proof` and one validated candidate fact matrix:
+
+```text
+validated_sprint = build_validated_learning_proof_sprint_v1({
+    "decision": validated_learning_decision_v3,
+    "candidate_fact_matrix": validated_candidate_fact_matrix,
+})
+json_receipt = write_learning_proof_sprint_v1(validated_sprint, private_json_output)
+html_receipt = write_learning_proof_sprint_html(validated_sprint, private_html_output)
+```
+
+The builder derives the sprint plan, five ordered day rows, and exactly three
+reuse maps; callers cannot inject those rows or a second vacancy/fact selector.
+Both consumers revalidate the same opaque snapshot before writing. The JSON
+receipt has `artifact_type=learning_proof_sprint`,
+`schema_version=learning-proof-sprint-v1`, `private_draft=true`, and
+`external_action_authorized=false`; the HTML receipt has
+`artifact_type=text/html`, the resolved local artifact path, and the locale.
+The three maps are private re-entry cues
+for profile copy, application evidence, and interview practice. They do not
+publish, upload, share, message, enroll, purchase, schedule, or claim an
+interview, offer, salary, or hiring ROI.
+
 ## Portfolio and export
 
 Portfolio evidence plans name the candidate fact ID, the intended demonstration, and evidence that the candidate owns the material or has documented rights-holder permission explicitly covering public disclosure. Candidate approval alone cannot authorize employer or third-party material. Secrets and customer data are always forbidden, even with candidate approval or rights-holder permission; never include credentials, tokens, private keys, or customer data.

@@ -42,6 +42,16 @@ When `recommended_next_action=candidate-owned evidence project`, add one `learni
 
 After the proof sprint, add exactly three `learning_evidence_reuse_map=proof_artifact_to_job_search_asset` rows for `target_asset=linkedin`, `target_asset=application_packet`, and `target_asset=interview`. Each row must map concrete sprint artifacts to one downstream job-search asset without taking external action. Required fields are `candidate_id`, `source_sprint_artifacts`, `reuse_goal`, `safe_claim`, `proof_boundary`, `required_review`, `blocked_claims`, `handoff_module`, `acceptance_test`, `authorization_gate=exact_action_and_target_authorization_before_publication_sharing_upload_or_message`, `outcome_boundary=not_an_interview_offer_salary_or_roi_prediction`, `draft_only=true`, and `no_external_action=true`. Use `handoff_module=optimize-professional-profile` for LinkedIn, `handoff_module=optimize-career-assets` for the application packet, and `handoff_module=prepare-role-interviews` for the interview. The map must state what can be reused privately, what must stay out of public copy, and what review is required before publication, upload, sharing, or messaging.
 
+The structured implementation of this contract is `learning-proof-sprint-v1`.
+Build it only from one source-recomputed v3 decision with
+`decision_code=build_bounded_proof` and one source-validated candidate fact
+matrix. The builder, validator, JSON writer, and offline HTML renderer derive
+the plan, days, and maps; they do not accept caller-supplied sprint rows. The
+validated snapshot is private, deterministic, and manual-only. Its renderer is
+a five-day timeline plus three handoff cards with no controls or external links;
+the maps are re-entry cues, not permission to publish, share, upload, message,
+enroll, purchase, schedule, or claim a hiring outcome.
+
 Every provider option needs `decision_basis` containing `official provider source`. Every candidate-owned artifact option needs `decision_basis` containing `candidate-owned evidence`. Every provider option needs `next_action_gate` containing `purchase or enrollment requires exact authorization`. Draft-only, bridge-role, and no-action options use a `next_action_gate` that starts with `no external action`.
 
 For every provider option, treat the official-source row as a purchase/enrollment risk register, not just a citation. It must keep `current_cost`, `currency`, `tax`, `duration`, `prerequisite`, `renewal`, `maintenance`, `geography`, `availability`, and `unknowns` separate before any recommendation can mention paying, enrolling, registering, creating an account, scheduling an exam, or submitting reimbursement. Do not merge `renewal` and `maintenance`. Do not overclaim Mexico eligibility unless the official source explicitly verifies it; otherwise state `geography=unknown:`. If the provider source is stale, expired, unavailable, or missing a material field, the option can only be a bounded draft recommendation with the missing evidence named and a fresh-source review required before action.

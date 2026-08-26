@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <title>{{TITLE}}</title>
+  <style>{{INLINE_CSS}}</style>
+</head>
+<body class="learning-proof-sprint-document">
+  <a class="skip-link" href="#main-content">{{SKIP}}</a>
+  <main id="main-content" class="sprint-shell" tabindex="-1">
+    <header class="sprint-header">
+      <div>
+        <p class="sprint-kicker">{{KICKER}}</p>
+        <h1>{{HEADING}}</h1>
+        <p class="sprint-intro">{{INTRO}}</p>
+      </div>
+      <p class="sprint-status" aria-label="{{STATUS_LABEL}}">{{STATUS}}</p>
+    </header>
+
+    <section class="sprint-plan" aria-labelledby="sprint-plan-heading">
+      <div class="section-heading">
+        <p class="sprint-label">{{PLAN_LABEL}}</p>
+        <h2 id="sprint-plan-heading">{{PLAN_HEADING}}</h2>
+      </div>
+      {{PLAN}}
+    </section>
+
+    <section class="sprint-timeline-section" aria-labelledby="sprint-timeline-heading">
+      <div class="section-heading">
+        <p class="sprint-label">{{TIMELINE_LABEL}}</p>
+        <h2 id="sprint-timeline-heading">{{TIMELINE_HEADING}}</h2>
+      </div>
+      <ol class="sprint-timeline">
+        {{DAYS}}
+      </ol>
+    </section>
+
+    <section class="sprint-handoffs-section" aria-labelledby="sprint-handoffs-heading">
+      <div class="section-heading">
+        <p class="sprint-label">{{HANDOFFS_LABEL}}</p>
+        <h2 id="sprint-handoffs-heading">{{HANDOFFS_HEADING}}</h2>
+      </div>
+      <ol class="sprint-handoffs">
+        {{HANDOFFS}}
+      </ol>
+    </section>
+
+    <aside class="sprint-boundary" aria-labelledby="sprint-boundary-heading">
+      <h2 id="sprint-boundary-heading">{{BOUNDARY_HEADING}}</h2>
+      <p>{{BOUNDARY}}</p>
+    </aside>
+  </main>
+  <footer class="sprint-footer">
+    <strong>{{FOOTER}}</strong>
+    <p>{{EMPLOYMENT_BOUNDARY}}</p>
+  </footer>
+</body>
+</html>

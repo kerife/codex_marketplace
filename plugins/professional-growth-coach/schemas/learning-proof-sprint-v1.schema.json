@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/professional-growth-coach/learning-proof-sprint-v1.schema.json",
+  "title": "Learning Proof Sprint v1",
+  "type": "object",
+  "required": ["schema_version", "locale", "case_scope", "plan", "days", "reuse_map", "source_snapshot", "privacy_boundary", "outcome_boundary", "draft_only", "no_external_action"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "learning-proof-sprint-v1"},
+    "locale": {"enum": ["es", "en"]},
+    "case_scope": {"const": "single_candidate"},
+    "plan": {"$ref": "#/$defs/plan"},
+    "days": {"type": "array", "minItems": 5, "maxItems": 5, "items": {"$ref": "#/$defs/day"}},
+    "reuse_map": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"$ref": "#/$defs/reuse"}},
+    "source_snapshot": {"type": "string", "pattern": "^snap-learning-proof-sprint-sha256-[0-9a-f]{64}$"},
+    "privacy_boundary": {"const": "candidate-owned-private-draft"},
+    "outcome_boundary": {"const": "not_an_interview_offer_salary_or_roi_prediction"},
+    "draft_only": {"const": true},
+    "no_external_action": {"const": true}
+  },
+  "$defs": {
+    "candidateId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+    "stableId": {"type": "string", "pattern": "^[A-Z]-[0-9]{1,12}$"},
+    "text": {"type": "string", "minLength": 1, "maxLength": 2048},
+    "plan": {
+      "type": "object",
+      "required": ["plan_id", "kind", "candidate_id", "source_decision", "sprint_goal", "target_gap", "deliverable", "vacancy_ids", "candidate_fact_ids", "review_model", "publication_gate", "outcome_boundary", "draft_only", "no_external_action"],
+      "additionalProperties": false,
+      "properties": {
+        "plan_id": {"const": "LPS-PLAN-001"},
+        "kind": {"const": "learning_proof_sprint_plan"},
+        "candidate_id": {"$ref": "#/$defs/candidateId"},
+        "source_decision": {"$ref": "#/$defs/text"},
+        "sprint_goal": {"$ref": "#/$defs/text"},
+        "target_gap": {"$ref": "#/$defs/text"},
+        "deliverable": {"$ref": "#/$defs/text"},
+        "vacancy_ids": {"type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true, "items": {"$ref": "#/$defs/stableId"}},
+        "candidate_fact_ids": {"type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true, "items": {"$ref": "#/$defs/stableId"}},
+        "review_model": {"const": "daily_private_review_then_final_candidate_review"},
+        "publication_gate": {"const": "exact_action_and_target_authorization_after_ownership_secrets_confidentiality_and_public_disclosure_review"},
+        "outcome_boundary": {"const": "not_an_interview_offer_salary_or_roi_prediction"},
+        "draft_only": {"const": true},
+        "no_external_action": {"const": true}
+      }
+    },
+    "day": {
+      "type": "object",
+      "required": ["day_id", "kind", "candidate_id", "day_number", "daily_goal", "artifact_piece", "proof_check", "risk_check", "acceptance_test", "candidate_timebox", "owner", "measurement_signal", "next_safe_action", "draft_only", "no_external_action"],
+      "additionalProperties": false,
+      "properties": {
+        "day_id": {"type": "string", "pattern": "^LPS-DAY-00[1-5]$"},
+        "kind": {"const": "learning_proof_sprint_day"},
+        "candidate_id": {"$ref": "#/$defs/candidateId"},
+        "day_number": {"type": "integer", "minimum": 1, "maximum": 5},
+        "daily_goal": {"$ref": "#/$defs/text"},
+        "artifact_piece": {"$ref": "#/$defs/text"},
+        "proof_check": {"$ref": "#/$defs/text"},
+        "risk_check": {"$ref": "#/$defs/text"},
+        "acceptance_test": {"$ref": "#/$defs/text"},
+        "candidate_timebox": {"type": "string", "pattern": "^[0-9]+_(?:hours|minutes)$"},
+        "owner": {"enum": ["candidate", "candidate_with_coach_review"]},
+        "measurement_signal": {"$ref": "#/$defs/text"},
+        "next_safe_action": {"$ref": "#/$defs/text"},
+        "draft_only": {"const": true},
+        "no_external_action": {"const": true}
+      }
+    },
+    "reuse": {
+      "type": "object",
+      "required": ["reuse_id", "kind", "candidate_id", "target_asset", "source_sprint_artifacts", "reuse_goal", "safe_claim", "proof_boundary", "required_review", "blocked_claims", "handoff_module", "acceptance_test", "authorization_gate", "outcome_boundary", "draft_only", "no_external_action"],
+      "additionalProperties": false,
+      "properties": {
+        "reuse_id": {"type": "string", "pattern": "^LPS-REUSE-00[1-3]$"},
+        "kind": {"const": "learning_evidence_reuse_map"},
+        "candidate_id": {"$ref": "#/$defs/candidateId"},
+        "target_asset": {"enum": ["linkedin", "application_packet", "interview"]},
+        "source_sprint_artifacts": {"type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+        "reuse_goal": {"$ref": "#/$defs/text"},
+        "safe_claim": {"$ref": "#/$defs/text"},
+        "proof_boundary": {"$ref": "#/$defs/text"},
+        "required_review": {"$ref": "#/$defs/text"},
+        "blocked_claims": {"$ref": "#/$defs/text"},
+        "handoff_module": {"enum": ["optimize-professional-profile", "optimize-career-assets", "prepare-role-interviews"]},
+        "acceptance_test": {"$ref": "#/$defs/text"},
+        "authorization_gate": {"const": "exact_action_and_target_authorization_before_publication_sharing_upload_or_message"},
+        "outcome_boundary": {"const": "not_an_interview_offer_salary_or_roi_prediction"},
+        "draft_only": {"const": true},
+        "no_external_action": {"const": true}
+      }
+    }
+  }
+}
