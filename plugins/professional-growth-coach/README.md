@@ -152,6 +152,9 @@ feedback, or provenance metadata.
 Ready boards and awaiting sessions include a localized, non-interactive
 re-entry capsule that explains the bounded answer shape; blocked and final
 states do not invite another response.
+The board also projects every closed risk, quality, score, authorization, and
+blocked-action enum into localized human copy. Unknown enum values fail closed
+and never appear in the rendered artifact.
 Unsafe answers, crossed sessions, and stale handoffs fail closed. No external
 action is performed.
 

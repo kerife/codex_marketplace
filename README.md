@@ -102,6 +102,9 @@ clear even before opening the private artifact.
 Ready boards and unanswered sessions also show a static private re-entry
 capsule with the expected context/action/result shape; blocked and final states
 omit it.
+The v2 board keeps its closed schema enums internal and renders risk topics,
+signal quality, pre-response score, authorization, and blocked actions with
+localized human labels; an unknown enum fails closed without being echoed.
 
 ## Installation
 

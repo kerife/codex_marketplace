@@ -56,6 +56,10 @@ does not invite another rehearsal.
 Ready boards and unanswered sessions may show a static re-entry capsule that
 describes the bounded context/action/result answer shape; it is omitted for
 blocked and terminal states and never creates a form or external action.
+Visible board labels for risk topics, signal quality, the pre-response score,
+authorization, and prohibited actions are localized projections of closed
+internal enums. If a value is outside those maps, fail closed with the generic
+renderer diagnostic and do not echo the raw value.
 
 The private first-interview handoff may be advanced only by the explicit
 `build_private_first_interview_practice_feedback` boundary. It accepts one

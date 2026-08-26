@@ -229,3 +229,6 @@ keeping answer text and provenance metadata out of the summary.
 Ready boards and awaiting sessions use a compact re-entry capsule for the one
 private next action; it remains static, localized, and absent from blocked or
 terminal states.
+The visual layer renders closed risk, quality, score, authorization, and
+prohibited-action enums as localized human labels; unsupported values stay out
+of the UI through a generic fail-closed diagnostic.

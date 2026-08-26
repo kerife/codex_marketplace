@@ -52,6 +52,13 @@ def _list_rows(rows: object, render_row: Any) -> str:
     return "".join(render_row(row, index) for index, row in enumerate(rows, 1))
 
 
+def _closed_label(value: object, labels: Mapping[object, str]) -> str:
+    try:
+        return labels[value]
+    except (KeyError, TypeError):
+        raise PrivateFirstInterviewConversionBoardV2RenderError("private board artifact is unavailable") from None
+
+
 def _render_artifact(artifact: Mapping[str, object]) -> str:
     locale = artifact.get("locale")
     decision_rows = artifact.get("decision")
@@ -104,6 +111,37 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
             "pause": "Pausar y revisar" if es else "Pause and review",
             "stop": "Detener" if es else "End review",
         },
+        "risk_topics": {
+            "production": "Producción" if es else "Production",
+            "compensation": "Compensación" if es else "Compensation",
+            "eligibility": "Elegibilidad" if es else "Eligibility",
+            "availability": "Disponibilidad" if es else "Availability",
+            "confidentiality": "Confidencialidad" if es else "Confidentiality",
+        },
+        "signal_quality": {
+            "strong": "Fuerte" if es else "Strong",
+            "mixed": "Mixta" if es else "Mixed",
+            "weak": "Débil" if es else "Weak",
+            "unknown": "No determinada" if es else "Undetermined",
+        },
+        "scores": {"unknown": "No determinada" if es else "Undetermined"},
+        "allowed_next_steps": {"manual_private_review": "Revisión privada manual" if es else "Manual private review"},
+        "authorization": {True: "Sí" if es else "Yes", False: "No" if es else "No"},
+        "prohibited_actions": {
+            "message": "Enviar mensaje" if es else "Send message",
+            "connect": "Conectar" if es else "Connect",
+            "apply": "Postularse" if es else "Apply",
+            "schedule": "Programar" if es else "Schedule",
+            "calendar_create": "Crear evento de calendario" if es else "Create calendar event",
+            "publish": "Publicar" if es else "Publish",
+            "share": "Compartir" if es else "Share",
+            "upload": "Subir" if es else "Upload",
+            "submit": "Enviar" if es else "Submit",
+            "export": "Exportar" if es else "Export",
+            "external_edit": "Editar externamente" if es else "Edit externally",
+            "purchase": "Comprar" if es else "Purchase",
+            "enroll": "Inscribirse" if es else "Enroll",
+        },
     }
     state = decision.get("state")
     state_label = labels["decision_states"].get(state)
@@ -143,7 +181,7 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         ladder = _list_rows(artifact.get("decision_ladder"), lambda row, i: f'<li class="board-branch"><h3>{_e(_branch_label(row))}</h3><dl>{_paragraph(labels["trigger"], row.get("trigger"))}{_paragraph("Requisito" if es else "Requirement", row.get("evidence_requirement"))}{_paragraph("Acción segura" if es else "Safe action", row.get("next_safe_action"))}{_paragraph("Acción bloqueada" if es else "Blocked action", row.get("blocked_action"))}{_paragraph("Pregunta" if es else "Review question", row.get("review_question"))}</dl></li>')
         sequence = _list_rows(artifact.get("sequence"), lambda row, i: f'<li><span class="board-number">{i}</span><h3>{_e(row.get("label"))}</h3><p>{_e(row.get("description"))}</p></li>')
         proof = _list_rows(artifact.get("proof_cards"), lambda row, i: f'<li class="board-proof-card"><h3>{_e(row.get("vacancy_signal"))}</h3><p>{_e(row.get("evidence_summary"))}</p><p><strong>{_e(labels["details"])}:</strong> {_e(row.get("caveat"))}</p></li>')
-        risks = _list_rows(artifact.get("risk_checks"), lambda row, i: f'<li class="board-risk-card"><h3>{_e(row.get("topic"))}</h3><dl>{_paragraph("Pregunta" if es else "Question", row.get("trigger_question"))}{_paragraph("Límite seguro" if es else "Safe boundary", row.get("safe_response_boundary"))}{_paragraph("Confirmación" if es else "Confirmation", row.get("confirmation_needed"))}{_paragraph("No afirmar" if es else "Do not claim", row.get("forbidden_claim"))}</dl></li>')
+        risks = _list_rows(artifact.get("risk_checks"), lambda row, i: f'<li class="board-risk-card"><h3>{_e(_closed_label(row.get("topic"), labels["risk_topics"]))}</h3><dl>{_paragraph("Pregunta" if es else "Question", row.get("trigger_question"))}{_paragraph("Límite seguro" if es else "Safe boundary", row.get("safe_response_boundary"))}{_paragraph("Confirmación" if es else "Confirmation", row.get("confirmation_needed"))}{_paragraph("No afirmar" if es else "Do not claim", row.get("forbidden_claim"))}</dl></li>')
         rehearsal = artifact.get("rehearsal")
         if not isinstance(rehearsal, Mapping):
             raise PrivateFirstInterviewConversionBoardV2RenderError("private board artifact is unavailable")
@@ -153,20 +191,20 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
             practice_instruction = labels["practice_clarify"]
         else:
             practice_instruction = labels["practice_pause"]
-        practice_gate = f'<section class="board-practice-gate" data-board-state="{_e(state)}" aria-labelledby="practice-gate-heading"><h2 id="practice-gate-heading">{_e(labels["practice_gate"])}</h2><p class="board-practice-question"><strong>{_e(rehearsal.get("question"))}</strong></p><dl class="board-facts">{_paragraph(labels["response_structure"], rehearsal.get("response_structure"))}{_paragraph(labels["score_before_response"], rehearsal.get("pre_response_score"))}</dl><p class="board-practice-instruction">{_e(practice_instruction)}</p><p class="board-boundary">{_e(labels["do_not_share_response"])}</p></section>'
+        practice_gate = f'<section class="board-practice-gate" data-board-state="{_e(state)}" aria-labelledby="practice-gate-heading"><h2 id="practice-gate-heading">{_e(labels["practice_gate"])}</h2><p class="board-practice-question"><strong>{_e(rehearsal.get("question"))}</strong></p><dl class="board-facts">{_paragraph(labels["response_structure"], rehearsal.get("response_structure"))}{_paragraph(labels["score_before_response"], _closed_label(rehearsal.get("pre_response_score"), labels["scores"]))}</dl><p class="board-practice-instruction">{_e(practice_instruction)}</p><p class="board-boundary">{_e(labels["do_not_share_response"])}</p></section>'
         reentry_capsule = (
             f'<aside class="board-reentry-capsule" aria-labelledby="reentry-capsule-heading"><h2 id="reentry-capsule-heading">{_e(labels["reentry_title"])}</h2><p>{_e(labels["reentry_text"])}</p></aside>'
             if state == "ready"
             else ""
         )
         week = _list_rows(artifact.get("week"), lambda row, i: f'<li class="board-day"><h3>{_e(labels["day"])} {_e(row.get("day"))}</h3><p><strong>{_e(row.get("private_action"))}</strong></p><dl>{_paragraph("Límite de evidencia" if es else "Evidence boundary", row.get("evidence_boundary"))}{_paragraph("Punto de revisión" if es else "Review checkpoint", row.get("review_checkpoint"))}{_paragraph("Señal observable" if es else "Observable signal", row.get("observable_signal"))}{_paragraph("Alternativa" if es else "Fallback", row.get("fallback"))}{_paragraph("Regla de parada" if es else "Stop rule", row.get("stop_rule"))}</dl></li>')
-        reviews = _list_rows(artifact.get("daily_reviews"), lambda row, i: f'<li class="board-review"><h3>{_e(labels["day"])} {_e(row.get("day"))}</h3><p><strong>{_e(_branch_label(row))}</strong> · {_e(row.get("signal_quality"))}</p><dl>{_paragraph("Señal" if es else "Signal", row.get("observed_signal"))}{_paragraph("Registro" if es else "Evidence log", row.get("evidence_log"))}{_paragraph("Siguiente acción" if es else "Next action", row.get("next_safe_action"))}{_paragraph("Pregunta del coach" if es else "Coach question", row.get("coach_question"))}</dl></li>')
+        reviews = _list_rows(artifact.get("daily_reviews"), lambda row, i: f'<li class="board-review"><h3>{_e(labels["day"])} {_e(row.get("day"))}</h3><p><strong>{_e(_branch_label(row))}</strong> · {_e(_closed_label(row.get("signal_quality"), labels["signal_quality"]))}</p><dl>{_paragraph("Señal" if es else "Signal", row.get("observed_signal"))}{_paragraph("Registro" if es else "Evidence log", row.get("evidence_log"))}{_paragraph("Siguiente acción" if es else "Next action", row.get("next_safe_action"))}{_paragraph("Pregunta del coach" if es else "Coach question", row.get("coach_question"))}</dl></li>')
         sections.extend((f'<section class="board-ladder" aria-labelledby="ladder-heading"><h2 id="ladder-heading">{_e(labels["ladder"])}</h2><ol class="board-ladder-list">{ladder}</ol></section>', practice_gate, reentry_capsule, f'<section class="board-sequence" aria-labelledby="sequence-heading"><h2 id="sequence-heading">{_e(labels["sequence"])}</h2><ol>{sequence}</ol></section>', f'<section class="board-proof" aria-labelledby="proof-heading"><h2 id="proof-heading">{_e(labels["proof"])}</h2><ul class="board-proof-list">{proof}</ul></section>', f'<section class="board-risks" aria-labelledby="risks-heading"><h2 id="risks-heading">{_e(labels["risks"])}</h2><ul class="board-risk-list">{risks}</ul></section>', f'<section class="board-week" aria-labelledby="week-heading"><h2 id="week-heading">{_e(labels["week"])}</h2><ol class="board-week-list">{week}</ol></section>', f'<section class="board-reviews" aria-labelledby="reviews-heading"><h2 id="reviews-heading">{_e(labels["reviews"])}</h2><ol class="board-review-list">{reviews}</ol></section>'))
     boundary = artifact.get("approval_boundary")
     if not isinstance(boundary, Mapping) or not isinstance(boundary.get("prohibited_actions"), list):
         raise PrivateFirstInterviewConversionBoardV2RenderError("private board artifact is unavailable")
-    prohibited = "".join(f"<li>{_e(action)}</li>" for action in boundary["prohibited_actions"])
-    approval = f'<section class="board-approval-boundary" aria-labelledby="approval-heading"><h2 id="approval-heading">{_e(labels["private"])}</h2><p><strong>{_e("Siguiente paso permitido" if es else "Allowed next step")}:</strong> {_e(boundary.get("allowed_next_step"))}</p><p><strong>{_e("Autorización requerida" if es else "Authorization required")}:</strong> {_e(str(boundary.get("authorization_required")).lower())}</p><p>{_e("Acciones prohibidas" if es else "Prohibited actions")}:</p><ul>{prohibited}</ul><p class="board-boundary"><strong>{_e("Límite de autorización" if es else "Authorization boundary")}:</strong> {_e("Mantén esta revisión privada; no ejecutes ninguna acción externa." if es else "Keep this review private; do not execute any external action.")}</p></section>'
+    prohibited = "".join(f"<li>{_e(_closed_label(action, labels["prohibited_actions"]))}</li>" for action in boundary["prohibited_actions"])
+    approval = f'<section class="board-approval-boundary" aria-labelledby="approval-heading"><h2 id="approval-heading">{_e(labels["private"])}</h2><p><strong>{_e("Siguiente paso permitido" if es else "Allowed next step")}:</strong> {_e(_closed_label(boundary.get("allowed_next_step"), labels["allowed_next_steps"]))}</p><p><strong>{_e("Autorización requerida" if es else "Authorization required")}:</strong> {_e(_closed_label(boundary.get("authorization_required"), labels["authorization"]))}</p><p>{_e("Acciones prohibidas" if es else "Prohibited actions")}:</p><ul>{prohibited}</ul><p class="board-boundary"><strong>{_e("Límite de autorización" if es else "Authorization boundary")}:</strong> {_e("Mantén esta revisión privada; no ejecutes ninguna acción externa." if es else "Keep this review private; do not execute any external action.")}</p></section>'
     footer = f'<footer class="board-footer"><strong>{_e(labels["private"])}</strong><p>{_e(labels["footer"])} {_e(labels["manual"])}</p><p>{_e("Acciones externas desactivadas." if es else "External actions remain disabled.")}</p></footer>'
     template = ASSET_LOADER.read_private_asset(ASSET_ROOT.parent, TEMPLATE_PATH)
     css = ASSET_LOADER.read_private_asset(ASSET_ROOT.parent, CSS_PATH)

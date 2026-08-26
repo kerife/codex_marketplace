@@ -86,9 +86,9 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
                 self.assertIn("Content-Security-Policy", output)
 
     def test_localized_practice_gate_preserves_the_exact_rehearsal_question_without_exposing_enums(self):
-        for locale, heading, score_label, later_request, do_not_share in (
-            ("en", "Practice checkpoint", "Score before response", "Respond only in a later explicit request.", "Do not send, share, or publish this response."),
-            ("es", "Punto de práctica", "Puntuación antes de responder", "Responde solo en una solicitud posterior explícita.", "No envíes, compartas ni publiques esta respuesta."),
+        for locale, heading, score_label, score_value, later_request, do_not_share in (
+            ("en", "Practice checkpoint", "Score before response", "Undetermined", "Respond only in a later explicit request.", "Do not send, share, or publish this response."),
+            ("es", "Punto de práctica", "Puntuación antes de responder", "No determinada", "Responde solo en una solicitud posterior explícita.", "No envíes, compartas ni publiques esta respuesta."),
         ):
             with self.subTest(locale=locale):
                 proof = self._proof(locale)
@@ -108,8 +108,8 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
                 self.assertIn(rehearsal["question"], output)
                 self.assertIn(rehearsal["response_structure"], output)
                 self.assertEqual(1, output.count(rehearsal["question"]))
-                self.assertEqual(1, output.count("<dd>unknown</dd>"))
-                self.assertIn(f"<dt>{score_label}</dt><dd>unknown</dd>", output)
+                self.assertEqual(1, output.count(f"<dd>{score_value}</dd>"))
+                self.assertIn(f"<dt>{score_label}</dt><dd>{score_value}</dd>", output)
                 self.assertIn(later_request, output)
                 self.assertIn(do_not_share, output)
                 for raw_enum in ("ready", "advance", "clarify", "pause", "stop"):
@@ -134,6 +134,78 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
                 blocked = self._proof(locale, source=blocked_source)
                 blocked_output = renderer.render_private_first_interview_conversion_board_v2(blocked)
                 self.assertNotIn('class="board-reentry-capsule"', blocked_output)
+
+    def test_localizes_closed_enums_in_visible_board_copy(self):
+        expected = {
+            "es": {
+                "topics": ("Producción", "Compensación", "Elegibilidad", "Disponibilidad", "Confidencialidad"),
+                "quality": ("Fuerte", "Mixta", "No determinada"),
+                "score": "<dt>Puntuación antes de responder</dt><dd>No determinada</dd>",
+                "allowed": "Siguiente paso permitido:</strong> Revisión privada manual",
+                "authorization": "Autorización requerida:</strong> Sí",
+                "actions": ("Enviar mensaje", "Conectar", "Postularse", "Programar", "Crear evento de calendario", "Publicar", "Compartir", "Subir", "Enviar", "Exportar", "Editar externamente", "Comprar", "Inscribirse"),
+            },
+            "en": {
+                "topics": ("Production", "Compensation", "Eligibility", "Availability", "Confidentiality"),
+                "quality": ("Strong", "Mixed", "Undetermined"),
+                "score": "<dt>Score before response</dt><dd>Undetermined</dd>",
+                "allowed": "Allowed next step:</strong> Manual private review",
+                "authorization": "Authorization required:</strong> Yes",
+                "actions": ("Send message", "Connect", "Apply", "Schedule", "Create calendar event", "Publish", "Share", "Upload", "Submit", "Export", "Edit externally", "Purchase", "Enroll"),
+            },
+        }
+        for locale, labels in expected.items():
+            with self.subTest(locale=locale):
+                output = renderer.render_private_first_interview_conversion_board_v2(self._proof(locale))
+                for label in labels["topics"] + labels["quality"] + labels["actions"]:
+                    self.assertIn(label, output)
+                self.assertIn(labels["score"], output)
+                self.assertIn(labels["allowed"], output)
+                self.assertIn(labels["authorization"], output)
+                self.assertNotIn("<h3>production</h3>", output)
+                self.assertNotIn("<strong>strong</strong>", output)
+                self.assertNotIn("manual_private_review", output)
+                self.assertNotIn("calendar_create", output)
+                self.assertNotIn("external_edit", output)
+
+    def test_localizes_weak_signal_quality(self):
+        for locale, expected in (("es", "Débil"), ("en", "Weak")):
+            with self.subTest(locale=locale):
+                proof = self._proof(locale)
+                artifact = copy.deepcopy(proof.artifact)
+                artifact["daily_reviews"][0]["signal_quality"] = "weak"
+                output = renderer._render_artifact(artifact)
+                self.assertIn(f"· {expected}", output)
+
+    def test_unknown_visible_enum_fails_closed_without_echo(self):
+        proof = self._proof()
+        artifact = copy.deepcopy(proof.artifact)
+        artifact["risk_checks"][0]["topic"] = "untrusted_topic"
+        with self.assertRaisesRegex(renderer.PrivateFirstInterviewConversionBoardV2RenderError, "private board artifact is unavailable"):
+            renderer._render_artifact(artifact)
+        self.assertNotIn("untrusted_topic", renderer._render_artifact(proof.artifact))
+
+    def test_unknown_closed_enum_fields_fail_closed_without_echo(self):
+        cases = (
+            ("risk_checks", 0, "topic", "unknown_topic"),
+            ("daily_reviews", 0, "signal_quality", "unknown_quality"),
+            ("rehearsal", None, "pre_response_score", "unknown_score"),
+            ("approval_boundary", None, "allowed_next_step", "unknown_step"),
+            ("approval_boundary", None, "authorization_required", "unknown_authorization"),
+            ("approval_boundary", None, "prohibited_actions", ["unknown_action"]),
+        )
+        for section, index, field, value in cases:
+            with self.subTest(field=field):
+                artifact = copy.deepcopy(self._proof().artifact)
+                target = artifact[section] if index is None else artifact[section][index]
+                target[field] = value
+                with self.assertRaisesRegex(renderer.PrivateFirstInterviewConversionBoardV2RenderError, "private board artifact is unavailable"):
+                    renderer._render_artifact(artifact)
+                self.assertNotIn(str(value), renderer.render_private_first_interview_conversion_board_v2(self._proof()))
+
+    def test_dark_decision_surface_keeps_light_copy_legible(self):
+        css = Path(renderer.CSS_PATH).read_text(encoding="utf-8")
+        self.assertIn(".board-decision { background: #173e30; }", css)
 
     def test_practice_gate_escapes_rehearsal_copy_and_stop_omits_it(self):
         proof = self._proof()
