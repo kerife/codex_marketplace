@@ -34,3 +34,9 @@ inspection authorization visibly secondary. Its v3-only stylesheet is
 card and preserves the existing safe step.
 
 The private vacancy packet route captures and validates the packet plus its source group once, then writes a mode-600 HTML artifact atomically. JSON and HTML writers can consume the same in-process opaque snapshot; neither route authorizes an external action.
+
+| Private first-interview conversion board | `scripts/render_private_first_interview_conversion_board_v1.py` | `assets/private-first-interview-conversion-board-v1.html` | `assets/private-first-interview-conversion-board-v1.css` |
+
+This explicit private route sits after recruiter triage and before manual
+`prepare-role-interviews`; it is source-bound, offline, draft-only, and never
+performs external action.

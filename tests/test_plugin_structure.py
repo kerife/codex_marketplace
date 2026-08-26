@@ -110,6 +110,20 @@ PRIVATE_VACANCY_PACKET_RELEASE_PATHS = (
     "tests/test_private_vacancy_application_packet_routing.py",
     *PRIVATE_VACANCY_PACKET_FIXTURE_PATHS,
 )
+PRIVATE_FIRST_INTERVIEW_BOARD_RELEASE_PATHS = (
+    "schemas/private-first-interview-conversion-board-v1.schema.json",
+    "scripts/private_first_interview_conversion_board_identity.py",
+    "scripts/validate_private_first_interview_conversion_board_v1.py",
+    "scripts/build_private_first_interview_conversion_board_v1.py",
+    "scripts/write_private_first_interview_conversion_board_v1.py",
+    "scripts/render_private_first_interview_conversion_board_v1.py",
+    "assets/private-first-interview-conversion-board-v1.html",
+    "assets/private-first-interview-conversion-board-v1.css",
+    "tests/test_private_first_interview_conversion_board_v1.py",
+    "tests/test_render_private_first_interview_conversion_board_v1.py",
+    "tests/fixtures/private-first-interview-conversion-board-v1/accepted-es.json",
+    "tests/fixtures/private-first-interview-conversion-board-v1/accepted-en.json",
+)
 
 
 def load_static_checker():
@@ -133,6 +147,25 @@ def load_repo_script(path: Path, name: str):
 
 
 class JobSearchCoachPluginStructureTests(unittest.TestCase):
+    def test_private_first_interview_board_release_inventory_is_complete(self) -> None:
+        """Break caught: a board runtime or fixture is omitted from the package."""
+
+        checker = load_static_checker()
+        self.assertEqual(
+            PRIVATE_FIRST_INTERVIEW_BOARD_RELEASE_PATHS,
+            checker.PRIVATE_FIRST_INTERVIEW_BOARD_PACKAGE_PATHS,
+        )
+        for relative in PRIVATE_FIRST_INTERVIEW_BOARD_RELEASE_PATHS:
+            path = PLUGIN_ROOT / relative
+            self.assertTrue(path.is_file(), path)
+            self.assertFalse(path.is_symlink(), path)
+
+    def test_private_first_interview_board_static_package_contract_is_valid(self) -> None:
+        checker = load_static_checker()
+        self.assertEqual(
+            [], checker.validate_private_first_interview_board_package(PLUGIN_ROOT)
+        )
+
     def test_private_packet_skill_routing_surface_is_regular_and_versioned(self) -> None:
         """Break caught: routing points to a missing, linked, or unversioned contract."""
 

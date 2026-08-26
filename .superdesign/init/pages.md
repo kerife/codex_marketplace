@@ -86,3 +86,16 @@ The renderer contains no browser behavior or external resource path. Static stru
 
 Response, assessment, eligibility, and learning v3 are one all-or-none offline
 input group. Historical v1/v2 pages do not load the v3 stylesheet.
+
+## PrivateFirstInterviewConversionBoard
+
+- `plugins/professional-growth-coach/scripts/render_private_first_interview_conversion_board_v1.py`
+  - `plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v1.html`
+  - `plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v1.css`
+  - `plugins/professional-growth-coach/schemas/private-first-interview-conversion-board-v1.schema.json`
+
+Explicit private branch after recruiter triage and before manual interview
+preparation. Decision-first seven-day board with proof, risk, rehearsal,
+ladder, and daily-review surfaces. `stop` keeps only decision and boundary.
+Static package checks cover offline modes; visual browser, print-preview, and
+assistive-technology QA were not run.

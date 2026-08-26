@@ -145,6 +145,33 @@ Source: `plugins/professional-growth-coach/assets/executive-career-dossier-v1.ht
   - renders the validated five-day snapshot with the static `Start here` card
     before the timeline; no browser behavior or external resource is used
 
+## Private first-interview conversion board
+
+Source: `plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v1.html`
+
+```html
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <title>{{TITLE}}</title>
+  <style>{{INLINE_CSS}}</style>
+</head>
+<body class="private-interview-board-document">
+  <a class="skip-link" href="#main-content">{{SKIP}}</a>
+  <main id="main-content" class="board-shell" tabindex="-1">
+    {{HEADER}}
+    {{MAIN}}
+  </main>
+  {{FOOTER}}
+</body>
+</html>
+```
+
 ## Private vacancy application packet
 
 Source: `plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.html`

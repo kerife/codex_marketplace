@@ -94,6 +94,22 @@ verified local artifact link, and approval boundary. The draft does not
 authorize an application, upload, export, message, publication, or other
 external action. No external action is performed.
 
+### Private first-interview conversion board v1
+
+After an explicit recruiter triage or conversion observation, and before
+manual `prepare-role-interviews`, the root can create a private
+`private-first-interview-conversion-board-v1`. It accepts one validated,
+same-group recruiter-outreach and seven-day plan composition, recomputes the
+decision, and produces a source-bound JSON/HTML review board with proof
+signals, risk checks, rehearsal, a seven-day sequence, a decision ladder, and
+daily review templates. A `stop` state is fail-closed and suppresses detailed
+preparation surfaces.
+
+The board is offline, identity-free, draft-only, and requires manual review.
+It never sends a message, schedules a calendar item, applies, edits a profile,
+publishes, uploads, or performs another external action. Its private writer
+creates a mode-600 artifact only after validator-issued proof is revalidated.
+
 ### Installed test scope
 
 An extracted marketplace cache contains the package-local validators, renderers,
@@ -122,6 +138,7 @@ This source tree is repo-local at `plugins/professional-growth-coach`. Source ed
 - “Compare professional-growth options for a synthetic SQL/Airflow/dbt background, then tell me what market evidence is missing.”
 - “Prepare me for this interview using the supplied vacancy and my candidate fact matrix.”
 - “Build a first-interview recruiter screen brief, objection response map, and draft-only outreach funnel from my confirmed evidence; do not send anything.”
+- “Build a private first-interview conversion board from my confirmed recruiter triage and seven-day plan; do not perform external actions.”
 
 ## Self-service example
 

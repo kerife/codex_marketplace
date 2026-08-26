@@ -91,6 +91,29 @@ When both inputs are supplied, create only the closed `private-recruiter-reply-t
 
 For `ready_for_private_prep`, the closed handoff is only a manual re-entry cue for `prepare-role-interviews`, scoped to one recruiter-screen question and an identity-free summary plus verified fact. It is **manual input only**: it does not auto-start, transfer execution context, create a `module_execution_packet`, or emit router rows. Its exact boundary is `candidate_answer_state=unanswered` and `score_state=unknown` until the candidate supplies an answer in a later explicit preparation request. Clarify-first and stop cards omit the handoff. Private triage precedence applies before all ordinary recruiter and LinkedIn routes; normal recruiter-reply behavior remains unchanged, including legacy debug/eval/detail behavior.
 
+## Private first-interview conversion board routing
+
+After an explicit private recruiter-reply triage or conversion observation, and
+before manual `prepare-role-interviews`, check for an explicit request for
+`private-first-interview-conversion-board-v1`. This branch is opt-in and does
+not replace ordinary recruiter triage, recruiter practice, or interview
+preparation when the request is absent.
+
+Require one same-group validated recruiter outreach lab, quality gate, and
+`first_interview_7_day_plan` composition. The builder derives the decision,
+sequence, proof cards, risk checks, rehearsal, seven-day plan, decision ladder,
+and daily reviews; callers cannot supply final board rows. Missing, crossed,
+stale, mutated, unsafe, or incomplete inputs fail closed without a fallback
+artifact.
+
+The output is a private offline JSON/HTML draft for manual review only. It
+keeps `draft_only=true`, `external_actions_authorized=false`,
+`no_message_action=true`, and `no_calendar_action=true`. It must not send,
+reply, connect, apply, publish, upload, schedule, or auto-start
+`prepare-role-interviews`. The only next step is a separately authorized
+manual review; a `stop` decision exposes the boundary and suppresses detailed
+proof, rehearsal, week, and tracking surfaces.
+
 ## Multi-module routing
 
 Outside the normal local LinkedIn artifact branch, use a multi-module ordered plan when one self-service or coach mode request contains several safe workstreams, such as LinkedIn audit plus CV rewrite plus imminent interview preparation. The router contract still gets exactly one `selected_module`: choose the first module that should run safely after evidence and authorization gates. Then add an `ordered plan` with one line per later module. In the artifact branch, keep later-module planning internal and end the client chat after the verified link.

@@ -26,6 +26,8 @@ ASSET_NAMES = (
     "private-recruiter-followthrough-checkpoint-v1.css",
     "private-recruiter-conversion-outcome-v1.css",
     "private-vacancy-application-packet-v1.css",
+    "private-first-interview-conversion-board-v1.css",
+    "learning-proof-sprint-v1.css",
 )
 EXPECTED_THEME_ASSET_NAMES = {
     "career-learning-eligibility-v1.css",
@@ -37,6 +39,8 @@ EXPECTED_THEME_ASSET_NAMES = {
     "private-recruiter-followthrough-checkpoint-v1.css",
     "private-recruiter-conversion-outcome-v1.css",
     "private-vacancy-application-packet-v1.css",
+    "private-first-interview-conversion-board-v1.css",
+    "learning-proof-sprint-v1.css",
 }
 HTML_ASSET_NAMES = (
     "executive-career-dossier-v1.html",
@@ -45,6 +49,7 @@ HTML_ASSET_NAMES = (
     "private-recruiter-followthrough-checkpoint-v1.html",
     "private-recruiter-conversion-outcome-v1.html",
     "private-vacancy-application-packet-v1.html",
+    "private-first-interview-conversion-board-v1.html",
 )
 EXPECTED_LAYOUT_SOURCES = {
     f"plugins/professional-growth-coach/assets/{name}" for name in HTML_ASSET_NAMES
@@ -82,6 +87,24 @@ def _layout_sources() -> dict[str, bytes]:
 
 
 class SuperdesignThemeAssetParityTests(unittest.TestCase):
+    def test_superdesign_maps_describe_private_first_interview_board(self):
+        documents = (
+            PAGES.read_text(encoding="utf-8"),
+            ROUTES.read_text(encoding="utf-8"),
+            COMPONENTS.read_text(encoding="utf-8"),
+            EXTRACTABLE.read_text(encoding="utf-8"),
+            DESIGN_SYSTEM.read_text(encoding="utf-8"),
+        )
+        for contract in (
+            "private-first-interview-conversion-board-v1.schema.json",
+            "render_private_first_interview_conversion_board_v1.py",
+            "private-first-interview-conversion-board-v1.css",
+            "PrivateFirstInterviewConversionBoard",
+            "visual QA not run",
+        ):
+            with self.subTest(contract=contract):
+                self.assertTrue(any(contract in document for document in documents))
+
     def test_superdesign_maps_describe_v3_weekly_decision_composition(self):
         pages = " ".join(PAGES.read_text(encoding="utf-8").split())
         routes = " ".join(ROUTES.read_text(encoding="utf-8").split())

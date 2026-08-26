@@ -292,6 +292,20 @@ PRIVATE_VACANCY_APPLICATION_PACKET_RELEASE_PATHS = (
     "tests/test_private_vacancy_application_packet_routing.py",
     *PRIVATE_VACANCY_APPLICATION_PACKET_FIXTURE_PATHS,
 )
+PRIVATE_FIRST_INTERVIEW_BOARD_PACKAGE_PATHS = (
+    "schemas/private-first-interview-conversion-board-v1.schema.json",
+    "scripts/private_first_interview_conversion_board_identity.py",
+    "scripts/validate_private_first_interview_conversion_board_v1.py",
+    "scripts/build_private_first_interview_conversion_board_v1.py",
+    "scripts/write_private_first_interview_conversion_board_v1.py",
+    "scripts/render_private_first_interview_conversion_board_v1.py",
+    "assets/private-first-interview-conversion-board-v1.html",
+    "assets/private-first-interview-conversion-board-v1.css",
+    "tests/test_private_first_interview_conversion_board_v1.py",
+    "tests/test_render_private_first_interview_conversion_board_v1.py",
+    "tests/fixtures/private-first-interview-conversion-board-v1/accepted-es.json",
+    "tests/fixtures/private-first-interview-conversion-board-v1/accepted-en.json",
+)
 MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/candidate-market-alignment-v1.schema.json",
     "schemas/candidate-market-alignment-v2.schema.json",
@@ -17297,6 +17311,93 @@ def validate_design_token_palette() -> list[str]:
     return checker.validate_palette_assets(PLUGIN_ROOT)
 
 
+def validate_private_first_interview_board_package(plugin_root: Path) -> list[str]:
+    """Validate the source-bound private first-interview package surface."""
+
+    errors: list[str] = []
+    safe_paths: set[str] = set()
+    for relative_path in PRIVATE_FIRST_INTERVIEW_BOARD_PACKAGE_PATHS:
+        if _package_path_traverses_symlink(plugin_root, relative_path):
+            errors.append(
+                f"{relative_path}: private first-interview package path cannot traverse a symlink"
+            )
+        elif not (plugin_root / relative_path).is_file():
+            errors.append(
+                f"{relative_path}: private first-interview path must be a regular package file"
+            )
+        else:
+            try:
+                if not stat.S_ISREG((plugin_root / relative_path).stat(follow_symlinks=False).st_mode):
+                    raise OSError
+            except OSError:
+                errors.append(
+                    f"{relative_path}: private first-interview path must be a regular package file"
+                )
+            else:
+                safe_paths.add(relative_path)
+
+    schema_relative = "schemas/private-first-interview-conversion-board-v1.schema.json"
+    if schema_relative in safe_paths:
+        try:
+            schema = json.loads((plugin_root / schema_relative).read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            errors.append(f"{schema_relative}: invalid JSON")
+        else:
+            if not (
+                isinstance(schema, dict)
+                and schema.get("type") == "object"
+                and schema.get("additionalProperties") is False
+                and isinstance(schema.get("required"), list)
+                and "source_group" in schema["required"]
+                and "delivery" in schema["required"]
+            ):
+                errors.append(f"{schema_relative}: invalid closed private board schema")
+
+    for relative_path in (
+        "assets/private-first-interview-conversion-board-v1.html",
+        "assets/private-first-interview-conversion-board-v1.css",
+    ):
+        if relative_path not in safe_paths:
+            continue
+        try:
+            asset = (plugin_root / relative_path).read_text(encoding="utf-8").casefold()
+        except (OSError, UnicodeError):
+            errors.append(f"{relative_path}: private board asset is not readable UTF-8")
+            continue
+        if any(token in asset for token in EXECUTIVE_DOSSIER_OFFLINE_TOKENS):
+            errors.append(f"{relative_path}: private board asset has remote or network token")
+        if re.search(r"</?(?:script|form|button)\b", asset, re.I):
+            errors.append(f"{relative_path}: private board asset has interactive markup")
+
+    if not all(
+        name in safe_paths
+        for name in (
+            "scripts/validate_private_first_interview_conversion_board_v1.py",
+            "scripts/build_private_first_interview_conversion_board_v1.py",
+            "scripts/render_private_first_interview_conversion_board_v1.py",
+        )
+    ):
+        return sorted(set(errors))
+    try:
+        scripts_root = plugin_root / "scripts"
+        previous_path = list(sys.path)
+        if str(scripts_root) not in sys.path:
+            sys.path.insert(0, str(scripts_root))
+        import validate_private_first_interview_conversion_board_v1 as validator
+        import render_private_first_interview_conversion_board_v1 as renderer
+        fixture = plugin_root / "tests/fixtures/private-first-interview-conversion-board-v1/accepted-en.json"
+        source = json.loads(fixture.read_text(encoding="utf-8"))["source_group"]
+        proof = validator.validate_private_first_interview_conversion_board_v1(source)
+        rendered = renderer.render_private_first_interview_conversion_board_v1(proof)
+        if not isinstance(rendered, str) or "private-interview-board-document" not in rendered:
+            errors.append("private first-interview renderer did not produce the package document")
+    except Exception:
+        errors.append("private first-interview runtime package import or fixture validation failed")
+    finally:
+        sys.path[:] = previous_path if "previous_path" in locals() else sys.path
+    return sorted(set(errors))
+
+
 def validate_renderer_asset_paths() -> list[str]:
     checker_path = PLUGIN_ROOT / "scripts" / "private_asset_loader.py"
     if not checker_path.is_file():
@@ -17430,6 +17531,7 @@ def main() -> int:
             PLUGIN_ROOT.parents[1] if repository_context else PLUGIN_ROOT,
         )
     )
+    errors.extend(validate_private_first_interview_board_package(PLUGIN_ROOT))
     errors.extend(validate_renderer_asset_paths())
     errors.extend(validate_design_token_palette())
     manifest_path = PLUGIN_ROOT / ".codex-plugin" / "plugin.json"

@@ -45,6 +45,20 @@ PRIVATE_VACANCY_PACKET_SOURCE_INVENTORY_PATHS = (
     Path("tests/test_render_private_vacancy_application_packet_v1.py"),
     Path("tests/test_private_vacancy_application_packet_routing.py"),
 )
+PRIVATE_FIRST_INTERVIEW_BOARD_SOURCE_INVENTORY_PATHS = (
+    Path("plugins/professional-growth-coach/schemas/private-first-interview-conversion-board-v1.schema.json"),
+    Path("plugins/professional-growth-coach/scripts/private_first_interview_conversion_board_identity.py"),
+    Path("plugins/professional-growth-coach/scripts/validate_private_first_interview_conversion_board_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/build_private_first_interview_conversion_board_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/write_private_first_interview_conversion_board_v1.py"),
+    Path("plugins/professional-growth-coach/scripts/render_private_first_interview_conversion_board_v1.py"),
+    Path("plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v1.html"),
+    Path("plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v1.css"),
+    Path("plugins/professional-growth-coach/tests/test_private_first_interview_conversion_board_v1.py"),
+    Path("plugins/professional-growth-coach/tests/test_render_private_first_interview_conversion_board_v1.py"),
+    Path("plugins/professional-growth-coach/tests/fixtures/private-first-interview-conversion-board-v1/accepted-es.json"),
+    Path("plugins/professional-growth-coach/tests/fixtures/private-first-interview-conversion-board-v1/accepted-en.json"),
+)
 DOSSIER_SOURCE_INVENTORY_PATHS = (
     Path("plugins/professional-growth-coach/schemas/executive-career-dossier-v1.schema.json"),
     Path("plugins/professional-growth-coach/scripts/validate_executive_career_dossier.py"),
@@ -79,6 +93,7 @@ DOSSIER_SOURCE_INVENTORY_PATHS = (
     Path("scripts/run_installed_learning_eligibility_v3_smokes.py"),
     Path("plugins/professional-growth-coach/tests/run_static_checks.py"),
     *PRIVATE_VACANCY_PACKET_SOURCE_INVENTORY_PATHS,
+    *PRIVATE_FIRST_INTERVIEW_BOARD_SOURCE_INVENTORY_PATHS,
 )
 INVENTORY_PATHS = (
     Path("docs/superpowers/plans/2026-08-05-job-search-coach-plugin.md"),

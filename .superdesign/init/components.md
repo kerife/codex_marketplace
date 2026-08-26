@@ -38,6 +38,13 @@ This repository is a Python-rendered, offline HTML/CSS plugin rather than a Java
 
 The exact HTML templates and CSS implementation are included in `layouts.md` and `theme.md` below.
 
+## PrivateFirstInterviewConversionBoard
+
+- Sources: `plugins/professional-growth-coach/scripts/build_private_first_interview_conversion_board_v1.py`, `plugins/professional-growth-coach/scripts/validate_private_first_interview_conversion_board_v1.py`, `plugins/professional-growth-coach/scripts/render_private_first_interview_conversion_board_v1.py`, and `plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v1.css`.
+- Description: decision-first private board with one decision, four sequence stages, up to three proof cards, five risk checks, one rehearsal, seven days, four decision branches, and seven daily review templates.
+- Inputs: one same-group opaque validator-issued snapshot; callers cannot supply final rows.
+- Privacy boundary: offline, identity-free, draft-only, no forms/buttons/scripts/external resources, and no send, calendar, apply, publish, upload, schedule, or automatic interview handoff. `stop` suppresses detailed preparation and tracking surfaces. Visual browser and assistive-technology QA were not run.
+
 ## VacancyApplicationPacketShell
 
 - Sources: `plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.html`, `plugins/professional-growth-coach/assets/private-vacancy-application-packet-v1.css`, and `plugins/professional-growth-coach/scripts/render_private_vacancy_application_packet_v1.py`.

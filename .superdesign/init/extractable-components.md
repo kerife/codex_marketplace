@@ -1,5 +1,12 @@
 # Extractable components
 
+## PrivateFirstInterviewConversionBoard
+
+Decision-first static board composed from one validator-issued snapshot. Reuse
+the decision, sequence, proof, risk, rehearsal, week, ladder, daily-review,
+and approval-boundary surfaces as one private artifact. No controls or
+external-action handoff; visual QA not run.
+
 ## PrivateReceiptShell
 
 - Source: `plugins/professional-growth-coach/assets/private-recruiter-conversion-outcome-v1.html`, `plugins/professional-growth-coach/assets/private-recruiter-followthrough-checkpoint-v1.html`

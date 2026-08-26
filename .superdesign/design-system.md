@@ -168,3 +168,18 @@ the `confirm_gap_relation` action only, a non-interactive unordered relation
 group follows the evidence statement and precedes the existing action. Its
 localized heading is the group's stable accessible label; it is not added to
 the card description. visual QA not run; deterministic DOM/CSS contract only.
+
+## Private first-interview conversion board
+
+`PrivateFirstInterviewConversionBoard` is a decision-first, offline product
+surface for the explicit private branch after recruiter triage and before
+manual interview preparation. The 920px editorial shell uses the shared
+`practice_triage` palette and places current state, next safe action, and the
+no-outcome boundary above the sequence. It then composes at most three proof
+cards, five risk topics, one rehearsal, seven days, four decision branches,
+and seven review templates; `stop` suppresses detail and tracking.
+
+The artifact is identity-free, draft-only, source-bound, and has no controls,
+network resources, or external action. Static parity covers responsive 640px,
+print, dark, forced-colors, and reduced-motion hooks. visual QA not run;
+deterministic DOM/CSS contract only.
