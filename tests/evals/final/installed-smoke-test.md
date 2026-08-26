@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `95efae727762622d22d09380ef05e847759fbc51`
+source_commit: `20b493fd0e9778069eb29d0a4af63f7ec05c1a93`
 
-source_tree: `e2f8d1bed25ac492a2e63d0f7f41c242115e3e1e`
+source_tree: `92834cb49c44ef18799803c1599b7eec13ccc802`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826131338`
+installed_cache_version: `0.2.0+codex.20260826131916`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `1f511d0662a2eadede4f10e49fd9a8b30137e222f101e6f4cbac2b08c62deaca`
+source_aggregate_sha256: `64d5602ceba296ca3cd68431f0d710e58abddeecbe000a7855a509f618dd704d`
 
-cache_aggregate_sha256: `1f511d0662a2eadede4f10e49fd9a8b30137e222f101e6f4cbac2b08c62deaca`
+cache_aggregate_sha256: `64d5602ceba296ca3cd68431f0d710e58abddeecbe000a7855a509f618dd704d`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826131338`.
+- Cachebuster identifier: `20260826131916`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -118,6 +118,8 @@ external_action_state: `not_executed`
   checks passed.
 - The current `missing_detail` increment makes independent next-step guidance ask for one
   bounded clarification in both locales; the package matrix passed 340/340 tests.
+- The current skip-link increment preserves a system `Highlight` focus ring in forced-colors;
+  focused accessibility and Superdesign parity checks passed.
 - The broader inherited suite remains bounded by the known legacy
   executive-dossier skill-size and pressure-binding checks; official validator
   checksum gates, package checks, and the expanded root privacy scan passed,
