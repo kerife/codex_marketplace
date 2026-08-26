@@ -7,6 +7,7 @@ import html
 import importlib.util
 import sys
 from collections.abc import Mapping
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -63,8 +64,22 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
     locale = artifact.get("locale")
     decision_rows = artifact.get("decision")
     provenance = artifact.get("source_provenance")
-    if locale not in ("en", "es") or not isinstance(decision_rows, list) or len(decision_rows) != 1 or not isinstance(provenance, Mapping):
+    as_of_date = artifact.get("as_of_date")
+    if (
+        locale not in ("en", "es")
+        or not isinstance(decision_rows, list)
+        or len(decision_rows) != 1
+        or not isinstance(provenance, Mapping)
+        or not isinstance(as_of_date, str)
+        or len(as_of_date) != 10
+        or as_of_date[4] != "-"
+        or as_of_date[7] != "-"
+    ):
         raise PrivateFirstInterviewConversionBoardV2RenderError("private board artifact is unavailable")
+    try:
+        date.fromisoformat(as_of_date)
+    except ValueError:
+        raise PrivateFirstInterviewConversionBoardV2RenderError("private board artifact is unavailable") from None
     decision = decision_rows[0]
     if not isinstance(decision, Mapping):
         raise PrivateFirstInterviewConversionBoardV2RenderError("private board artifact is unavailable")
@@ -87,6 +102,7 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         "details": "Detalle" if es else "Detail", "day": "Día" if es else "Day", "trigger": "Disparador" if es else "Trigger",
         "measurement": "Señal de medición" if es else "Measurement signal", "script_boundary": "Límite de guion" if es else "Script boundary",
         "trust": "Límite de procedencia" if es else "Provenance boundary",
+        "reference_date": "Fecha de referencia" if es else "Reference date",
         "synthetic": "Fuente sintética de prueba" if es else "Synthetic test source",
         "composition": "Procedencia por composición; revisar fuente" if es else "Composition provenance; review source",
         "not_stored": "Texto original no almacenado" if es else "Original text is not stored",
@@ -170,7 +186,7 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
     header = (
         '<header class="board-header" aria-labelledby="board-heading"><div>'
         f'<p class="board-kicker">{_e(labels["kicker"])}</p><h1 id="board-heading">{_e(labels["heading"])}</h1></div>'
-        f'<p class="board-state">{_e(state_label)}</p></header>'
+        f'<div class="board-header-meta"><p class="board-reference-date">{_e(labels["reference_date"])}: <time datetime="{_e(as_of_date)}">{_e(as_of_date)}</time></p><p class="board-state">{_e(state_label)}</p></div></header>'
     )
     decision_html = (
         f'<section class="board-decision board-decision-cockpit" data-board-state="{_e(state)}" aria-labelledby="decision-heading"><h2 id="decision-heading" tabindex="-1">'

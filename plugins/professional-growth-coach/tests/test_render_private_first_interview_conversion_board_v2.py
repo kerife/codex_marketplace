@@ -85,6 +85,37 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
                 self.assertIn('name="referrer" content="no-referrer"', output)
                 self.assertIn("Content-Security-Policy", output)
 
+    def test_header_exposes_localized_reference_date_once_for_ready_and_stop(self):
+        for locale, label in (("en", "Reference date"), ("es", "Fecha de referencia")):
+            with self.subTest(locale=locale):
+                ready = self._proof(locale)
+                ready_artifact = copy.deepcopy(ready.artifact)
+                ready_artifact["as_of_date"] = "2025-01-09"
+                ready_output = renderer._render_artifact(ready_artifact)
+                self.assertIn(f'<time datetime="2025-01-09">2025-01-09</time>', ready_output)
+                self.assertIn(f'<p class="board-reference-date">{label}: <time datetime="2025-01-09">2025-01-09</time></p>', ready_output)
+                self.assertEqual(1, ready_output.count('<time datetime="2025-01-09">2025-01-09</time>'))
+                self.assertLess(ready_output.index("board-reference-date"), ready_output.index('class="board-state"'))
+
+                stop_source = copy.deepcopy(_source())
+                for name in ("recruiter_outreach_lab", "quality_gate", "first_interview_7_day_plan", "weekly_coach_plan"):
+                    stop_source[name]["state"] = "stop"
+                for check in stop_source["quality_gate"]["checks"]:
+                    check["state"] = "stop"
+                _rebind_snapshot(stop_source)
+                stop = self._proof(locale, source=stop_source)
+                stop_artifact = copy.deepcopy(stop.artifact)
+                stop_artifact["as_of_date"] = "2025-01-09"
+                stop_output = renderer._render_artifact(stop_artifact)
+                self.assertEqual(1, stop_output.count('<time datetime="2025-01-09">2025-01-09</time>'))
+
+    def test_renderer_rejects_an_invalid_reference_date_when_called_directly(self):
+        proof = self._proof()
+        artifact = copy.deepcopy(proof.artifact)
+        artifact["as_of_date"] = "2025-02-30"
+        with self.assertRaisesRegex(renderer.PrivateFirstInterviewConversionBoardV2RenderError, "private board artifact is unavailable"):
+            renderer._render_artifact(artifact)
+
     def test_localized_practice_gate_preserves_the_exact_rehearsal_question_without_exposing_enums(self):
         for locale, heading, score_label, score_value, later_request, do_not_share in (
             ("en", "Practice checkpoint", "Score before response", "Undetermined", "Respond only in a later explicit request.", "Do not send, share, or publish this response."),
@@ -370,6 +401,7 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
             "prefers-reduced-motion: reduce", "main:focus-visible", "minmax(",
             ".board-trust-strip", ".board-approval-boundary", "grid-template-columns: 1fr",
             ".board-decision-cockpit", ".board-cockpit-prompt", ".board-practice-gate",
+            ".board-reference-date", ".board-header-meta",
             '[data-board-state="ready"]', '[data-board-state="clarify"]', '[data-board-state="pause"]',
         ):
             self.assertIn(hook, css)

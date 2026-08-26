@@ -9,7 +9,9 @@ external-action handoff; visual QA not run. V2 adds an always-present
 `board-trust-strip` after decision and before sequence. It exposes only the
 closed synthetic-fixture/composition-only trust copy, original-text absence,
 and manual-review requirement; it never accepts or reveals provenance IDs,
-digests, or source prose.
+digests, or source prose. The header exposes the validated `as_of_date` once
+as a localized reference-date `<time>` beside the state; this is an evidence
+cutoff, not a freshness guarantee.
 
 ## PrivateReceiptShell
 

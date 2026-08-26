@@ -202,6 +202,13 @@ reduced-motion handling. Browser visual QA, printed-page QA, and
 assistive-technology QA are not run or claimed; evidence is deterministic
 DOM/CSS testing only.
 
+The header also exposes the artifact's `as_of_date` once as a localized
+“Reference date”/“Fecha de referencia” beside the state, using a semantic ISO
+`time` value. It describes the evidence cutoff only; it must not be labelled as
+“updated”, “current”, or “valid through”, and it never exposes provenance IDs,
+digests, or source text. The date remains visible for `stop`, mobile, print,
+dark, and forced-colors presentations.
+
 The practice handoff keeps the board static and proof-first. A ready board
 uses the coral practice checkpoint treatment and a later-request cue; clarify
 uses a forest-soft checkpoint that asks for the missing fact; pause uses a

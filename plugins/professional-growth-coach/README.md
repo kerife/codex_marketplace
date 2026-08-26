@@ -120,6 +120,11 @@ solicitud posterior explícita. No envíes, compartas ni publiques esa respuesta
 Las etiquetas visibles traducen los estados y ramas; los enums del artefacto no
 son instrucciones para el cliente.
 
+La cabecera renderizada muestra `as_of_date` una sola vez como fecha de
+referencia localizada (`<time datetime="YYYY-MM-DD">YYYY-MM-DD</time>`) junto
+al estado. Es el corte de evidencia usado por el tablero, no una promesa de
+frescura o validez; se conserva también en `stop`.
+
 Cuando la decisión está en `ready`, el coach puede hacer un handoff manual a
 `private-first-interview-practice-handoff-v1`. El handoff acepta únicamente la
 prueba opaca y exacta del tablero, revalida su vínculo y produce una sesión

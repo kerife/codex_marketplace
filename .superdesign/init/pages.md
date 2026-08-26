@@ -105,4 +105,5 @@ preparation. Decision-first seven-day board with proof, risk, rehearsal,
 ladder, and daily-review surfaces. `stop` keeps only decision and boundary.
 Static package checks cover offline modes; visual browser, print-preview, and
 assistive-technology QA were not run. The v2 route adds deterministic DOM/CSS
-coverage for its trust boundary, not runtime visual or assistive evidence.
+coverage for its trust boundary and one localized semantic reference date, not
+runtime visual or assistive evidence.
