@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `61894da84262d6dcc20377b2d04240a1820bb668`
+source_commit: `91eca25e2c8e4b9413e2a88418a2947f64b73186`
 
-source_tree: `8794c6f34aac097dccf998268b285f4e327ee476`
+source_tree: `698158ae9f186696c2fe17b6ff4a42055c0f1f99`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826101250`
+installed_cache_version: `0.2.0+codex.20260826102903`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `c77d5f546f0dc04913ff719bc57577f8a147d13692654b12c36b667c3aeb99f9`
+source_aggregate_sha256: `187c52fa5121766f6df618ae5966d3c2c1f504c2d3a7680c1952acb17c2dad9f`
 
-cache_aggregate_sha256: `c77d5f546f0dc04913ff719bc57577f8a147d13692654b12c36b667c3aeb99f9`
+cache_aggregate_sha256: `187c52fa5121766f6df618ae5966d3c2c1f504c2d3a7680c1952acb17c2dad9f`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826101250`.
+- Cachebuster identifier: `20260826102903`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -86,7 +86,8 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- Focused source verification passed 47/47 tests across the private-first
+- Focused source verification passed 47/47 plugin tests plus 54/54 root
+  renderer tests across the private-first
   interview handoff, ephemeral feedback continuation, proof-bound rendering,
   state-aware conversion-board rendering, recruiter-practice-session
   compatibility, and release checks; the prior cycle's 131/131 source matrix
@@ -102,7 +103,7 @@ external_action_state: `not_executed`
 
 - Source was extracted from the published source commit with `git archive`; no mutable-worktree
   content comparison was used.
-- Source and cache each contained 211 non-empty sorted POSIX relative files.
+- Source and cache each contained 212 non-empty sorted POSIX relative files.
   Every path and lowercase per-file SHA-256 matched, and the aggregate digest
   over `path + NUL + file hash + LF` matched on both sides.
 - `diff -qr` was silent. Source and cache contained no `.pyc`, `.pyo`,
