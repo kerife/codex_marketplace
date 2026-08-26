@@ -85,6 +85,56 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
                 self.assertIn('name="referrer" content="no-referrer"', output)
                 self.assertIn("Content-Security-Policy", output)
 
+    def test_localized_practice_gate_preserves_the_exact_rehearsal_question_without_exposing_enums(self):
+        for locale, heading, score_label, later_request, do_not_share in (
+            ("en", "Practice checkpoint", "Score before response", "Respond only in a later explicit request.", "Do not send, share, or publish this response."),
+            ("es", "Punto de práctica", "Puntuación antes de responder", "Responde solo en una solicitud posterior explícita.", "No envíes, compartas ni publiques esta respuesta."),
+        ):
+            with self.subTest(locale=locale):
+                proof = self._proof(locale)
+                rehearsal = proof.artifact["rehearsal"]
+                output = renderer.render_private_first_interview_conversion_board_v2(proof)
+                decision_section = '<section class="board-decision board-decision-cockpit"'
+                trust_section = '<section class="board-trust-strip"'
+                ladder_section = '<section class="board-ladder"'
+                practice_section = '<section class="board-practice-gate"'
+                sequence_section = '<section class="board-sequence"'
+                self.assertEqual(1, output.count(practice_section))
+                self.assertLess(output.index(decision_section), output.index(trust_section))
+                self.assertLess(output.index(trust_section), output.index(ladder_section))
+                self.assertLess(output.index(ladder_section), output.index(practice_section))
+                self.assertLess(output.index(practice_section), output.index(sequence_section))
+                self.assertIn(heading, output)
+                self.assertIn(rehearsal["question"], output)
+                self.assertIn(rehearsal["response_structure"], output)
+                self.assertIn(f"<dt>{score_label}</dt><dd>unknown</dd>", output)
+                self.assertIn(later_request, output)
+                self.assertIn(do_not_share, output)
+                for raw_enum in ("ready", "advance", "clarify", "pause", "stop"):
+                    self.assertNotIn(f'<p class="board-state">{raw_enum}</p>', output.lower())
+                    self.assertNotIn(f"<h3>{raw_enum}</h3>", output.lower())
+                    self.assertNotIn(f"<strong>{raw_enum}</strong>", output.lower())
+
+    def test_practice_gate_escapes_rehearsal_copy_and_stop_omits_it(self):
+        proof = self._proof()
+        artifact = proof.artifact
+        artifact["rehearsal"]["question"] = "<script>unsafe()</script>"
+        artifact["rehearsal"]["response_structure"] = "<img src=x onerror=unsafe()>"
+        rendered = renderer._render_artifact(artifact)
+        self.assertNotIn("<script>unsafe", rendered)
+        self.assertNotIn("<img src=x", rendered)
+        self.assertIn("&lt;script&gt;unsafe()&lt;/script&gt;", rendered)
+        self.assertIn("&lt;img src=x onerror=unsafe()&gt;", rendered)
+
+        stop_source = _source()
+        for name in ("recruiter_outreach_lab", "quality_gate", "first_interview_7_day_plan", "weekly_coach_plan"):
+            stop_source[name]["state"] = "stop"
+        for check in stop_source["quality_gate"]["checks"]:
+            check["state"] = "stop"
+        _rebind_snapshot(stop_source)
+        stop_output = renderer.render_private_first_interview_conversion_board_v2(self._proof(source=stop_source))
+        self.assertNotIn('<section class="board-practice-gate"', stop_output)
+
     def test_composition_only_trust_copy_is_distinct_and_no_provenance_value_leaks(self):
         source = _source()
         source["source_snapshot"] = "snap-private-first-interview-v1-sha256-" + "a" * 64
@@ -127,7 +177,7 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
             "@media print", "prefers-color-scheme: dark", "forced-colors: active",
             "prefers-reduced-motion: reduce", "main:focus-visible", "minmax(",
             ".board-trust-strip", ".board-approval-boundary", "grid-template-columns: 1fr",
-            ".board-decision-cockpit", ".board-cockpit-prompt",
+            ".board-decision-cockpit", ".board-cockpit-prompt", ".board-practice-gate",
         ):
             self.assertIn(hook, css)
         print_block = css.split("@media print", 1)[1].split("@media (prefers-reduced-motion", 1)[0]

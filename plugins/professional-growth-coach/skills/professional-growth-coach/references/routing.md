@@ -102,7 +102,7 @@ the request is absent.
 
 | Úsalo cuando | Necesitas | Recibes | Siguiente paso |
 | --- | --- | --- | --- |
-| Ya existe una observación privada de triage o conversión y quieres decidir cómo preparar la primera entrevista. | La referencia privada validada que originó esa observación; pide sólo una confirmación breve y sin identidad si falta el contexto. | Un tablero local en borrador con centro de decisión, límite de procedencia, escalera de decisión y secuencia de revisión. | Revisa la rama aplicable de la escalera en privado; solicita autorización separada antes de cualquier acción externa. |
+| Ya existe una observación privada de triage o conversión y quieres decidir cómo preparar la primera entrevista. | La referencia privada validada que originó esa observación; pide sólo una confirmación breve y sin identidad si falta el contexto. | Un tablero local en borrador con centro de decisión, límite de procedencia, escalera de decisión, un punto de práctica y secuencia de revisión. | Revisa la rama aplicable y, sólo en una solicitud posterior explícita, responde la pregunta de práctica en privado. |
 
 Never ask the client to paste raw JSON, source rows, provenance values, or a
 final board. The opaque validated source bundle is an internal boundary, not a
@@ -118,8 +118,12 @@ mutated, unsafe, or incomplete inputs fail closed without a fallback artifact.
 
 The output is a private offline JSON/HTML draft for manual review only. The
 localized decision cockpit appears first, followed by the provenance boundary
-and the decision ladder before the review sequence so the next safe branch is
-visible before planning detail. It
+and the decision ladder. The single practice gate then exposes only the exact
+validated rehearsal question, its response structure, and `score=unknown`
+before the review sequence. It asks the candidate to respond only in a later
+explicit request; it never sends, shares, or publishes an answer. Visible
+state and branch labels are localized wording rather than raw artifact enums,
+so they remain client-facing guidance instead of executable states. It
 keeps `draft_only=true`, `external_actions_authorized=false`,
 `no_message_action=true`, and `no_calendar_action=true`. It must not send,
 reply, connect, apply, publish, upload, schedule, or auto-start

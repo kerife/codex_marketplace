@@ -108,12 +108,17 @@ after exact proof revalidation.
 
 | Úsalo cuando | Necesitas | Recibes | Siguiente paso |
 | --- | --- | --- | --- |
-| Ya existe una observación privada de triage o conversión y quieres preparar la primera entrevista. | La referencia privada validada de esa observación; si falta contexto, una confirmación breve y sin identidad. | Un tablero privado con centro de decisión, límite de procedencia, escalera de decisión y secuencia de revisión. | Revisa la rama segura de la escalera en privado y solicita autorización separada antes de una acción externa. |
+| Ya existe una observación privada de triage o conversión y quieres preparar la primera entrevista. | La referencia privada validada de esa observación; si falta contexto, una confirmación breve y sin identidad. | Un tablero privado con centro de decisión, límite de procedencia, escalera de decisión, un punto de práctica y secuencia de revisión. | Revisa la rama segura y, sólo en una solicitud posterior explícita, responde la pregunta de práctica en privado. |
 
 No se pide JSON crudo, filas fuente ni valores de procedencia al cliente: la
 fuente validada opaca es un límite interno. El centro de decisión localizado va
 antes del límite de procedencia; la escalera va inmediatamente después de ese
-límite y antes de la secuencia para hacer visible primero la rama segura.
+límite. Un único punto de práctica va después de la escalera y antes de la
+secuencia: muestra la pregunta y la estructura de respuesta ya validadas,
+mantiene la puntuación como `unknown`, y sólo permite responder en una
+solicitud posterior explícita. No envíes, compartas ni publiques esa respuesta.
+Las etiquetas visibles traducen los estados y ramas; los enums del artefacto no
+son instrucciones para el cliente.
 
 `private-first-interview-conversion-board-v1` is frozen legacy compatibility
 only. New requests must use v2.
