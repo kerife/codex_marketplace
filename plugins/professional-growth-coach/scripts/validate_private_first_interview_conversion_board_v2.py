@@ -27,6 +27,8 @@ def _sibling(name: str) -> Any:
     origin = os.path.realpath(os.fspath(path))
     direct_name = {
         "private_first_interview_source_bundle.py": "private_first_interview_source_bundle",
+        "validate_private_first_interview_conversion_board_v1.py": "validate_private_first_interview_conversion_board_v1",
+        "private_first_interview_conversion_board_identity.py": "private_first_interview_conversion_board_identity",
         "private_first_interview_conversion_board_v2_identity.py": "private_first_interview_conversion_board_v2_identity",
     }.get(name)
     if direct_name:

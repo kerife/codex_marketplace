@@ -31,9 +31,19 @@ _CONSTRUCTOR_TOKEN = object()
 def _sibling(name: str) -> Any:
     path = Path(__file__).with_name(name)
     origin = os.path.realpath(os.fspath(path))
-    module_name = "_pgc_private_first_interview_source_bundle_" + hashlib.sha256(
-        origin.encode("utf-8")
-    ).hexdigest()
+    direct_name = {
+        "validate_private_first_interview_conversion_board_v1.py": "validate_private_first_interview_conversion_board_v1",
+        "private_first_interview_conversion_board_identity.py": "private_first_interview_conversion_board_identity",
+    }.get(name)
+    if direct_name:
+        existing = sys.modules.get(direct_name)
+        if existing is not None:
+            return existing
+        module_name = direct_name
+    else:
+        module_name = "_pgc_private_first_interview_source_bundle_" + hashlib.sha256(
+            origin.encode("utf-8")
+        ).hexdigest()
     existing = sys.modules.get(module_name)
     if existing is not None:
         return existing

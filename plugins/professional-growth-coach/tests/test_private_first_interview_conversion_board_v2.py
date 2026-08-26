@@ -2,6 +2,7 @@ import copy
 import hashlib
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -18,13 +19,18 @@ SCHEMA_PATH = ROOT / "schemas" / "private-first-interview-conversion-board-v2.sc
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from validate_json_schema_subset import validate_schema_instance
-import build_private_first_interview_conversion_board_v1 as build_v1
-import build_private_first_interview_conversion_board_v2 as build_v2
-import private_first_interview_source_bundle as source_bundle
-import validate_private_first_interview_conversion_board_v2 as validate_v2
+from private_first_interview_conversion_board_identity import (
+    ValidatedPrivateFirstInterviewConversionBoard,
+)
 from private_first_interview_conversion_board_v2_identity import (
     ValidatedPrivateFirstInterviewConversionBoardV2,
 )
+import validate_private_first_interview_conversion_board_v1 as validate_v1
+import write_private_first_interview_conversion_board_v1 as write_v1
+import private_first_interview_source_bundle as source_bundle
+import build_private_first_interview_conversion_board_v1 as build_v1
+import validate_private_first_interview_conversion_board_v2 as validate_v2
+import build_private_first_interview_conversion_board_v2 as build_v2
 
 
 def synthetic_source() -> dict[str, object]:
@@ -102,6 +108,26 @@ class PrivateFirstInterviewConversionBoardV2Tests(unittest.TestCase):
                 "candidate_review_required": True,
             },
             artifact["delivery"],
+        )
+
+    def test_mixed_v1_v2_loaders_share_the_v1_proof_identity(self):
+        self.assertIs(source_bundle._v1_validator, validate_v1)
+        self.assertIs(validate_v2._v1, validate_v1)
+        v1_proof = build_v1.build_private_first_interview_conversion_board_v1(
+            synthetic_source()
+        )
+        self.assertIs(type(v1_proof), ValidatedPrivateFirstInterviewConversionBoard)
+        with tempfile.TemporaryDirectory() as directory:
+            receipt = write_v1.write_private_first_interview_conversion_board_v1(
+                v1_proof, Path(directory) / "v1-board.json"
+            )
+            self.assertTrue(receipt.output_path.is_file())
+        bundle = source_bundle.adapt_v1_private_first_interview_proof(v1_proof)
+        v2_proof = build_v2.build_private_first_interview_conversion_board_v2(
+            bundle, as_of_date="2026-08-26"
+        )
+        self.assertEqual(
+            "composition_only", v2_proof.artifact["source_provenance"]["provenance_state"]
         )
 
     def test_projection_does_not_copy_safe_source_prose(self):
