@@ -223,7 +223,7 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         reentry_capsule = (
             f'<aside class="board-reentry-capsule" aria-labelledby="reentry-capsule-heading"><h2 id="reentry-capsule-heading">{_e(labels["reentry_title"])}</h2><p>{_e(labels["reentry_text"])}</p><p class="board-reentry-recipe-label">{_e(labels["reentry_recipe_title"])}</p><ol class="board-reentry-recipe">'
             + "".join(
-                f'<li><span class="board-reentry-step">{index}</span><span><strong>{_e(labels["reentry_recipe"][key][0])}</strong><span>{_e(labels["reentry_recipe"][key][1])}</span></span></li>'
+                f'<li><span class="board-reentry-step" aria-hidden="true">{index}</span><span><strong>{_e(labels["reentry_recipe"][key][0])}</strong><span>{_e(labels["reentry_recipe"][key][1])}</span></span></li>'
                 for index, key in enumerate(("context", "action", "result"), 1)
             )
             + "</ol></aside>"

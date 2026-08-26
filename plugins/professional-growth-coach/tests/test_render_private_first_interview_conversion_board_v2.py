@@ -146,6 +146,11 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
                 for label in labels:
                     self.assertIn(label, output)
 
+    def test_reentry_recipe_numbers_are_decorative_for_assistive_technology(self):
+        output = renderer.render_private_first_interview_conversion_board_v2(self._proof("en"))
+        self.assertEqual(3, output.count('<span class="board-reentry-step" aria-hidden="true">'))
+        self.assertNotIn('<span class="board-reentry-step">', output)
+
     def test_localizes_closed_enums_in_visible_board_copy(self):
         expected = {
             "es": {
