@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `20b493fd0e9778069eb29d0a4af63f7ec05c1a93`
+source_commit: `abdeea621ad42195256235a36fcd550e0c53e424`
 
-source_tree: `92834cb49c44ef18799803c1599b7eec13ccc802`
+source_tree: `3161f3ac0f19c2c78b86bb18b3d01fa30e5200f8`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826131916`
+installed_cache_version: `0.2.0+codex.20260826133208`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `64d5602ceba296ca3cd68431f0d710e58abddeecbe000a7855a509f618dd704d`
+source_aggregate_sha256: `c19d5ff064ed70922cb07fc40d77118ade2a6e55192b70aad7d11c29f0c3029a`
 
-cache_aggregate_sha256: `64d5602ceba296ca3cd68431f0d710e58abddeecbe000a7855a509f618dd704d`
+cache_aggregate_sha256: `c19d5ff064ed70922cb07fc40d77118ade2a6e55192b70aad7d11c29f0c3029a`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826131916`.
+- Cachebuster identifier: `20260826133208`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -120,6 +120,9 @@ external_action_state: `not_executed`
   bounded clarification in both locales; the package matrix passed 340/340 tests.
 - The current skip-link increment preserves a system `Highlight` focus ring in forced-colors;
   focused accessibility and Superdesign parity checks passed.
+- The current reference-date increment exposes the validated `as_of_date` once in the
+  localized board header, including `stop`; focused builder and renderer coverage passed
+  9/9 and 24/24, and the immutable installed cache matched the published archive.
 - The broader inherited suite remains bounded by the known legacy
   executive-dossier skill-size and pressure-binding checks; official validator
   checksum gates, package checks, and the expanded root privacy scan passed,
