@@ -2,8 +2,8 @@
 
 no_real_profile_mapping: true
 
-This attestation binds the installed vacancy-first release to immutable commit
-A and its exact plugin tree. The case is synthetic, repository-only, and does
+This attestation binds the installed vacancy-first release to the immutable
+published source commit and its exact plugin tree. The case is synthetic, repository-only, and does
 not map any real profile, recruiter, employer, or account.
 
 ## Closed release contract
@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `4b6700f3278813e6d27b0d1af6df88a5bf490c8b`
+source_commit: `9436d9d4b136f84522442e1427e98d5a18966f36`
 
-source_tree: `3add93395ae085b0fd20adca7bf194fc2a0d2f74`
+source_tree: `3e2c3c8380342b7be55d874e8a0c17108f1dca92`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826022926`
+installed_cache_version: `0.2.0+codex.20260826031158`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `3541a2db2a437c14b9a469d2d719d14576223ddc395b1ebda2212125e3108c37`
+source_aggregate_sha256: `05aba8ff0cd2b8d78450cfadbfd26bcc0d8cb5474bb770cabbae255b26e29b92`
 
-cache_aggregate_sha256: `3541a2db2a437c14b9a469d2d719d14576223ddc395b1ebda2212125e3108c37`
+cache_aggregate_sha256: `05aba8ff0cd2b8d78450cfadbfd26bcc0d8cb5474bb770cabbae255b26e29b92`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826022926`.
+- Cachebuster identifier: `20260826031158`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -86,14 +86,12 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- The focused learning-proof contract and renderer suite passed 18/18 tests,
-  including source-route provenance, duplicate/excess fact rejection, bounded
-  Spanish/English safety filters, opaque-proof rendering, and no-partial-output
-  behavior.
-- Extracted plugin discovery passed 190/190 tests with 42 expected skips for
-  repository-only fixtures; no fixture or module-discovery errors remained.
-- Private schema conformance passed 64/64 tests. Static validation passed the
-  private-schema, dossier-handoff, and package checks.
+- The focused learning-proof renderer and token suites passed 18/18 tests,
+  including localized closed-value rendering, escaped fallback behavior, the
+  static Start here card, and practice-family token coverage.
+- The source plugin suite passed 236/236 tests; no fixture or module-discovery
+  errors remained. Static validation passed the private-schema, dossier-handoff,
+  and package checks.
 - Installed semantic smokes passed 39/39 accepted and 9/9 rejected cases; the
   installed packet matrix passed 6/6 accepted and 12/12 rejected cases.
 - Repository-only conformance is not claimed from the installed cache, and
