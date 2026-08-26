@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `2b47ad5cbcd0fa21c6c43cf8807249d41e592f41`
+source_commit: `34cf130f15cebe0f2873bde73589e4639e7bb7c6`
 
-source_tree: `9670542b256934825050698553f3d1f2a199ff16`
+source_tree: `3806e88ea8db34ec72c1f7b00ef09e8a84e6b03d`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826123748`
+installed_cache_version: `0.2.0+codex.20260826130128`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `7da101a5d2316721189ef2c8eb709b4c24976d798019d8334ba68d8fa981123d`
+source_aggregate_sha256: `f537a7478764a06448f2076e49d7a5c4eea2eccd93859d50dde2c46069b8699c`
 
-cache_aggregate_sha256: `7da101a5d2316721189ef2c8eb709b4c24976d798019d8334ba68d8fa981123d`
+cache_aggregate_sha256: `f537a7478764a06448f2076e49d7a5c4eea2eccd93859d50dde2c46069b8699c`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826123748`.
+- Cachebuster identifier: `20260826130128`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -113,6 +113,9 @@ external_action_state: `not_executed`
 - The current practice-structure increment aligns the first-conversation rehearsal and
   question-aware next-step copy to the four board criteria; focused renderer coverage passed
   55/55 root tests and the package matrix passed 339/339 tests.
+- The current forced-colors increment adds a non-color `Highlight` outline to the active
+  practice-progress step; the focused accessibility, Superdesign parity, and package renderer
+  checks passed.
 - The broader inherited suite remains bounded by the known legacy
   executive-dossier skill-size and pressure-binding checks; official validator
   checksum gates, package checks, and the expanded root privacy scan passed,
