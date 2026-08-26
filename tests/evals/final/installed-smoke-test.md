@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `282e9173924017fe6d36c14882e851d906565a90`
+source_commit: `3c3cac7751852d724237cc9c71b433127f7e3df4`
 
-source_tree: `13a21d65f158d9408cf852fb9dc28f84e5122619`
+source_tree: `f6d8641633cc00b7aa8224dbb36236c354bf7379`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826110207`
+installed_cache_version: `0.2.0+codex.20260826111216`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `3a249431f1a331174fb82ff793321debfb8f50813d5e73802ec59b710c1e9d0d`
+source_aggregate_sha256: `cb9aa370b9d30c41938863866f8ad9b9dafd422cfffaa5e9c23e55d740dc13e4`
 
-cache_aggregate_sha256: `3a249431f1a331174fb82ff793321debfb8f50813d5e73802ec59b710c1e9d0d`
+cache_aggregate_sha256: `cb9aa370b9d30c41938863866f8ad9b9dafd422cfffaa5e9c23e55d740dc13e4`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826110207`.
+- Cachebuster identifier: `20260826111216`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -86,17 +86,19 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- Focused source verification passed 64/64 plugin tests plus 54/54 root
+- Focused source verification passed 65/65 plugin tests plus 54/54 root
   renderer tests across the private-first
   interview handoff, ephemeral feedback continuation, proof-bound rendering,
   state-aware conversion-board rendering, private re-entry capsules, localized
-  closed-enum projections, keyboard-accessible section navigation,
+  closed-enum projections, keyboard-accessible section navigation, fragment-
+  target orientation highlight,
   recruiter-practice-session
   compatibility, and release checks; the prior cycle's 131/131 source matrix
   remains covered by the same package history.
-- Installed exact-cache revision smoke passed across the handoff, feedback,
+- Installed exact-cache revision smoke passed 49/49 focused tests across the handoff, feedback,
   private re-entry capsules, localized closed-enum projections, keyboard-
-  accessible section navigation, final-attempt revision, and terminal
+  accessible section navigation, fragment-target orientation highlight,
+  final-attempt revision, and terminal
   recruiter-practice-session surfaces.
 - The broader inherited suite remains bounded by the known legacy
   executive-dossier validation timeout; no full-suite green claim is made.
@@ -150,7 +152,8 @@ external_action_state: `not_executed`
   approved high-contrast forest token.
 
 - Section-navigation installed smoke: normal boards expose all detailed
-  destinations with focusable headings and 44px links; stop boards expose only
+  destinations with keyboard-ready headings, 44px links, and a visible
+  `h2:target` outline for the selected fragment; stop boards expose only
   decision, provenance, and private-boundary destinations.
 
 - Accepted groups: response mapping, recurrence routes, non-learning routes,
