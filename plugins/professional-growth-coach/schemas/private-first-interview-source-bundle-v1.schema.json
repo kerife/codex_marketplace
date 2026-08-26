@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/professional-growth-coach/private-first-interview-source-bundle-v1.schema.json",
+  "title": "Private First-Interview Source Bundle v1 Metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_contract",
+    "provenance_state",
+    "source_digest",
+    "source_kinds"
+  ],
+  "properties": {
+    "source_contract": {"const": "private-first-interview-source-bundle-v1"},
+    "provenance_state": {
+      "enum": ["upstream_attested", "synthetic_fixture", "composition_only"]
+    },
+    "source_digest": {
+      "type": "string",
+      "pattern": "^snap-private-first-interview-v1-sha256-[0-9a-f]{64}$"
+    },
+    "source_kinds": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "recruiter_outreach_lab",
+          "quality_gate",
+          "first_interview_7_day_plan",
+          "weekly_coach_plan",
+          "decision_ladder",
+          "plan_days",
+          "daily_review_logs"
+        ]
+      }
+    }
+  }
+}
