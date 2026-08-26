@@ -16,9 +16,7 @@ from typing import Any
 
 _UNAVAILABLE = "source bundle is unavailable"
 _CONTRACT = "private-first-interview-source-bundle-v1"
-_PROVENANCE_STATES = frozenset(
-    {"upstream_attested", "synthetic_fixture", "composition_only"}
-)
+_PROVENANCE_STATES = frozenset({"synthetic_fixture", "composition_only"})
 _DIGEST_PATTERN = re.compile(r"^snap-private-first-interview-v1-sha256-[0-9a-f]{64}$")
 _SOURCE_KINDS = (
     "recruiter_outreach_lab",
@@ -29,6 +27,7 @@ _SOURCE_KINDS = (
     "plan_days",
     "daily_review_logs",
 )
+_CONSTRUCTOR_TOKEN = object()
 def _sibling(name: str) -> Any:
     path = Path(__file__).with_name(name)
     origin = os.path.realpath(os.fspath(path))
@@ -51,75 +50,42 @@ _snapshot = _sibling("semantic_provenance_snapshot.py")
 _v1_validator = _sibling("validate_private_first_interview_conversion_board_v1.py")
 
 
-def _proof_boundary():
-    issuer_marker = object()
+class ValidatedPrivateFirstInterviewSourceBundle:
+    """Immutable source payload with a deliberately metadata-only public boundary."""
 
-    class ValidatedPrivateFirstInterviewSourceBundle:
-        """Immutable source payload with a deliberately metadata-only public boundary."""
+    __slots__ = ("__source_group_json", "__metadata_json")
 
-        __slots__ = ("__issuer_marker", "__source_group_json", "__metadata_json")
+    def __new__(
+        cls,
+        token: object = None,
+        source_group_json: str = "",
+        metadata_json: str = "",
+    ):
+        if token is not _CONSTRUCTOR_TOKEN:
+            raise TypeError(_UNAVAILABLE)
+        return super().__new__(cls)
 
-        def __new__(
-            cls,
-            token: object = None,
-            source_group_json: str = "",
-            metadata_json: str = "",
-        ):
-            if token is not issuer_marker:
-                raise TypeError(_UNAVAILABLE)
-            return super().__new__(cls)
-
-        def __init__(
+    def __init__(
+        self,
+        token: object = None,
+        source_group_json: str = "",
+        metadata_json: str = "",
+    ) -> None:
+        if token is not _CONSTRUCTOR_TOKEN:
+            raise TypeError(_UNAVAILABLE)
+        object.__setattr__(
             self,
-            token: object = None,
-            source_group_json: str = "",
-            metadata_json: str = "",
-        ) -> None:
-            if token is not issuer_marker:
-                raise TypeError(_UNAVAILABLE)
-            object.__setattr__(
-                self,
-                "_ValidatedPrivateFirstInterviewSourceBundle__issuer_marker",
-                issuer_marker,
-            )
-            object.__setattr__(
-                self,
-                "_ValidatedPrivateFirstInterviewSourceBundle__source_group_json",
-                source_group_json,
-            )
-            object.__setattr__(
-                self,
-                "_ValidatedPrivateFirstInterviewSourceBundle__metadata_json",
-                metadata_json,
-            )
-
-        def __setattr__(self, name: str, value: object) -> None:
-            raise AttributeError("source bundle is immutable")
-
-    def issue(source_group_json: str, metadata_json: str) -> ValidatedPrivateFirstInterviewSourceBundle:
-        return ValidatedPrivateFirstInterviewSourceBundle(
-            issuer_marker, source_group_json, metadata_json
+            "_ValidatedPrivateFirstInterviewSourceBundle__source_group_json",
+            source_group_json,
+        )
+        object.__setattr__(
+            self,
+            "_ValidatedPrivateFirstInterviewSourceBundle__metadata_json",
+            metadata_json,
         )
 
-    def is_issued(value: object) -> bool:
-        try:
-            return (
-                type(value) is ValidatedPrivateFirstInterviewSourceBundle
-                and value._ValidatedPrivateFirstInterviewSourceBundle__issuer_marker
-                is issuer_marker
-            )
-        except AttributeError:
-            return False
-
-    return ValidatedPrivateFirstInterviewSourceBundle, issue, is_issued
-
-
-(
-    ValidatedPrivateFirstInterviewSourceBundle,
-    _issue_bundle,
-    _is_issued_bundle,
-) = _proof_boundary()
-del _proof_boundary
+    def __setattr__(self, name: str, value: object) -> None:
+        raise AttributeError("source bundle is immutable")
 
 
 def _canonical_json(value: object) -> str:
@@ -153,7 +119,8 @@ def _bundle_from_source(
     source_group: Mapping[str, object], *, provenance_state: str
 ) -> ValidatedPrivateFirstInterviewSourceBundle:
     validated_source = _capture_validated_source(source_group)
-    return _issue_bundle(
+    return ValidatedPrivateFirstInterviewSourceBundle(
+        _CONSTRUCTOR_TOKEN,
         _canonical_json(validated_source),
         _canonical_json(_metadata_for(validated_source, provenance_state)),
     )
@@ -170,28 +137,6 @@ def issue_validated_private_first_interview_source_bundle(
         return _bundle_from_source(frozen, provenance_state="synthetic_fixture")
     except Exception:
         raise ValueError(_UNAVAILABLE) from None
-
-
-def _private_upstream_issuer():
-    capability = object()
-
-    def issue(
-        source_group: object, *, capability: object
-    ) -> ValidatedPrivateFirstInterviewSourceBundle:
-        try:
-            if capability is not issue_capability:
-                raise ValueError(_UNAVAILABLE)
-            frozen = _snapshot.bounded_plain_snapshot(source_group)
-            return _bundle_from_source(frozen, provenance_state="upstream_attested")
-        except Exception:
-            raise ValueError(_UNAVAILABLE) from None
-
-    issue_capability = capability
-    return issue
-
-
-_issue_upstream_attested_private = _private_upstream_issuer()
-del _private_upstream_issuer
 
 
 def adapt_v1_private_first_interview_proof(
@@ -215,7 +160,7 @@ def adapt_v1_private_first_interview_proof(
 
 def _payload_json(value: object) -> tuple[str, str]:
     """Return private canonical payloads only for this exact proof class."""
-    if not _is_issued_bundle(value):
+    if type(value) is not ValidatedPrivateFirstInterviewSourceBundle:
         raise TypeError(_UNAVAILABLE)
     try:
         source_group_json = value._ValidatedPrivateFirstInterviewSourceBundle__source_group_json

@@ -13,7 +13,7 @@
   "properties": {
     "source_contract": {"const": "private-first-interview-source-bundle-v1"},
     "provenance_state": {
-      "enum": ["upstream_attested", "synthetic_fixture", "composition_only"]
+      "enum": ["synthetic_fixture", "composition_only"]
     },
     "source_digest": {
       "type": "string",

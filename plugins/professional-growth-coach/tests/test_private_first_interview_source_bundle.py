@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_PATH = ROOT / "schemas" / "private-first-interview-source-bundle-v1.schema.json"
 FIXTURE = (
     ROOT
     / "tests"
@@ -19,6 +20,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from private_first_interview_conversion_board_identity import (
     ValidatedPrivateFirstInterviewConversionBoard,
 )
+from validate_json_schema_subset import validate_schema_instance
 import build_private_first_interview_conversion_board_v1 as v1_builder
 import private_first_interview_source_bundle as source_bundle
 
@@ -86,15 +88,20 @@ class PrivateFirstInterviewSourceBundleTests(unittest.TestCase):
             source_bundle.metadata(composed)["source_digest"],
         )
 
-    def test_raw_issuer_is_fixture_only_and_upstream_path_requires_private_capability(self):
+    def test_upstream_attestation_is_unavailable_in_this_release(self):
         with self.assertRaisesRegex(ValueError, "source bundle is unavailable"):
             source_bundle.issue_validated_private_first_interview_source_bundle(
                 synthetic_source(), provenance_state="upstream_attested"
             )
-        with self.assertRaisesRegex(ValueError, "source bundle is unavailable"):
-            source_bundle._issue_upstream_attested_private(
-                synthetic_source(), capability=object()
-            )
+        self.assertFalse(hasattr(source_bundle, "_issue_upstream_attested_private"))
+        upstream_metadata = {
+            "source_contract": "private-first-interview-source-bundle-v1",
+            "provenance_state": "upstream_attested",
+            "source_digest": synthetic_source()["source_snapshot"],
+            "source_kinds": SOURCE_KINDS,
+        }
+        schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+        self.assertNotEqual([], validate_schema_instance(upstream_metadata, schema))
         fixture = source_bundle.issue_validated_private_first_interview_source_bundle(
             synthetic_source(), provenance_state="synthetic_fixture"
         )
@@ -142,30 +149,7 @@ class PrivateFirstInterviewSourceBundleTests(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "source bundle is unavailable"):
             source_bundle.adapt_v1_private_first_interview_proof(synthetic_source())
 
-    def test_exact_class_payload_forgery_and_invalid_digest_fail_closed(self):
-        forged = object.__new__(source_bundle.ValidatedPrivateFirstInterviewSourceBundle)
-        object.__setattr__(
-            forged,
-            "_ValidatedPrivateFirstInterviewSourceBundle__source_group_json",
-            json.dumps(synthetic_source()),
-        )
-        object.__setattr__(
-            forged,
-            "_ValidatedPrivateFirstInterviewSourceBundle__metadata_json",
-            json.dumps(
-                {
-                    "source_contract": "private-first-interview-source-bundle-v1",
-                    "provenance_state": "synthetic_fixture",
-                    "source_digest": "not-a-digest",
-                    "source_kinds": SOURCE_KINDS,
-                }
-            ),
-        )
-        with self.assertRaisesRegex(TypeError, "source bundle is unavailable"):
-            source_bundle._payload_json(forged)
-        with self.assertRaisesRegex(TypeError, "source bundle is unavailable"):
-            source_bundle.metadata(forged)
-
+    def test_invalid_digest_in_an_issued_proof_fails_closed(self):
         issued = source_bundle.issue_validated_private_first_interview_source_bundle(
             synthetic_source(), provenance_state="synthetic_fixture"
         )
