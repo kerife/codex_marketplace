@@ -366,6 +366,13 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
         self.assertNotIn("<form", template.lower())
         self.assertNotRegex(template, r"https?://")
 
+    def test_forced_colors_section_links_have_system_focus_indicator(self):
+        css = (ROOT / "assets" / "private-first-interview-conversion-board-v2.css").read_text(encoding="utf-8")
+        forced_colors_block = css.split("@media (forced-colors: active)", 1)[1]
+        self.assertIn(".board-section-nav a:focus-visible", forced_colors_block)
+        self.assertIn("outline: 2px solid Highlight", forced_colors_block)
+        self.assertIn("outline-offset", forced_colors_block)
+
     def test_print_keeps_repeated_review_cards_atomic(self):
         css = (ROOT / "assets" / "private-first-interview-conversion-board-v2.css").read_text(encoding="utf-8")
         print_block = css.split("@media print", 1)[1].split("@media (prefers-reduced-motion", 1)[0]
