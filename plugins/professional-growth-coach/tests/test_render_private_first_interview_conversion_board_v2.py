@@ -107,6 +107,8 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
                 self.assertIn(heading, output)
                 self.assertIn(rehearsal["question"], output)
                 self.assertIn(rehearsal["response_structure"], output)
+                self.assertEqual(1, output.count(rehearsal["question"]))
+                self.assertEqual(1, output.count("<dd>unknown</dd>"))
                 self.assertIn(f"<dt>{score_label}</dt><dd>unknown</dd>", output)
                 self.assertIn(later_request, output)
                 self.assertIn(do_not_share, output)
