@@ -91,6 +91,10 @@ COPY = {
         "next_action": "Siguiente paso",
         "next_action_ready": "Lee la pregunta y prepara tu respuesta en tres movimientos. No se guarda tu respuesta.",
         "next_action_answer": "Responde con contexto breve, acción concreta y resultado observado. No se guarda tu respuesta.",
+        "next_action_ready_screen_opening": "Lee la pregunta y prepara tu respuesta en cuatro movimientos: contexto suministrado, acción concreta, resultado observable y límite de evidencia. No se guarda tu respuesta.",
+        "next_action_answer_screen_opening": "Responde con contexto suministrado, acción concreta, resultado observable y límite de evidencia. No se guarda tu respuesta.",
+        "next_action_answer_eligibility_boundary": "Responde con dato suministrado, pregunta abierta y límite seguro. No se guarda tu respuesta.",
+        "next_action_answer_compensation_boundary": "Responde con contexto conocido, pregunta de compensación y límite de decisión. No se guarda tu respuesta.",
         "next_action_sourced_ready": "Lee la pregunta y prepara tu respuesta; después regresa a la conversación privada de Codex que originó esta práctica. Esta página no guarda tu respuesta.",
         "next_action_sourced_answer": "Regresa a la conversación privada de Codex que originó esta práctica para responder. Esta página no guarda tu respuesta.",
         "evidence": "Puntos de evidencia",
@@ -151,6 +155,10 @@ COPY = {
         "next_action": "Next step",
         "next_action_ready": "Read the question and prepare your answer in three moves. Your answer is not saved.",
         "next_action_answer": "Answer with brief context, a concrete action, and an observed result. Your answer is not saved.",
+        "next_action_ready_screen_opening": "Read the question and prepare your answer in four moves: supplied context, concrete action, observable result, and evidence boundary. Your answer is not saved.",
+        "next_action_answer_screen_opening": "Answer with supplied context, concrete action, observable result, and evidence boundary. Your answer is not saved.",
+        "next_action_answer_eligibility_boundary": "Answer with supplied fact, open question, and safe boundary. Your answer is not saved.",
+        "next_action_answer_compensation_boundary": "Answer with known context, compensation question, and decision boundary. Your answer is not saved.",
         "next_action_sourced_ready": "Read the question and prepare your answer; then return to the private Codex conversation that originated this practice. This page does not save your answer.",
         "next_action_sourced_answer": "Return to the private Codex conversation that originated this practice to answer. This page does not save your answer.",
         "evidence": "Evidence points",
@@ -297,7 +305,7 @@ REHEARSAL_COPY = {
     "es": {
         "screen_opening": {
             "hint": "Prepara una apertura breve que conecte la evidencia suministrada con la conversación.",
-            "steps": ("Contexto suministrado", "Enfoque relevante", "Puente a la conversación"),
+            "steps": ("Contexto suministrado", "Acción concreta", "Resultado observable", "Límite de evidencia"),
         },
         "proof_example": {
             "hint": "Presenta una evidencia confirmada en tres movimientos fáciles de seguir.",
@@ -319,7 +327,7 @@ REHEARSAL_COPY = {
     "en": {
         "screen_opening": {
             "hint": "Prepare a brief opening that connects the supplied evidence to the conversation.",
-            "steps": ("Supplied context", "Relevant focus", "Conversation bridge"),
+            "steps": ("Supplied context", "Concrete action", "Observable result", "Evidence boundary"),
         },
         "proof_example": {
             "hint": "Present confirmed evidence in three easy-to-follow moves.",
@@ -490,7 +498,11 @@ def _render_rehearsal_scaffold(
 
 
 def _render_next_action(
-    state: str, labels: Mapping[str, str], *, sourced: bool
+    state: str,
+    labels: Mapping[str, str],
+    *,
+    sourced: bool,
+    question_kind: str | None = None,
 ) -> str:
     copy_keys = {
         "ready_to_practice": "next_action_sourced_ready" if sourced else "next_action_ready",
@@ -500,6 +512,10 @@ def _render_next_action(
         copy_key = copy_keys[state]
     except KeyError as error:
         raise ValueError(f"unsupported recruiter practice state: {state}") from error
+    if not sourced and question_kind:
+        specialized_key = f"{copy_key}_{question_kind}"
+        if specialized_key in labels:
+            copy_key = specialized_key
     if sourced:
         described_by = "prompt-title practice-question-text"
     else:
@@ -584,10 +600,14 @@ def _render_main(
         )
         practice_sequence = f"{attempt_notice}{rehearsal}{feedback}{decision}{handoff}"
     elif sourced:
-        next_action = _render_next_action(state, labels, sourced=sourced)
+        next_action = _render_next_action(
+            state, labels, sourced=sourced, question_kind=question_kind
+        )
         practice_sequence = f"{attempt_notice}{next_action}{reentry_capsule}{rehearsal}{handoff}"
     else:
-        next_action = _render_next_action(state, labels, sourced=sourced)
+        next_action = _render_next_action(
+            state, labels, sourced=sourced, question_kind=question_kind
+        )
         practice_sequence = f"{rehearsal}{next_action}"
     return f'''<main id="main-content" class="practice-shell" tabindex="-1">
     <section class="practice-session" aria-labelledby="practice-session-title" aria-describedby="practice-session-state">

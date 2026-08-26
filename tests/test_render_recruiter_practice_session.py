@@ -580,6 +580,30 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unsupported recruiter practice state: bogus"):
             self.renderer._render_next_action("bogus", self.renderer.COPY["es"], sourced=False)
 
+    def test_next_action_copy_matches_question_boundary(self) -> None:
+        cases = {
+            "es": {
+                "screen_opening": "contexto suministrado, acción concreta, resultado observable y límite de evidencia",
+                "eligibility_boundary": "dato suministrado, pregunta abierta y límite seguro",
+                "compensation_boundary": "contexto conocido, pregunta de compensación y límite de decisión",
+            },
+            "en": {
+                "screen_opening": "supplied context, concrete action, observable result, and evidence boundary",
+                "eligibility_boundary": "supplied fact, open question, and safe boundary",
+                "compensation_boundary": "known context, compensation question, and decision boundary",
+            },
+        }
+        for locale, kinds in cases.items():
+            for question_kind, expected in kinds.items():
+                with self.subTest(locale=locale, question_kind=question_kind):
+                    rendered = self.renderer._render_next_action(
+                        "awaiting_answer",
+                        self.renderer.COPY[locale],
+                        sourced=False,
+                        question_kind=question_kind,
+                    )
+                    self.assertIn(expected, rendered.casefold())
+
     def test_feedback_copy_is_closed_and_kind_aware_in_both_locales(self) -> None:
         expected = {
             "es": {
@@ -729,8 +753,8 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
     def test_each_question_kind_renders_closed_bilingual_coaching(self) -> None:
         expected = {
             "screen_opening": {
-                "es": ("Prepara una apertura breve que conecte la evidencia suministrada con la conversación.", ("Contexto suministrado", "Enfoque relevante", "Puente a la conversación")),
-                "en": ("Prepare a brief opening that connects the supplied evidence to the conversation.", ("Supplied context", "Relevant focus", "Conversation bridge")),
+                "es": ("Prepara una apertura breve que conecte la evidencia suministrada con la conversación.", ("Contexto suministrado", "Acción concreta", "Resultado observable", "Límite de evidencia")),
+                "en": ("Prepare a brief opening that connects the supplied evidence to the conversation.", ("Supplied context", "Concrete action", "Observable result", "Evidence boundary")),
             },
             "proof_example": {
                 "es": ("Presenta una evidencia confirmada en tres movimientos fáciles de seguir.", ("Contexto de la evidencia", "Acción técnica concreta", "Impacto observado directo")),

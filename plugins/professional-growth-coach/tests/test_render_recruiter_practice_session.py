@@ -195,7 +195,7 @@ class RecruiterPracticeRendererTests(unittest.TestCase):
         self.assertIn("No se guarda tu respuesta", rendered)
 
         expected_steps = {
-            "screen_opening": "Puente a la conversación",
+            "screen_opening": "Límite de evidencia",
             "proof_example": "Impacto observado directo",
             "eligibility_boundary": "Pregunta abierta",
             "compensation_boundary": "Pregunta de compensación",
