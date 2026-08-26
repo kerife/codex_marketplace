@@ -239,6 +239,14 @@ class DarkModeAccessibilityTests(unittest.TestCase):
             r"\.recruiter-practice-document \.practice-progress li\[aria-current=\"step\"\]\s*\{[^}]*outline:\s*2px solid Highlight;[^}]*outline-offset:\s*2px;",
         )
 
+    def test_forced_colors_keeps_practice_skip_link_focus_visible(self) -> None:
+        css = (ASSETS / "recruiter-practice-session-v1.css").read_text(encoding="utf-8")
+        forced = css[css.index("@media (forced-colors: active)"):]
+        self.assertRegex(
+            forced,
+            r"\.recruiter-practice-document \.skip-link:focus-visible\s*\{[^}]*outline:\s*2px solid Highlight;[^}]*outline-offset:\s*3px;",
+        )
+
     def test_dossier_forced_colors_keeps_all_focus_targets_visible(self) -> None:
         css = (ASSETS / "executive-career-dossier-v1.css").read_text(encoding="utf-8")
         forced = css[css.index("@media (forced-colors: active)"):]

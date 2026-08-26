@@ -226,6 +226,8 @@ attempt adds a localized final-attempt notice, and its terminal feedback card
 closes the cycle without inviting a third rehearsal.
 In forced-colors mode, the current progress step keeps a system `Highlight`
 outline so its location remains visible without relying on color differences.
+The practice skip link uses the same system `Highlight` outline on focus, while
+its `Canvas`/`CanvasText` surface remains visible before focus moves to `main`.
 The chat summary mirrors that closure with a short terminal message while
 keeping answer text and provenance metadata out of the summary.
 Independent sessions keep the next-step instruction aligned with the closed
