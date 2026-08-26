@@ -243,6 +243,15 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
         css = Path(renderer.CSS_PATH).read_text(encoding="utf-8")
         self.assertIn("min-height: 44px", css)
 
+    def test_section_navigation_highlights_the_fragment_destination_without_script(self):
+        output = renderer.render_private_first_interview_conversion_board_v2(self._proof("en"))
+        css = Path(renderer.CSS_PATH).read_text(encoding="utf-8")
+        self.assertIn('href="#proof-heading"', output)
+        self.assertIn('<h2 id="proof-heading" tabindex="-1">', output)
+        self.assertIn("h2:target", css)
+        self.assertIn("outline:", css)
+        self.assertNotIn("<script", output.lower())
+
     def test_practice_gate_escapes_rehearsal_copy_and_stop_omits_it(self):
         proof = self._proof()
         artifact = proof.artifact

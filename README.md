@@ -109,7 +109,9 @@ Long boards include localized in-page navigation to the decision, practice,
 risk, plan, review, and private-boundary sections; stop states expose only
 safe decision, provenance, and boundary destinations.
 The navigation also covers the ladder, sequence, and proof sections, gives
-each destination a keyboard-focus target, and is hidden in print.
+each destination a keyboard-ready heading target and a visible fragment
+highlight, and is hidden in print. Because the board is static and script-free,
+activating a link does not claim automatic focus transfer.
 
 ## Installation
 

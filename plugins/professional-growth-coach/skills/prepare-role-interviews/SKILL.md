@@ -64,7 +64,10 @@ Long board artifacts may include a static in-page navigation; it is localized,
 keyboard reachable, hidden from print, and never exposes an external-action
 target. Stop states list only decision, provenance, and private-boundary links.
 Normal states link to every detailed board section, and each destination
-heading is a focus target for keyboard and assistive-technology navigation.
+heading is prepared as a keyboard/assistive-technology target and receives a
+visible `:target` outline when selected. The artifact is static and
+script-free, so do not claim that activating a fragment link transfers focus
+automatically.
 
 The private first-interview handoff may be advanced only by the explicit
 `build_private_first_interview_practice_feedback` boundary. It accepts one

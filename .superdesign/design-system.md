@@ -234,5 +234,9 @@ prohibited-action enums as localized human labels; unsupported values stay out
 of the UI through a generic fail-closed diagnostic.
 Long boards use a restrained localized section-navigation strip for scanning;
 it disappears in print and preserves the static, private boundary.
-The strip links every detailed section and lands on focusable headings, with
-touch-sized links that wrap cleanly on narrow screens.
+The strip links every detailed section and targets headings prepared for
+keyboard and assistive-technology navigation, with
+touch-sized links that wrap cleanly on narrow screens. The selected heading
+gets a visible `:target` outline for orientation; because the artifact is
+static and script-free, the fragment link does not claim automatic focus
+transfer.

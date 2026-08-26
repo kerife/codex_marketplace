@@ -167,7 +167,9 @@ For long boards, the renderer may add localized in-page navigation; it remains
 static and private, and stop states link only to safe decision/provenance/
 boundary sections.
 Normal-state navigation covers all detailed sections and targets headings that
-can receive focus; print output omits the navigation strip.
+are prepared to receive focus and highlights the selected fragment; print
+output omits the navigation strip. The board is static and script-free, so
+fragment activation does not transfer focus automatically.
 
 ## Multi-module routing
 
