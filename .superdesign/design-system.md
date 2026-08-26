@@ -210,3 +210,13 @@ preparation detail. State modifiers are carried in a non-executable data
 attribute so CSS can distinguish them without exposing raw enums as copy.
 Print, dark, forced-colors, reduced-motion, and offline contracts remain
 unchanged. Visual/browser/assistive-technology QA is not run or claimed.
+
+The answer-feedback continuation closes the loop without adding a form or a
+control: the reading order is question, next step, answer structure, feedback,
+decision, evidence boundary, then the compact practice-origin receipt. One
+localized categorical signal is shown, with the score remaining unknown; raw
+answer text, internal identifiers, and snapshot metadata never enter the
+document. The origin receipt is deliberately secondary to the action and
+review, while the same print, dark, forced-colors, reduced-motion, and offline
+boundaries remain in force. Visual/browser/assistive-technology QA is not run
+or claimed.

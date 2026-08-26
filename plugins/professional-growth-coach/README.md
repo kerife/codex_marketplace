@@ -131,6 +131,15 @@ comparte, publica, agenda ni ejecuta otra acción externa.
 `private-first-interview-conversion-board-v1` is frozen legacy compatibility
 only. New requests must use v2.
 
+In a later explicit request, `private-first-interview-practice-feedback-v1`
+can transform that exact `awaiting_answer` session into `feedback_available`.
+The answer is used only in memory and discarded after the cycle; the result
+keeps `score=unknown`, shows one categorical signal (`solid`, `confirm`, or
+`do_not_assert`), and cites only the ephemeral answer and rubric. HTML uses
+fixed localized feedback but never echoes the answer, internal IDs, or snapshot.
+Unsafe answers, crossed sessions, and stale handoffs fail closed. No external
+action is performed.
+
 ### Private first-interview conversion board v1 (frozen legacy compatibility)
 
 After an explicit recruiter triage or conversion observation, and before
@@ -178,6 +187,7 @@ This source tree is repo-local at `plugins/professional-growth-coach`. Source ed
 - “Build a private first-interview conversion board from my confirmed recruiter triage and seven-day plan; do not perform external actions.”
 - “Crea un tablero privado v2 de primera entrevista desde una fuente validada; no realices acciones externas.”
 - “Build a private first-interview board v2 from a validated source bundle; do not perform external actions.”
+- “Responde la pregunta privada de primera entrevista y dame feedback categórico acotado; no guardes ni envíes nada.”
 
 ## Self-service example
 

@@ -299,6 +299,61 @@ class RecruiterPracticeRendererTests(unittest.TestCase):
             with self.subTest(omitted=omitted):
                 self.assertNotIn(omitted, rendered)
 
+    def test_sourced_practice_prioritizes_next_step_before_origin_receipt(self):
+        session = self._feedback_session([])
+        session["schema_version"] = "recruiter-practice-session-v2"
+        session["ui_locale"] = "en"
+        session["content_locale"] = "en"
+        session.pop("locale")
+        session["state"] = "awaiting_answer"
+        session["observed_answer"] = None
+        session["feedback"] = {"score": "unknown", "score_state": "unknown", "observations": []}
+        session["handoff_context"] = {
+            "source": "private_first_interview_conversion_board",
+            "source_snapshot": "snap-practice-board-sha256-" + "1" * 64,
+            "question_rank": 1,
+            "question_id": "Q-001",
+            "requirement_id": "R-001",
+            "fact_ids": ["F-001"],
+            "draft_only": True,
+            "external_actions_authorized": False,
+        }
+        rendered = renderer.render_session_html(session)
+        self.assertLess(
+            rendered.index('<section class="practice-next-action'),
+            rendered.index('<aside class="practice-handoff'),
+        )
+        self.assertLess(
+            rendered.index('<section class="practice-rehearsal'),
+            rendered.index('<aside class="practice-handoff'),
+        )
+
+    def test_sourced_feedback_keeps_origin_receipt_after_review(self):
+        session = self._feedback_session([self._observation("solid")])
+        session["schema_version"] = "recruiter-practice-session-v2"
+        session["ui_locale"] = "en"
+        session["content_locale"] = "en"
+        session.pop("locale")
+        session["handoff_context"] = {
+            "source": "private_first_interview_conversion_board",
+            "source_snapshot": "snap-practice-board-sha256-" + "2" * 64,
+            "question_rank": 1,
+            "question_id": "Q-001",
+            "requirement_id": "R-001",
+            "fact_ids": ["F-001"],
+            "draft_only": True,
+            "external_actions_authorized": False,
+        }
+        rendered = renderer.render_session_html(session)
+        self.assertLess(
+            rendered.index('<section class="practice-feedback'),
+            rendered.index('<aside class="practice-handoff'),
+        )
+        self.assertLess(
+            rendered.index('<section class="practice-decision'),
+            rendered.index('<aside class="practice-handoff'),
+        )
+
     def test_employment_continuity_boundary_is_visible_for_every_practice_state(self):
         expected = {
             "en": "This analysis evaluates professional options; it does not recommend resigning, leaving a job, or stopping your job search; you decide what comes next.",

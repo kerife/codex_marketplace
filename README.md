@@ -81,6 +81,13 @@ boundary, states that original text is not stored, and requires manual review.
 `composition-only` never asserts external provenance. The v1 board is frozen
 legacy compatibility only; do not use it for new requests.
 
+When a ready board has produced a private practice handoff, a later explicit
+answer can use `private-first-interview-practice-feedback-v1`. The answer stays
+in memory only, the result exposes exactly one categorical signal (`solid`,
+`confirm`, or `do_not_assert`) with `score=unknown`, and the renderer never
+echoes the answer, internal IDs, or provenance snapshot. No external action is
+performed.
+
 ## Installation
 
 This source tree is repo-local at `plugins/professional-growth-coach`. Source edits do not update the installed plugin cache. A separate explicitly authorized installation is required to publish a source increment into the local marketplace cache; existing chats may continue using their loaded version, so verify the new installation from a fresh chat. Use the repo-local marketplace workflow only after the exact target and command are approved.
@@ -93,6 +100,7 @@ This source tree is repo-local at `plugins/professional-growth-coach`. Source ed
 - “Build a first-interview recruiter screen brief, objection response map, and draft-only outreach funnel from my confirmed evidence; do not send anything.”
 - “Crea un tablero privado v2 de primera entrevista desde una fuente validada; no realices acciones externas.”
 - “Build a private first-interview board v2 from a validated source bundle; do not perform external actions.”
+- “Answer the private first-interview practice question and give me bounded categorical feedback; do not save or send anything.”
 
 ## Self-service example
 

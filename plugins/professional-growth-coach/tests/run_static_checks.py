@@ -328,6 +328,11 @@ PRIVATE_FIRST_INTERVIEW_BOARD_PACKAGE_PATHS = (
     "tests/test_private_first_interview_practice_handoff.py",
     "tests/fixtures/private-first-interview-practice-handoff/accepted-es.json",
     "tests/fixtures/private-first-interview-practice-handoff/accepted-en.json",
+    "schemas/private-first-interview-practice-feedback-v1.schema.json",
+    "scripts/private_first_interview_practice_feedback_identity.py",
+    "scripts/build_private_first_interview_practice_feedback.py",
+    "scripts/render_private_first_interview_practice.py",
+    "tests/test_private_first_interview_practice_feedback.py",
 )
 MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/candidate-market-alignment-v1.schema.json",

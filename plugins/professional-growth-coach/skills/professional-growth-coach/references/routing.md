@@ -149,6 +149,15 @@ request may supply one ephemeral answer to the existing categorical-feedback
 flow; it never creates a numeric readiness score, predicts an interview, or
 authorizes external action.
 
+For that later answer, use `private-first-interview-practice-feedback-v1` only
+with the exact opaque handoff, its matching snapshot, and one bounded answer.
+The proof-bound consumer revalidates the session before rendering, emits one
+`feedback_available` result with `score=unknown`, and keeps the answer
+ephemeral. Unsafe, stale, crossed, or repeated input fails with a generic
+diagnostic. Render the result through the proof-bound practice entry point;
+passing a mutable session mapping to the generic renderer is not a valid
+handoff. No external action is performed.
+
 ## Multi-module routing
 
 Outside the normal local LinkedIn artifact branch, use a multi-module ordered plan when one self-service or coach mode request contains several safe workstreams, such as LinkedIn audit plus CV rewrite plus imminent interview preparation. The router contract still gets exactly one `selected_module`: choose the first module that should run safely after evidence and authorization gates. Then add an `ordered plan` with one line per later module. In the artifact branch, keep later-module planning internal and end the client chat after the verified link.

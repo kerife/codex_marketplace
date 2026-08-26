@@ -509,10 +509,10 @@ def _render_main(
         governing_label = _governing_feedback_label(feedback_labels)
         feedback = _render_feedback(locale, question_kind, feedback_labels, labels)
         decision = _render_decision(locale, question_kind, governing_label, labels)
-        practice_sequence = f"{handoff}{rehearsal}{feedback}{decision}"
+        practice_sequence = f"{rehearsal}{feedback}{decision}{handoff}"
     elif sourced:
         next_action = _render_next_action(state, labels, sourced=sourced)
-        practice_sequence = f"{handoff}{next_action}{rehearsal}"
+        practice_sequence = f"{next_action}{rehearsal}{handoff}"
     else:
         next_action = _render_next_action(state, labels, sourced=sourced)
         practice_sequence = f"{rehearsal}{next_action}"

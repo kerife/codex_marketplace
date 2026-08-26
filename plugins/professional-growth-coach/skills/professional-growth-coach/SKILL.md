@@ -56,6 +56,13 @@ visible `board-trust-strip` as either synthetic fixture data or a
 provenance. Keep the output draft-only, require manual review, and perform no
 external action. Treat v1 as frozen legacy compatibility only.
 
+For a later explicit answer, pass only the exact `awaiting_answer` handoff to
+`private-first-interview-practice-feedback-v1`. Revalidate the handoff and its
+snapshot, keep the answer ephemeral, emit one categorical feedback signal with
+`score=unknown`, and reject unsafe, stale, crossed, or already-completed
+sessions generically. Never expose the answer, internal IDs, or provenance in
+HTML, and never perform an external action.
+
 When a request needs more than one domain skill, keep `selected_module` as the first safe module to execute and then provide an `ordered plan` labelled `multi-module`. Each later step must name the module, required evidence, and whether action-time authorization will be needed.
 
 ## Execute ready modules

@@ -146,6 +146,11 @@ PRIVATE_FIRST_INTERVIEW_BOARD_RELEASE_PATHS = (
     "tests/test_private_first_interview_practice_handoff.py",
     "tests/fixtures/private-first-interview-practice-handoff/accepted-es.json",
     "tests/fixtures/private-first-interview-practice-handoff/accepted-en.json",
+    "schemas/private-first-interview-practice-feedback-v1.schema.json",
+    "scripts/private_first_interview_practice_feedback_identity.py",
+    "scripts/build_private_first_interview_practice_feedback.py",
+    "scripts/render_private_first_interview_practice.py",
+    "tests/test_private_first_interview_practice_feedback.py",
 )
 
 
@@ -228,6 +233,9 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
         self.assertIn("private-first-interview-conversion-board-v2", combined)
         self.assertIn("board-trust-strip", combined)
         self.assertIn("private-first-interview-practice-handoff-v1", combined)
+        self.assertIn("private-first-interview-practice-feedback-v1", combined)
+        self.assertIn("feedback_available", combined)
+        self.assertIn("do_not_assert", combined)
         self.assertIn("awaiting_answer", combined)
         self.assertIn("score=unknown", combined)
         self.assertIn("clarify`, `pause` y `stop`", combined)

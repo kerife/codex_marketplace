@@ -43,6 +43,14 @@ do_not_assert > confirm > solid. This is evidence-bounded coaching, not semantic
 verification, readiness scoring, or an interview-outcome claim; the raw answer
 and feedback statement remain omitted from the artifact.
 
+The private first-interview handoff may be advanced only by the explicit
+`build_private_first_interview_practice_feedback` boundary. It accepts one
+exact `awaiting_answer` handoff and one bounded answer, revalidates the carried
+snapshot, emits one `feedback_available` session, and discards the answer after
+the in-memory projection. A stale, crossed, unsafe, empty, or repeated session
+fails closed with a generic diagnostic. No answer writer, external action, or
+numeric score exists in this flow.
+
 An explicit private recruiter-reply triage request is not a practice request: it first produces the separate closed private decision card from an identity-free recruiter-reply summary and one supplied candidate fact. If either input is missing, ask exactly one concise intake question; do not infer it from raw content, a profile, or a recruiter message. Its local handoff can identify whether private preparation is available, but it does not start a practice session automatically. Do not expose raw reply content, internal identifiers, a draft/send action, proposed time, or calendar detail. When ready, the handoff is only a manual re-entry cue for one recruiter-screen question using the identity-free summary plus verified fact; clarify-first and stop states omit it.
 
 The ready re-entry receipt is **manual input only** to a later, explicit `prepare-role-interviews` request. It does not auto-start preparation, does not create a `module_execution_packet`, and does not emit router rows. It carries no candidate answer: `candidate_answer_state=unanswered` and `score_state=unknown` until the candidate supplies a response in that later session. Never treat the receipt as an execution packet or as permission to reuse a prior answer.
