@@ -820,6 +820,41 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
         with self.assertRaises(self.renderer.SessionValidationError):
             self.renderer.render_session_html(invalid)
 
+    def test_chat_summary_closes_the_final_attempt_without_revealing_private_content(self) -> None:
+        terminal = self.v2_mixed_locale_session()
+        terminal["state"] = "feedback_available"
+        terminal["handoff_context"].update(
+            {
+                "source": "private_first_interview_conversion_board",
+                "source_snapshot": "snap-practice-board-sha256-" + "a" * 64,
+                "attempt": 2,
+                "final_attempt": True,
+            }
+        )
+        terminal["handoff_context"].pop("claim_ids")
+        terminal["handoff_context"].pop("evidence_ids")
+        terminal["feedback"] = {
+            "score": "unknown",
+            "score_state": "categorical",
+            "observations": [
+                {
+                    "label": "solid",
+                    "statement": "La respuesta describe una acción concreta.",
+                    "source_refs": ["OBS-001", "RB-001"],
+                }
+            ],
+        }
+        terminal["observed_answer"] = {
+            "id": "OBS-001",
+            "text": "Organicé el proceso y expliqué el alcance que confirmé.",
+            "storage": "ephemeral",
+        }
+        summary = self.renderer.build_chat_summary(terminal)
+        self.assertIn("Practice complete", summary)
+        self.assertIn("No third attempt", summary)
+        self.assertNotIn("OBS-001", summary)
+        self.assertNotIn("snap-practice-board", summary)
+
     def test_renderer_rejects_unsupported_script_prose_without_echoing_content(self) -> None:
         invalid = copy.deepcopy(self.awaiting_session)
         invalid["facts"][0]["summary"] = "Алексей Иванов описал опыт."

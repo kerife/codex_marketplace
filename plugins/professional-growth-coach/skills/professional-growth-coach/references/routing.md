@@ -156,7 +156,9 @@ The proof-bound consumer revalidates the session before rendering, emits one
 ephemeral. Unsafe, stale, crossed, or repeated input fails with a generic
 diagnostic. Render the result through the proof-bound practice entry point;
 passing a mutable session mapping to the generic renderer is not a valid
-handoff. No external action is performed.
+handoff. A single explicit revision may create `attempt=2,
+final_attempt=true`; feedback from that handoff closes the practice cycle and
+must not invite a third attempt. No external action is performed.
 
 ## Multi-module routing
 

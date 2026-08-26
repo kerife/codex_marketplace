@@ -97,6 +97,8 @@ second and final answer handoff; the prior answer and feedback are not reused,
 and a third attempt is unavailable.
 The renderer also exposes a semantic three-step progress track and makes the
 second attempt terminal instead of suggesting another rehearsal.
+Its short chat summary uses the same terminal language, so the closed cycle is
+clear even before opening the private artifact.
 
 ## Installation
 

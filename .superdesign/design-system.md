@@ -224,3 +224,5 @@ The session also exposes a three-step semantic progress track
 (`prepare`, `answer`, `review`) with one `aria-current="step"`. A second
 attempt adds a localized final-attempt notice, and its terminal feedback card
 closes the cycle without inviting a third rehearsal.
+The chat summary mirrors that closure with a short terminal message while
+keeping answer text and provenance metadata out of the summary.

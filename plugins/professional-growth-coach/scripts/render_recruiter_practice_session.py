@@ -119,6 +119,8 @@ COPY = {
         "footer": "No se realizó ninguna acción externa.",
         "employment_boundary": "Este análisis evalúa opciones profesionales; no recomienda renunciar, dejar un empleo ni abandonar tu búsqueda; tú decides qué sigue.",
         "summary": "Práctica privada: ",
+        "summary_terminal": "Práctica completada: ",
+        "summary_terminal_boundary": " No hay un tercer intento disponible.",
         "attempt_heading": "Último intento",
         "attempt_text": "Esta es la segunda y última versión de esta práctica. La respuesta anterior no se reutilizó.",
         "progress": "Progreso de práctica",
@@ -175,6 +177,8 @@ COPY = {
         "footer": "No external action was taken.",
         "employment_boundary": "This analysis evaluates professional options; it does not recommend resigning, leaving a job, or stopping your job search; you decide what comes next.",
         "summary": "Private practice: ",
+        "summary_terminal": "Practice complete: ",
+        "summary_terminal_boundary": " No third attempt is available.",
         "attempt_heading": "Final attempt",
         "attempt_text": "This is the second and final version of this practice. The previous answer was not reused.",
         "progress": "Practice progress",
@@ -629,6 +633,15 @@ def build_chat_summary(session: Mapping[str, object]) -> str:
     )
     labels = COPY[locale]
     question = _mapping(validated["question"])
+    context = validated.get("handoff_context")
+    terminal = (
+        validated.get("state") == "feedback_available"
+        and isinstance(context, Mapping)
+        and context.get("attempt") == 2
+        and context.get("final_attempt") is True
+    )
+    if terminal:
+        return f'{labels["summary_terminal"]}{_text(question["text"])}{labels["summary_terminal_boundary"]}'
     return f'{labels["summary"]}{_text(question["text"])} {labels["footer"]}'
 
 
