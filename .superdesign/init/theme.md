@@ -1209,6 +1209,7 @@ html { color-scheme: light; background: var(--paper); }
   .recruiter-practice-document .practice-handoff h2 { color: CanvasText; }
   .recruiter-practice-document .practice-progress li,
   .recruiter-practice-document .practice-progress li[aria-current="step"] { border-color: CanvasText; background: Canvas; color: CanvasText; }
+  .recruiter-practice-document .practice-progress li[aria-current="step"] { outline: 2px solid Highlight; outline-offset: 2px; }
   .recruiter-practice-document .practice-attempt-notice { border-color: CanvasText; background: Canvas; color: CanvasText; }
   .recruiter-practice-document .practice-attempt-notice h2 { color: CanvasText; }
   .recruiter-practice-document .practice-reentry-capsule { border-color: CanvasText; background: Canvas; color: CanvasText; }

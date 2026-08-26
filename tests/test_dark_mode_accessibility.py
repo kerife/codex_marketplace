@@ -231,6 +231,14 @@ class DarkModeAccessibilityTests(unittest.TestCase):
                     rf"{re.escape(scope)} main:focus-visible \{{[^}}]*outline-color: Highlight;",
                 )
 
+    def test_forced_colors_keeps_current_practice_progress_step_visible(self) -> None:
+        css = (ASSETS / "recruiter-practice-session-v1.css").read_text(encoding="utf-8")
+        forced = css[css.index("@media (forced-colors: active)"):]
+        self.assertRegex(
+            forced,
+            r"\.recruiter-practice-document \.practice-progress li\[aria-current=\"step\"\]\s*\{[^}]*outline:\s*2px solid Highlight;[^}]*outline-offset:\s*2px;",
+        )
+
     def test_dossier_forced_colors_keeps_all_focus_targets_visible(self) -> None:
         css = (ASSETS / "executive-career-dossier-v1.css").read_text(encoding="utf-8")
         forced = css[css.index("@media (forced-colors: active)"):]

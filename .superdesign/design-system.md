@@ -224,6 +224,8 @@ The session also exposes a three-step semantic progress track
 (`prepare`, `answer`, `review`) with one `aria-current="step"`. A second
 attempt adds a localized final-attempt notice, and its terminal feedback card
 closes the cycle without inviting a third rehearsal.
+In forced-colors mode, the current progress step keeps a system `Highlight`
+outline so its location remains visible without relying on color differences.
 The chat summary mirrors that closure with a short terminal message while
 keeping answer text and provenance metadata out of the summary.
 Ready boards and awaiting sessions use a compact re-entry capsule for the one
