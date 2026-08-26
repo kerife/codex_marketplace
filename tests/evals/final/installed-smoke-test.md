@@ -12,27 +12,27 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `4967973ab4919933380f689b5cd949f98fd36cbd`
+source_commit: `9dcd391e4a212b56d7fda7df4063a4353b3a3a92`
 
-source_tree: `645d2344c5654bac8eb822f70b3861a162a34f1d`
+source_tree: `58040cf4291100eee776a8b1bec9f5c9d3a62f60`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826092044`
+installed_cache_version: `0.2.0+codex.20260826094127`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
-source_file_count: `206`
+source_file_count: `211`
 
-installed_file_count: `206`
+installed_file_count: `211`
 
 sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `7b47b649ba61ff6912481bf84a9408897a2ad237fa24ebb12214a7d2eb2e757c`
+source_aggregate_sha256: `6f87ca342656c0cbae2b86d578e6b6937a226ce205d6fe806447186f9241bfa3`
 
-cache_aggregate_sha256: `7b47b649ba61ff6912481bf84a9408897a2ad237fa24ebb12214a7d2eb2e757c`
+cache_aggregate_sha256: `6f87ca342656c0cbae2b86d578e6b6937a226ce205d6fe806447186f9241bfa3`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826092044`.
+- Cachebuster identifier: `20260826094127`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -86,12 +86,13 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- Focused source verification passed 131/131 tests across the private-first
-  interview practice handoff, state-aware conversion-board rendering,
-  recruiter-practice-session compatibility, package structure, and release
-  checks.
-- Installed exact-cache package smokes passed 43/43 tests across the handoff,
-  conversion-board, writer, and recruiter-practice-session surfaces.
+- Focused source verification passed 53/53 tests across the private-first
+  interview handoff, ephemeral feedback continuation, proof-bound rendering,
+  state-aware conversion-board rendering, recruiter-practice-session
+  compatibility, and release checks; the prior cycle's 131/131 source matrix
+  remains covered by the same package history.
+- Installed exact-cache package smokes passed 53/53 tests across the handoff,
+  feedback, conversion-board, writer, and recruiter-practice-session surfaces.
 - The broader inherited suite remains bounded by the known legacy
   executive-dossier validation timeout; no full-suite green claim is made.
 - Repository-only conformance is not claimed from the installed cache, and
@@ -101,7 +102,7 @@ external_action_state: `not_executed`
 
 - Source was extracted from the published source commit with `git archive`; no mutable-worktree
   content comparison was used.
-- Source and cache each contained 206 non-empty sorted POSIX relative files.
+- Source and cache each contained 211 non-empty sorted POSIX relative files.
   Every path and lowercase per-file SHA-256 matched, and the aggregate digest
   over `path + NUL + file hash + LF` matched on both sides.
 - `diff -qr` was silent. Source and cache contained no `.pyc`, `.pyo`,
