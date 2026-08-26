@@ -1,7 +1,10 @@
 import copy
 import hashlib
 import json
+import os
+import stat
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -14,6 +17,8 @@ from private_first_interview_conversion_board_identity import (
     ValidatedPrivateFirstInterviewConversionBoard,
 )
 import validate_private_first_interview_conversion_board_v1 as board_validator
+import build_private_first_interview_conversion_board_v1 as board_builder
+import write_private_first_interview_conversion_board_v1 as board_writer
 
 
 class PrivateFirstInterviewConversionBoardContractTests(unittest.TestCase):
@@ -244,6 +249,103 @@ class PrivateFirstInterviewConversionBoardContractTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "does not match validated sources"):
             board_validator._revalidate_validated_private_first_interview_conversion_board(forged)
+
+
+class PrivateFirstInterviewConversionBoardBuildWriteTests(unittest.TestCase):
+    def _source(self, locale="en"):
+        value = json.loads((FIXTURES / f"accepted-{locale}.json").read_text(encoding="utf-8"))
+        return value["source_group"]
+
+    def test_builder_is_deterministic_and_does_not_accept_caller_authored_projection(self):
+        source = self._source()
+        first = board_builder.build_private_first_interview_conversion_board_v1(source)
+        second = board_builder.build_private_first_interview_conversion_board_v1(copy.deepcopy(source))
+        self.assertIs(type(first), ValidatedPrivateFirstInterviewConversionBoard)
+        self.assertEqual(first.artifact, second.artifact)
+        self.assertEqual(first.source_group, second.source_group)
+        caller_artifact = copy.deepcopy(json.loads((FIXTURES / "accepted-en.json").read_text()))
+        caller_artifact["decision"][0]["objective"] = "caller-authored final row"
+        with self.assertRaisesRegex(ValueError, "does not match validated sources"):
+            board_builder.build_private_first_interview_conversion_board_v1(caller_artifact)
+
+    def test_builder_stop_state_suppresses_detail(self):
+        source = copy.deepcopy(self._source())
+        for name in ("recruiter_outreach_lab", "quality_gate", "first_interview_7_day_plan", "weekly_coach_plan"):
+            source[name]["state"] = "stop"
+        for check in source["quality_gate"]["checks"]:
+            check["state"] = "stop"
+        without_snapshot = dict(source)
+        without_snapshot.pop("source_snapshot")
+        source["source_snapshot"] = "snap-private-first-interview-v1-sha256-" + hashlib.sha256(
+            json.dumps(without_snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        proof = board_builder.build_private_first_interview_conversion_board_v1(source)
+        self.assertEqual("stop", proof.artifact["decision"][0]["state"])
+        for section in ("sequence", "proof_cards", "risk_checks", "rehearsal", "week", "decision_ladder", "daily_reviews"):
+            self.assertNotIn(section, proof.artifact)
+
+    def test_writer_creates_private_mode_six_hundred_and_requires_force(self):
+        proof = board_builder.build_private_first_interview_conversion_board_v1(self._source())
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "board.json"
+            receipt = board_writer.write_private_first_interview_conversion_board_v1(proof, output)
+            self.assertEqual(output, receipt.output_path)
+            self.assertEqual(0o600, stat.S_IMODE(output.stat().st_mode))
+            self.assertEqual(json.dumps(proof.artifact, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(), output.read_bytes())
+            with self.assertRaises(board_writer.PrivateFirstInterviewConversionBoardWriteError):
+                board_writer.write_private_first_interview_conversion_board_v1(proof, output)
+            board_writer.write_private_first_interview_conversion_board_v1(proof, output, force=True)
+            self.assertEqual(0o600, stat.S_IMODE(output.stat().st_mode))
+
+    def test_writer_rejects_symlink_and_non_regular_target_without_partial_output(self):
+        proof = board_builder.build_private_first_interview_conversion_board_v1(self._source())
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            real = root / "real.json"
+            real.write_bytes(b"keep")
+            link = root / "link.json"
+            link.symlink_to(real)
+            with self.assertRaises(board_writer.PrivateFirstInterviewConversionBoardWriteError):
+                board_writer.write_private_first_interview_conversion_board_v1(proof, link, force=True)
+            self.assertEqual(b"keep", real.read_bytes())
+            nested = root / "nested"
+            nested.mkdir()
+            with self.assertRaises(board_writer.PrivateFirstInterviewConversionBoardWriteError):
+                board_writer.write_private_first_interview_conversion_board_v1(proof, nested, force=True)
+            self.assertFalse((root / ".nested").exists())
+
+    def test_writer_invalid_proof_leaves_no_output(self):
+        source = self._source()
+        invalid = copy.deepcopy(source)
+        invalid["plan_days"][0]["action"] = "unsafe changed final row"
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "board.json"
+            with self.assertRaises(board_writer.PrivateFirstInterviewConversionBoardWriteError):
+                board_writer.write_private_first_interview_conversion_board_v1(invalid, output)
+            self.assertFalse(output.exists())
+            self.assertEqual([], list(Path(directory).glob(".board.json.tmp-*")))
+
+    def test_writer_cleans_temporary_file_after_write_failure(self):
+        proof = board_builder.build_private_first_interview_conversion_board_v1(self._source())
+        original_fsync = board_writer.os.fsync
+        calls = {"count": 0}
+
+        def fail_once(fd):
+            calls["count"] += 1
+            if calls["count"] == 1:
+                raise OSError("simulated fsync failure")
+            return original_fsync(fd)
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "board.json"
+            board_writer.os.fsync = fail_once
+            try:
+                with self.assertRaises(board_writer.PrivateFirstInterviewConversionBoardWriteError):
+                    board_writer.write_private_first_interview_conversion_board_v1(proof, output)
+            finally:
+                board_writer.os.fsync = original_fsync
+            self.assertFalse(output.exists())
+            self.assertEqual([], list(Path(directory).glob(".board.json.tmp-*")))
 
 
 if __name__ == "__main__":
