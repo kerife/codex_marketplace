@@ -53,6 +53,7 @@ def _sibling(name: str) -> Any:
 
 
 _schema_validation = _sibling("validate_json_schema_subset.py")
+_v1_identity = _sibling("private_first_interview_conversion_board_identity.py")
 _source_bundle = _sibling("private_first_interview_source_bundle.py")
 _v1 = _sibling("validate_private_first_interview_conversion_board_v1.py")
 _identity = _sibling("private_first_interview_conversion_board_v2_identity.py")

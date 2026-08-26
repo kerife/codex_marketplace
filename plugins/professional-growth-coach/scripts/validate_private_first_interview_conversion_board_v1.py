@@ -20,9 +20,7 @@ def _sibling(name: str) -> Any:
         existing = sys.modules.get("private_first_interview_conversion_board_identity")
         if existing is not None:
             return existing
-        module_name = "private_first_interview_conversion_board_identity"
-    else:
-        module_name = "_pgc_private_first_interview_" + hashlib.sha256(origin.encode()).hexdigest()
+    module_name = "_pgc_private_first_interview_" + hashlib.sha256(origin.encode()).hexdigest()
     existing = sys.modules.get(module_name)
     if existing is not None:
         return existing

@@ -148,6 +148,7 @@ def _open_private_parent(parent: Path) -> int:
 def _atomic_private_write(output: Path, content: bytes, *, force: bool) -> None:
     parent_descriptor = _open_private_parent(output.parent)
     temporary_name: str | None = None
+    rollback_name: str | None = None
     descriptor: int | None = None
     try:
         try:
@@ -185,6 +186,23 @@ def _atomic_private_write(output: Path, content: bytes, *, force: bool) -> None:
             stream.flush()
             os.fsync(stream.fileno())
         if force:
+            if target is not None:
+                for _ in range(100):
+                    candidate = f".{output.name}.rollback-{secrets.token_hex(8)}"
+                    try:
+                        os.link(
+                            output.name,
+                            candidate,
+                            src_dir_fd=parent_descriptor,
+                            dst_dir_fd=parent_descriptor,
+                            follow_symlinks=False,
+                        )
+                        rollback_name = candidate
+                        break
+                    except FileExistsError:
+                        continue
+                if rollback_name is None:
+                    raise OSError(_FAILURE)
             os.replace(
                 temporary_name,
                 output.name,
@@ -201,13 +219,35 @@ def _atomic_private_write(output: Path, content: bytes, *, force: bool) -> None:
             )
             os.unlink(temporary_name, dir_fd=parent_descriptor)
         temporary_name = None
-        os.fsync(parent_descriptor)
+        try:
+            os.fsync(parent_descriptor)
+        except Exception:
+            if rollback_name is not None:
+                os.replace(
+                    rollback_name,
+                    output.name,
+                    src_dir_fd=parent_descriptor,
+                    dst_dir_fd=parent_descriptor,
+                )
+                rollback_name = None
+            else:
+                os.unlink(output.name, dir_fd=parent_descriptor)
+            os.fsync(parent_descriptor)
+            raise
+        if rollback_name is not None:
+            os.unlink(rollback_name, dir_fd=parent_descriptor)
+            rollback_name = None
     finally:
         if descriptor is not None:
             os.close(descriptor)
         if temporary_name is not None:
             try:
                 os.unlink(temporary_name, dir_fd=parent_descriptor)
+            except FileNotFoundError:
+                pass
+        if rollback_name is not None:
+            try:
+                os.unlink(rollback_name, dir_fd=parent_descriptor)
             except FileNotFoundError:
                 pass
         os.close(parent_descriptor)

@@ -36,7 +36,9 @@ def _proof():
 
 class PrivateFirstInterviewConversionBoardV2WriterTests(unittest.TestCase):
     def _temporary_names(self, directory: Path, output: Path) -> list[Path]:
-        return list(directory.glob(f".{output.name}.tmp-*"))
+        return list(directory.glob(f".{output.name}.tmp-*")) + list(
+            directory.glob(f".{output.name}.rollback-*")
+        )
 
     def test_writes_only_exact_proof_as_canonical_private_bytes_and_minimal_receipt(self):
         proof = _proof()
@@ -189,6 +191,37 @@ class PrivateFirstInterviewConversionBoardV2WriterTests(unittest.TestCase):
             self.assertEqual(0o700, stat.S_IMODE(output.parent.stat().st_mode))
             self.assertFalse(output.exists())
             self.assertEqual([], self._temporary_names(output.parent, output))
+
+    def test_directory_fsync_failure_rolls_back_published_output_and_preserves_forced_target(self):
+        proof = _proof()
+        original_fsync = board_writer.os.fsync
+        for force, initial in ((False, None), (True, b"keep")):
+            with self.subTest(force=force), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                output = root / "board.json"
+                if initial is not None:
+                    output.write_bytes(initial)
+                calls = {"count": 0}
+
+                def fail_directory_fsync(descriptor):
+                    calls["count"] += 1
+                    if calls["count"] == 2:
+                        raise OSError("simulated directory fsync failure")
+                    return original_fsync(descriptor)
+
+                board_writer.os.fsync = fail_directory_fsync
+                try:
+                    with self.assertRaises(board_writer.PrivateFirstInterviewConversionBoardV2WriteError):
+                        board_writer.write_private_first_interview_conversion_board_v2(
+                            proof, output, force=force
+                        )
+                finally:
+                    board_writer.os.fsync = original_fsync
+                if initial is None:
+                    self.assertFalse(output.exists())
+                else:
+                    self.assertEqual(initial, output.read_bytes())
+                self.assertEqual([], self._temporary_names(root, output))
 
 
 if __name__ == "__main__":
