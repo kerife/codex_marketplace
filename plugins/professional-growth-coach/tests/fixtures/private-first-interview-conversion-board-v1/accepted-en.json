@@ -5,7 +5,7 @@
   "as_of_date": "2026-08-26",
   "source_group": {
     "group_id": "group-synthetic-platform-review",
-    "source_snapshot": "snap-private-first-interview-v1-sha256-0000000000000000000000000000000000000000000000000000000000000000",
+    "source_snapshot": "snap-private-first-interview-v1-sha256-5e8fc337154d8d3794daca183dcafbf581fd480cc316c49935649fbe4d6af302",
     "recruiter_outreach_lab": {"record_id": "src-outreach-lab", "state": "ready", "objective": "Prepare a focused interview conversation", "fact_summary": "Synthetic role context and supported experience facts"},
     "quality_gate": {"record_id": "src-quality-gate", "state": "pass", "checks": [
       {"check_id": "src-check-specificity", "topic": "specificity", "state": "pass"},

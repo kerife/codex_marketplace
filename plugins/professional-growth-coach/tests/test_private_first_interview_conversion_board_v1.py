@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import json
 import sys
 import unittest
@@ -158,6 +159,50 @@ class PrivateFirstInterviewConversionBoardContractTests(unittest.TestCase):
         changed_projection["decision"][0]["objective"] = "caller supplied final row"
         with self.assertRaisesRegex(ValueError, "does not match validated sources"):
             board_validator.validate_private_first_interview_conversion_board_v1(changed_projection)
+
+    def test_source_snapshot_is_content_bound(self):
+        source = self._load_fixture("en")["source_group"]
+        source["source_snapshot"] = source["source_snapshot"][:-1] + "0"
+        with self.assertRaisesRegex(ValueError, "does not match validated sources"):
+            board_validator.validate_private_first_interview_conversion_board_v1(source)
+
+    def test_stop_state_suppresses_tracking_detail(self):
+        source = copy.deepcopy(self._load_fixture("en")["source_group"])
+        for name in (
+            "recruiter_outreach_lab",
+            "quality_gate",
+            "first_interview_7_day_plan",
+            "weekly_coach_plan",
+        ):
+            source[name]["state"] = "stop"
+        for check in source["quality_gate"]["checks"]:
+            check["state"] = "stop"
+        without_snapshot = dict(source)
+        without_snapshot.pop("source_snapshot")
+        source["source_snapshot"] = (
+            "snap-private-first-interview-v1-sha256-"
+            + hashlib.sha256(
+                json.dumps(
+                    without_snapshot,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest()
+        )
+        proof = board_validator.validate_private_first_interview_conversion_board_v1(source)
+        artifact = proof.artifact
+        self.assertEqual("stop", artifact["decision"][0]["state"])
+        for section in (
+            "sequence",
+            "proof_cards",
+            "risk_checks",
+            "rehearsal",
+            "week",
+            "decision_ladder",
+            "daily_reviews",
+        ):
+            self.assertNotIn(section, artifact)
 
     def test_source_mutation_after_validation_does_not_mutate_frozen_proof(self):
         source = self._load_fixture("en")["source_group"]

@@ -77,7 +77,19 @@ def _unsafe_source_text(value: object) -> bool:
         "probabilidad", "guarantee", "garantía", "salary", "sueldo", "api_key",
         "password", "credential", "secret", "token",
     )
-    for text in _strings(value):
+    metadata_fields = {"group_id", "source_snapshot", "record_id", "check_id", "day", "branch", "topic", "state"}
+    def prose_values(node: object):
+        if isinstance(node, Mapping):
+            for key, item in node.items():
+                if key in metadata_fields:
+                    continue
+                yield from prose_values(item)
+        elif isinstance(node, list):
+            for item in node:
+                yield from prose_values(item)
+        elif isinstance(node, str):
+            yield node
+    for text in prose_values(value):
         if not _prose.is_safe_prose_text(text):
             return True
         if _prose.contains_obfuscated_candidate_identity(text) or _prose.contains_candidate_identity(text):
@@ -114,9 +126,13 @@ def _source_group_shape(source: object) -> bool:
     snapshot = source.get("source_snapshot")
     if not isinstance(snapshot, str):
         return False
-    if snapshot == "snap-private-first-interview-v1-sha256-" + ("0" * 64):
-        if source.get("group_id") != "group-synthetic-platform-review":
-            return False
+    without_snapshot = dict(source)
+    without_snapshot.pop("source_snapshot", None)
+    expected_snapshot = "snap-private-first-interview-v1-sha256-" + hashlib.sha256(
+        _canonical_json(without_snapshot).encode("utf-8")
+    ).hexdigest()
+    if snapshot != expected_snapshot:
+        return False
     return True
 
 
@@ -167,6 +183,10 @@ def _project_from_frozen(source_group: Mapping[str, object], *, locale: str = "e
     current_state = next((state for state in _STATES[::-1] if state in states), "clarify")
     artifact: dict[str, object] = {"schema_version": "private-first-interview-conversion-board-v1", "artifact_kind": "private_first_interview_conversion_board", "locale": locale, "as_of_date": as_of_date, "source_group": source_group}
     artifact["decision"] = [{"state": current_state, **copy["decision"]}]
+    if current_state == "stop":
+        artifact["approval_boundary"] = {"artifact_state": "private_draft", "allowed_next_step": "manual_private_review", "prohibited_actions": ["message", "connect", "apply", "schedule", "calendar_create", "publish", "share", "upload", "submit", "export", "external_edit", "purchase", "enroll"], "authorization_required": True}
+        artifact["delivery"] = {"draft_only": True, "external_actions_authorized": False, "no_message_action": True, "no_calendar_action": True, "raw_event_retained": False, "raw_reply_retained": False, "raw_answer_retained": False, "local_save_mode": "disabled", "candidate_review_required": True}
+        return artifact
     stages = ("current_state", "private_preparation", "human_review", "authorization_gate")
     artifact["sequence"] = [{"stage": stage, "label": copy["sequence"][i][0], "description": copy["sequence"][i][1]} for i, stage in enumerate(stages)]
     artifact["proof_cards"] = [{"vacancy_signal": a, "evidence_summary": b, "caveat": c} for a, b, c in copy["proof"]]

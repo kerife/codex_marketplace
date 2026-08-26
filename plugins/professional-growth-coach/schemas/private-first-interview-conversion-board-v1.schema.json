@@ -6,8 +6,28 @@
   "additionalProperties": false,
   "required": [
     "schema_version", "artifact_kind", "locale", "as_of_date", "source_group",
-    "decision", "sequence", "proof_cards", "risk_checks", "rehearsal", "week",
-    "decision_ladder", "daily_reviews", "approval_boundary", "delivery"
+    "decision", "approval_boundary", "delivery"
+  ],
+  "oneOf": [
+    {
+      "required": [
+        "sequence", "proof_cards", "risk_checks", "rehearsal", "week",
+        "decision_ladder", "daily_reviews"
+      ]
+    },
+    {
+      "not": {
+        "anyOf": [
+          {"required": ["sequence"]},
+          {"required": ["proof_cards"]},
+          {"required": ["risk_checks"]},
+          {"required": ["rehearsal"]},
+          {"required": ["week"]},
+          {"required": ["decision_ladder"]},
+          {"required": ["daily_reviews"]}
+        ]
+      }
+    }
   ],
   "properties": {
     "schema_version": {"const": "private-first-interview-conversion-board-v1"},
