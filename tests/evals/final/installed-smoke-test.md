@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `34cf130f15cebe0f2873bde73589e4639e7bb7c6`
+source_commit: `95efae727762622d22d09380ef05e847759fbc51`
 
-source_tree: `3806e88ea8db34ec72c1f7b00ef09e8a84e6b03d`
+source_tree: `e2f8d1bed25ac492a2e63d0f7f41c242115e3e1e`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826130128`
+installed_cache_version: `0.2.0+codex.20260826131338`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `f537a7478764a06448f2076e49d7a5c4eea2eccd93859d50dde2c46069b8699c`
+source_aggregate_sha256: `1f511d0662a2eadede4f10e49fd9a8b30137e222f101e6f4cbac2b08c62deaca`
 
-cache_aggregate_sha256: `f537a7478764a06448f2076e49d7a5c4eea2eccd93859d50dde2c46069b8699c`
+cache_aggregate_sha256: `1f511d0662a2eadede4f10e49fd9a8b30137e222f101e6f4cbac2b08c62deaca`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826130128`.
+- Cachebuster identifier: `20260826131338`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -116,6 +116,8 @@ external_action_state: `not_executed`
 - The current forced-colors increment adds a non-color `Highlight` outline to the active
   practice-progress step; the focused accessibility, Superdesign parity, and package renderer
   checks passed.
+- The current `missing_detail` increment makes independent next-step guidance ask for one
+  bounded clarification in both locales; the package matrix passed 340/340 tests.
 - The broader inherited suite remains bounded by the known legacy
   executive-dossier skill-size and pressure-binding checks; official validator
   checksum gates, package checks, and the expanded root privacy scan passed,
