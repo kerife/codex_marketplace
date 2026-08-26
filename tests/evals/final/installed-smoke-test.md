@@ -12,27 +12,27 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `6d45d4bb0916446cb956d50caf63d1d52c97feda`
+source_commit: `4b6700f3278813e6d27b0d1af6df88a5bf490c8b`
 
-source_tree: `199639e7128494ecc2a0625ce5952792ef262e9e`
+source_tree: `3add93395ae085b0fd20adca7bf194fc2a0d2f74`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260825051725`
+installed_cache_version: `0.2.0+codex.20260826022926`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
-source_file_count: `162`
+source_file_count: `171`
 
-installed_file_count: `162`
+installed_file_count: `171`
 
 sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `9715c4228f9b3321747226d2302694d990749222ca607d083d587dcc2b8359aa`
+source_aggregate_sha256: `3541a2db2a437c14b9a469d2d719d14576223ddc395b1ebda2212125e3108c37`
 
-cache_aggregate_sha256: `9715c4228f9b3321747226d2302694d990749222ca607d083d587dcc2b8359aa`
+cache_aggregate_sha256: `3541a2db2a437c14b9a469d2d719d14576223ddc395b1ebda2212125e3108c37`
 
 source_bytecode_count: `0`
 
@@ -74,11 +74,11 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster timestamp: 2026-08-25T05:17:25Z.
-- Commit A changed only the plugin manifest, was pushed to remote `main`, and
-  was verified by fetch plus a live remote-head lookup before installation.
+- Cachebuster identifier: `20260826022926`.
+- The release commits were pushed to remote `main` and verified by fetch plus a
+  live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
-  proved clean and non-divergent, and aligned detached to commit A.
+  proved clean and non-divergent, and aligned detached to the published source commit.
 - Installation used only the exact public selector. The resulting row was the
   sole matching row, enabled, and reported the committed version. No manual
   configuration edit, cache deletion, mutable alias, glob, or lexicographic
@@ -86,34 +86,24 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- The pre-A source matrix passed 333/333 tests in 3576.499 seconds. The
-  checked-in installed-attestation binding was tested separately and correctly
-  rejected the prior release with its one fixed stale-contract diagnostic; the
-  prior attestation was not rewritten early.
-- Skill and plugin validation both passed.
-- Plugin package discovery passed 223/223 tests; the final pre-A official run
-  completed that phase in 144.015 seconds.
-- Repository root discovery passed 1478/1478 tests in 4332.487 seconds with the
-  same single installed-attestation binding test deferred. The documented
-  locked `VALIDATION_PYTHON` override was used.
-- Static validation passed private-schema, dossier-handoff, and package checks.
-- Repository privacy passed without findings or sensitive-value echo.
-- Post-cachebuster structure/full-plugin verification passed all 275 non-stale
-  tests in 2413.866 seconds; the only failure was the same exact binding test
-  deferred until this attestation update. The final post-cachebuster official
-  run passed package 223/223 in 146.054 seconds and root 1478/1478 in 4411.091
-  seconds; post-cachebuster static and privacy validation also passed.
-- The unfiltered real binding test and canonical release runner are post-B
-  publication gates and are not claimed by this pre-B attestation text.
-- A fresh validation-environment bootstrap was blocked by the established
-  persistent-install sandbox policy. Every gate used the documented, verified
-  locked CPython 3.11.15 arm64 environment with PyYAML 6.0.3.
+- The focused learning-proof contract and renderer suite passed 18/18 tests,
+  including source-route provenance, duplicate/excess fact rejection, bounded
+  Spanish/English safety filters, opaque-proof rendering, and no-partial-output
+  behavior.
+- Extracted plugin discovery passed 190/190 tests with 42 expected skips for
+  repository-only fixtures; no fixture or module-discovery errors remained.
+- Private schema conformance passed 64/64 tests. Static validation passed the
+  private-schema, dossier-handoff, and package checks.
+- Installed semantic smokes passed 39/39 accepted and 9/9 rejected cases; the
+  installed packet matrix passed 6/6 accepted and 12/12 rejected cases.
+- Repository-only conformance is not claimed from the installed cache, and
+  visual/browser/assistive-technology QA remains unrun.
 
 ## Immutable archive and installed package evidence
 
-- Source was extracted from commit A with `git archive`; no mutable-worktree
+- Source was extracted from the published source commit with `git archive`; no mutable-worktree
   content comparison was used.
-- Source and cache each contained 162 non-empty sorted POSIX relative files.
+- Source and cache each contained 171 non-empty sorted POSIX relative files.
   Every path and lowercase per-file SHA-256 matched, and the aggregate digest
   over `path + NUL + file hash + LF` matched on both sides.
 - `diff -qr` was silent. Source and cache contained no `.pyc`, `.pyo`,
