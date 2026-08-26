@@ -18,6 +18,7 @@ FAMILY_ASSETS = {
         "assets/recruiter-practice-session-v1.css",
         "assets/private-recruiter-reply-triage-v1.css",
         "assets/learning-proof-sprint-v1.css",
+        "assets/private-first-interview-conversion-board-v1.css",
     ),
     "compact_receipt": (
         "assets/private-recruiter-followthrough-checkpoint-v1.css",
@@ -60,7 +61,9 @@ FAMILY_COLORS = {
     ),
     "practice_triage": frozenset(
         {
+            "#000000",
             "#101521",
+            "#244337",
             "#173e30",
             "#1b1c1a",
             "#182235",
@@ -68,6 +71,8 @@ FAMILY_COLORS = {
             "#3b301f",
             "#3f282d",
             "#46534d",
+            "#4a2829",
+            "#536158",
             "#5f718e",
             "#5c4a12",
             "#6f8175",
@@ -81,12 +86,14 @@ FAMILY_COLORS = {
             "#dfbf70",
             "#f3f6ff",
             "#f5d68a",
+            "#f2d28a",
             "#f5ecd8",
             "#f6e0da",
             "#f6f4ee",
             "#f7ecd5",
             "#f8f7f2",
             "#ff9f8d",
+            "#ff9b83",
             "#ffffff",
         }
     ),

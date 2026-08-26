@@ -35,6 +35,14 @@ class DesignTokenContractTests(unittest.TestCase):
             checker.FAMILY_ASSETS["practice_triage"],
         )
 
+    def test_practice_family_includes_private_first_interview_board_surface(self):
+        checker = load_checker()
+
+        self.assertIn(
+            "assets/private-first-interview-conversion-board-v1.css",
+            checker.FAMILY_ASSETS["practice_triage"],
+        )
+
     def test_canonical_assets_pass_their_declared_family_allowlist(self):
         checker = load_checker()
 
