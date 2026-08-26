@@ -241,7 +241,6 @@
   "source_provenance": {
     "provenance_state": "synthetic_fixture",
     "source_contract": "private-first-interview-source-bundle-v1",
-    "source_digest": "snap-private-first-interview-v1-sha256-5e8fc337154d8d3794daca183dcafbf581fd480cc316c49935649fbe4d6af302",
     "source_kinds": [
       "recruiter_outreach_lab",
       "quality_gate",

@@ -1036,6 +1036,7 @@ class FullPluginIntegrationTests(unittest.TestCase):
             )
             self.assertEqual("synthetic_fixture", artifact["source_provenance"]["provenance_state"])
             self.assertNotIn("source_group", artifact)
+            self.assertNotIn("source_digest", artifact["source_provenance"])
 
     def test_static_checker_exists_and_passes(self) -> None:
         checker = PLUGIN_ROOT / "tests" / "run_static_checks.py"

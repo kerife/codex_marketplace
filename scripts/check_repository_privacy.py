@@ -1632,6 +1632,7 @@ def validate_private_first_interview_v2_artifact(path: Path, text: str) -> Count
             and value.get("schema_version") == "private-first-interview-conversion-board-v2"
             and isinstance(provenance, dict)
             and provenance.get("provenance_state") == "synthetic_fixture"
+            and "source_digest" not in provenance
             and value.get("delivery", {}).get("external_actions_authorized") is False
         ):
             violations["PRIVATE_INTERVIEW_V2_FIXTURE_CONTRACT"] += 1

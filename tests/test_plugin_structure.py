@@ -182,6 +182,26 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
             [], checker.validate_private_first_interview_board_package(PLUGIN_ROOT)
         )
 
+    def test_private_first_interview_v2_static_gate_rejects_interactive_markup(self) -> None:
+        """Break caught: the v2 asset regex accepts a script, form, or button tag."""
+
+        checker = load_static_checker()
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            copied_plugin = Path(temporary_directory) / "professional-growth-coach"
+            shutil.copytree(PLUGIN_ROOT, copied_plugin)
+            asset = copied_plugin / "assets" / "private-first-interview-conversion-board-v2.html"
+            asset.write_text("<button>unsafe</button>", encoding="utf-8")
+            previous_modules = dict(sys.modules)
+            try:
+                errors = checker.validate_private_first_interview_board_package(copied_plugin)
+            finally:
+                sys.modules.clear()
+                sys.modules.update(previous_modules)
+        self.assertTrue(
+            any("sanitized board asset has interactive markup" in error for error in errors),
+            errors,
+        )
+
     def test_private_first_interview_v2_docs_route_new_requests_to_the_sanitized_boundary(self) -> None:
         """Break caught: new routes expose v1 source-bearing or action-bearing guidance."""
 

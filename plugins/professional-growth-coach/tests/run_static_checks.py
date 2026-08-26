@@ -17442,7 +17442,7 @@ def validate_private_first_interview_board_package(plugin_root: Path) -> list[st
             continue
         if any(token in asset for token in EXECUTIVE_DOSSIER_OFFLINE_TOKENS):
             errors.append(f"{relative_path}: sanitized board asset has remote or network token")
-        if re.search(r"</?(?:script|form|button)\\b", asset, re.I):
+        if re.search(r"</?(?:script|form|button)\b", asset, re.I):
             errors.append(f"{relative_path}: sanitized board asset has interactive markup")
 
     v2_runtime_paths = (
@@ -17487,7 +17487,10 @@ def validate_private_first_interview_board_package(plugin_root: Path) -> list[st
                 and provenance.get("provenance_state") == "synthetic_fixture"
                 and artifact.get("locale") == locale
                 and artifact.get("schema_version") == "private-first-interview-conversion-board-v2"
-                and all(token not in artifact_text for token in ("source_group", "record_id", "group_id"))
+                and all(
+                    token not in artifact_text
+                    for token in ("source_digest", "source_group", "record_id", "group_id")
+                )
             ):
                 errors.append(f"{fixture.name}: sanitized fixture contract is invalid")
         with tempfile.TemporaryDirectory() as temporary_directory:
