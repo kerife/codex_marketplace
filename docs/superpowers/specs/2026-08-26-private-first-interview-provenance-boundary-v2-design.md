@@ -26,9 +26,10 @@ In scope:
 - A v1-compatible adapter that accepts only the exact published v1 proof
   object and labels the resulting bundle `composition_only`; it must never
   claim upstream attestation.
-- An attested path that accepts only an exact upstream proof object issued by
-  the source-bundle validator. Raw mappings and forged duck-typed proofs are
-  rejected by the public v2 builder.
+- An upstream-attested path that accepts only an exact upstream proof object
+  issued by the source-bundle validator, plus an explicitly labeled synthetic
+  fixture path. Raw mappings and forged duck-typed proofs are rejected by the
+  public v2 builder.
 - A sanitized projection containing closed provenance metadata but no raw
   source rows, source prose, internal record IDs, or source snapshot in HTML.
 - Writer smoke coverage for mode `0600`, force semantics, symlink and
@@ -69,7 +70,7 @@ payload slots. Its public surface exposes only a bounded metadata view:
 
 ```text
 source_contract = "private-first-interview-source-bundle-v1"
-provenance_state = "attested" | "composition_only"
+provenance_state = "upstream_attested" | "synthetic_fixture" | "composition_only"
 source_digest = "snap-private-first-interview-v1-sha256-" followed by exactly
 64 lowercase hexadecimal characters
 source_kinds = ["recruiter_outreach_lab", "quality_gate",
@@ -80,10 +81,10 @@ source_kinds = ["recruiter_outreach_lab", "quality_gate",
 The exact source payload is captured once and retained only inside the proof
 object for recomputation; no public property returns it. The v2 builder accepts
 only the exact class, not a mapping, serialized JSON, or duck-typed object.
-The validator issues `attested` only from its private upstream-proof issuer.
-The v1 adapter issues `composition_only` and is intentionally explicit about
-that weaker provenance. A raw, correctly re-hashed but fabricated group has no
-accepted public v2 entry point.
+The validator issues `upstream_attested` only from its private upstream-proof
+issuer. A fixture issuer may issue `synthetic_fixture` for tests, and the v1
+adapter issues `composition_only`; neither state is silently upgraded. A raw,
+correctly re-hashed but fabricated group has no accepted public v2 entry point.
 
 ### Sanitized artifact
 
@@ -106,8 +107,10 @@ artifact never contains `source_group`, `record_id`, `group_id`, or raw
 
 ### Safety and provenance semantics
 
-- `attested` means the exact upstream proof class was issued by the source
-  validator; it is not a hiring or interview outcome claim.
+- `upstream_attested` means the exact upstream proof class was issued by the
+  source validator; it is not a hiring or interview outcome claim.
+- `synthetic_fixture` is test-only data and must be visibly labeled as such;
+  it is never presented as candidate evidence or an upstream source.
 - `composition_only` means the v1 proof was structurally and snapshot bound,
   but upstream origin was not independently attested. The renderer shows this
   as a review warning and never upgrades it.
@@ -136,13 +139,11 @@ adapt_v1_private_first_interview_proof(
 ) -> ValidatedPrivateFirstInterviewSourceBundle
 
 build_private_first_interview_conversion_board_v2(
-    source_bundle: object, *, locale: str = "en",
-    as_of_date: str = "1970-01-01"
+    source_bundle: object, *, locale: str = "en", as_of_date: str
 ) -> ValidatedPrivateFirstInterviewConversionBoardV2
 
 validate_private_first_interview_conversion_board_v2(
-    source_bundle_or_artifact: object, *, locale: str = "en",
-    as_of_date: str = "1970-01-01"
+    source_bundle_or_artifact: object, *, locale: str = "en", as_of_date: str
 ) -> ValidatedPrivateFirstInterviewConversionBoardV2
 
 write_private_first_interview_conversion_board_v2(
@@ -155,10 +156,10 @@ render_private_first_interview_conversion_board_v2(
 ```
 
 The public builder rejects raw source mappings, serialized artifacts, and
-caller-authored projection rows. A private test/fixture issuer may create an
-attested proof only to model an upstream validator; production documentation
-must use the v1 adapter and visibly retain `composition_only` unless a real
-upstream issuer is integrated.
+caller-authored projection rows. A private test/fixture issuer may create a
+`synthetic_fixture` proof only to model an upstream validator; production
+documentation must use the v1 adapter and visibly retain `composition_only`
+unless a real upstream issuer is integrated.
 
 ## File and data flow
 
@@ -175,9 +176,10 @@ upstream issuer is integrated.
    fsyncs, atomically replaces only with `force=True`, and removes temporary
    files on every failure.
 5. The renderer accepts only the exact v2 proof class and renders a trust strip
-   that says “Fuente validada” for `attested` or “Procedencia por composición;
-   revisar fuente” for `composition_only`, plus “Sin texto fuente persistido”
-   and “Revisión manual requerida”. No digest or IDs are shown.
+   that says “Fuente validada” for `upstream_attested`, “Fuente sintética de
+   prueba” for `synthetic_fixture`, or “Procedencia por composición; revisar
+   fuente” for `composition_only`, plus “Texto original no almacenado” and
+   “Revisión manual requerida”. No digest or IDs are shown.
 
 ## Visual product direction
 
@@ -197,8 +199,8 @@ Focused tests must prove:
 - v1 fixtures and historical tests remain unchanged and green;
 - exact proof identity, immutability, one-capture behavior, bounded metadata,
   and rejection of raw/duck-typed/forged v2 inputs;
-- `attested` and `composition_only` are distinct, deterministic, and never
-  silently upgraded;
+- `upstream_attested`, `synthetic_fixture`, and `composition_only` are
+  distinct, deterministic, and never silently upgraded;
 - v2 JSON has no `source_group` and no raw source values, preserves 1/7/4/7
   projection cardinalities, and suppresses detail in `stop` state;
 - unsafe arbitrary confidential prose, PII, secrets, URLs, HTML, controls,
