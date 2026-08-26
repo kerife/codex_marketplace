@@ -586,11 +586,13 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
                 "screen_opening": "contexto suministrado, acción concreta, resultado observable y límite de evidencia",
                 "eligibility_boundary": "dato suministrado, pregunta abierta y límite seguro",
                 "compensation_boundary": "contexto conocido, pregunta de compensación y límite de decisión",
+                "missing_detail": "mínimo suministrado, detalle faltante y próxima confirmación",
             },
             "en": {
                 "screen_opening": "supplied context, concrete action, observable result, and evidence boundary",
                 "eligibility_boundary": "supplied fact, open question, and safe boundary",
                 "compensation_boundary": "known context, compensation question, and decision boundary",
+                "missing_detail": "supplied minimum, missing detail, and next confirmation",
             },
         }
         for locale, kinds in cases.items():
@@ -603,6 +605,12 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
                         question_kind=question_kind,
                     )
                     self.assertIn(expected, rendered.casefold())
+                    if question_kind == "missing_detail":
+                        generic = {
+                            "es": "responde con contexto breve, acción concreta y resultado observado",
+                            "en": "answer with brief context, a concrete action, and an observed result",
+                        }[locale]
+                        self.assertNotIn(generic, rendered.casefold())
 
     def test_feedback_copy_is_closed_and_kind_aware_in_both_locales(self) -> None:
         expected = {

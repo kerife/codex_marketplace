@@ -58,6 +58,27 @@ class RecruiterPracticeRendererTests(unittest.TestCase):
     def _observation(self, label):
         return {"label": label, "statement": "Observación acotada.", "source_refs": ["OBS-001", "RB-001"]}
 
+    def test_missing_detail_next_action_copy_is_question_aware(self):
+        expected = {
+            "es": "mínimo suministrado, detalle faltante y próxima confirmación",
+            "en": "supplied minimum, missing detail, and next confirmation",
+        }
+        generic = {
+            "es": "responde con contexto breve, acción concreta y resultado observado",
+            "en": "answer with brief context, a concrete action, and an observed result",
+        }
+        for locale in ("es", "en"):
+            session = self._feedback_session([])
+            session["locale"] = locale
+            session["state"] = "awaiting_answer"
+            session["question"]["kind"] = "missing_detail"
+            session["observed_answer"] = None
+            session["feedback"] = {"score": "unknown", "score_state": "unknown", "observations": []}
+            with self.subTest(locale=locale):
+                rendered = renderer.render_session_html(session)
+                self.assertIn(expected[locale], rendered.casefold())
+                self.assertNotIn(generic[locale], rendered.casefold())
+
     def test_feedback_taxonomy_accepts_canonical_order(self):
         session = self._feedback_session([self._observation(label) for label in ("solid", "confirm", "do_not_assert")])
         self.assertEqual(validator.validate_session(session), [])

@@ -228,6 +228,10 @@ In forced-colors mode, the current progress step keeps a system `Highlight`
 outline so its location remains visible without relying on color differences.
 The chat summary mirrors that closure with a short terminal message while
 keeping answer text and provenance metadata out of the summary.
+Independent sessions keep the next-step instruction aligned with the closed
+question kind; `missing_detail` asks for one bounded clarification instead of
+the generic context/action/result sequence. Sourced sessions continue to point
+back to the private originating conversation.
 Ready boards and awaiting sessions use a compact re-entry capsule for the one
 private next action; it remains static, localized, and absent from blocked or
 terminal states. The ready capsule presents the bounded context/action/result
