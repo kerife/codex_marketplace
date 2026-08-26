@@ -111,6 +111,16 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
             "pause": "Pausar y revisar" if es else "Pause and review",
             "stop": "Detener" if es else "End review",
         },
+        "section_nav": "Ir a una sección" if es else "Jump to a section",
+        "section_links": {
+            "decision-heading": "Decisión" if es else "Decision",
+            "trust-heading": "Procedencia" if es else "Provenance",
+            "practice-gate-heading": "Práctica" if es else "Practice",
+            "risks-heading": "Riesgos" if es else "Risks",
+            "week-heading": "Plan" if es else "Plan",
+            "reviews-heading": "Revisión" if es else "Review",
+            "approval-heading": "Límite privado" if es else "Private boundary",
+        },
         "risk_topics": {
             "production": "Producción" if es else "Production",
             "compensation": "Compensación" if es else "Compensation",
@@ -169,7 +179,16 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         f'{_e(labels["trust"])}</h2><ul><li>{_e(trust_copy)}</li><li>{_e(labels["not_stored"])}</li>'
         f'<li>{_e(labels["manual"])}</li></ul></section>'
     )
-    sections = [decision_html, trust]
+    nav_targets = ["decision-heading", "trust-heading"]
+    if state != "stop":
+        nav_targets.extend(("practice-gate-heading", "risks-heading", "week-heading", "reviews-heading"))
+    nav_targets.append("approval-heading")
+    section_nav = (
+        f'<nav class="board-section-nav" aria-label="{_e(labels["section_nav"])}"><p class="board-section-nav-label">{_e(labels["section_nav"])}</p><ul>'
+        + "".join(f'<li><a href="#{_e(target)}">{_e(labels["section_links"][target])}</a></li>' for target in nav_targets)
+        + "</ul></nav>"
+    )
+    sections = [decision_html, trust, section_nav]
     if state != "stop":
         def _branch_label(row: Mapping[str, object]) -> str:
             branch = row.get("branch", row.get("decision"))

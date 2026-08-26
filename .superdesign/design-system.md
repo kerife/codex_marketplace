@@ -232,3 +232,5 @@ terminal states.
 The visual layer renders closed risk, quality, score, authorization, and
 prohibited-action enums as localized human labels; unsupported values stay out
 of the UI through a generic fail-closed diagnostic.
+Long boards use a restrained localized section-navigation strip for scanning;
+it disappears in print and preserves the static, private boundary.

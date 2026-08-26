@@ -207,6 +207,31 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
         css = Path(renderer.CSS_PATH).read_text(encoding="utf-8")
         self.assertIn(".board-decision { background: #173e30; }", css)
 
+    def test_long_board_exposes_localized_section_navigation_and_stop_only_safe_destinations(self):
+        for locale, nav_label, links in (
+            ("es", "Ir a una sección", ("Decisión", "Procedencia", "Práctica", "Riesgos", "Plan", "Revisión", "Límite privado")),
+            ("en", "Jump to a section", ("Decision", "Provenance", "Practice", "Risks", "Plan", "Review", "Private boundary")),
+        ):
+            with self.subTest(locale=locale):
+                output = renderer.render_private_first_interview_conversion_board_v2(self._proof(locale))
+                self.assertIn(f'<nav class="board-section-nav" aria-label="{nav_label}">', output)
+                for link in links:
+                    self.assertIn(link, output)
+                self.assertLess(output.index('<nav class="board-section-nav"'), output.index('<section class="board-ladder"'))
+
+                stop_source = copy.deepcopy(_source())
+                for name in ("recruiter_outreach_lab", "quality_gate", "first_interview_7_day_plan", "weekly_coach_plan"):
+                    stop_source[name]["state"] = "stop"
+                for check in stop_source["quality_gate"]["checks"]:
+                    check["state"] = "stop"
+                _rebind_snapshot(stop_source)
+                stop_output = renderer.render_private_first_interview_conversion_board_v2(self._proof(locale, source=stop_source))
+                self.assertIn('href="#decision-heading"', stop_output)
+                self.assertIn('href="#trust-heading"', stop_output)
+                self.assertIn('href="#approval-heading"', stop_output)
+                self.assertNotIn('href="#practice-gate-heading"', stop_output)
+                self.assertNotIn('href="#risks-heading"', stop_output)
+
     def test_practice_gate_escapes_rehearsal_copy_and_stop_omits_it(self):
         proof = self._proof()
         artifact = proof.artifact

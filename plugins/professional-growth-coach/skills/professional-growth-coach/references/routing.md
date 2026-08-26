@@ -163,6 +163,9 @@ only a static re-entry capsule describing the bounded answer shape; blocked and
 terminal states omit it. No external action is performed.
 The rendered board localizes its closed risk, quality, score, authorization, and
 prohibited-action enums. Unknown values fail closed without raw enum disclosure.
+For long boards, the renderer may add localized in-page navigation; it remains
+static and private, and stop states link only to safe decision/provenance/
+boundary sections.
 
 ## Multi-module routing
 

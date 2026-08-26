@@ -105,6 +105,9 @@ omit it.
 The v2 board keeps its closed schema enums internal and renders risk topics,
 signal quality, pre-response score, authorization, and blocked actions with
 localized human labels; an unknown enum fails closed without being echoed.
+Long boards include localized in-page navigation to the decision, practice,
+risk, plan, review, and private-boundary sections; stop states expose only
+safe decision, provenance, and boundary destinations.
 
 ## Installation
 
