@@ -51,9 +51,9 @@
         },
         "first_interview_7_day_plan": {"$ref": "#/$defs/source_record"},
         "weekly_coach_plan": {"$ref": "#/$defs/source_record"},
-        "decision_ladder": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"$ref": "#/$defs/source_ladder_row"}},
-        "plan_days": {"type": "array", "minItems": 7, "maxItems": 7, "items": {"$ref": "#/$defs/source_day_row"}},
-        "daily_review_logs": {"type": "array", "minItems": 7, "maxItems": 7, "items": {"$ref": "#/$defs/source_review_row"}}
+        "decision_ladder": {"type": "array", "minItems": 4, "maxItems": 4, "uniqueItemsBy": ["branch"], "items": {"$ref": "#/$defs/source_ladder_row"}},
+        "plan_days": {"type": "array", "minItems": 7, "maxItems": 7, "uniqueItemsBy": ["day"], "items": {"$ref": "#/$defs/source_day_row"}},
+        "daily_review_logs": {"type": "array", "minItems": 7, "maxItems": 7, "uniqueItemsBy": ["day"], "items": {"$ref": "#/$defs/source_review_row"}}
       }
     },
     "source_record": {

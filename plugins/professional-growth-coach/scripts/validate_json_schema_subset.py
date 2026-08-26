@@ -662,6 +662,16 @@ def _keyword_shapes_valid(schema: Mapping[str, object]) -> bool:
         return False
     if "uniqueItems" in schema and not isinstance(schema["uniqueItems"], bool):
         return False
+    if "uniqueItemsBy" in schema:
+        fields = schema["uniqueItemsBy"]
+        if (
+            not isinstance(fields, list)
+            or not fields
+            or len(fields) > 8
+            or not all(isinstance(field, str) and field for field in fields)
+            or len(fields) != len(set(fields))
+        ):
+            return False
     if "format" in schema and schema["format"] != "date":
         return False
     if "$ref" in schema and not isinstance(schema["$ref"], str):
@@ -1020,6 +1030,31 @@ def _validate(
             errors.append(f"{path}: too many items")
         if schema.get("uniqueItems") and len({repr(item) for item in value}) != len(value):
             errors.append(f"{path}: duplicate items")
+        unique_fields = schema.get("uniqueItemsBy")
+        if unique_fields:
+            seen: set[tuple[bytes, ...]] = set()
+            for index, item in enumerate(value):
+                if not isinstance(item, Mapping):
+                    errors.append(f"{path}[{index}]: unique item key unavailable")
+                    continue
+                fingerprints: list[bytes] = []
+                valid_key = True
+                for field in unique_fields:
+                    if field not in item:
+                        errors.append(f"{path}[{index}]: unique item key unavailable")
+                        valid_key = False
+                        break
+                    fingerprint = _json_fingerprint(item[field], budget)
+                    if fingerprint is None:
+                        errors.append(f"{path}[{index}]: unique item key unavailable")
+                        valid_key = False
+                        break
+                    fingerprints.append(fingerprint)
+                if valid_key:
+                    key = tuple(fingerprints)
+                    if key in seen:
+                        errors.append(f"{path}: duplicate items by key")
+                    seen.add(key)
         if "items" in schema:
             for index, child in enumerate(value):
                 errors.extend(

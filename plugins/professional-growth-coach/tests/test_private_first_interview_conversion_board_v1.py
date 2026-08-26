@@ -24,6 +24,14 @@ class PrivateFirstInterviewConversionBoardContractTests(unittest.TestCase):
             errors.append("daily review days must be unique")
         if len({row["branch"] for row in value.get("decision_ladder", [])}) != 4:
             errors.append("decision branches must be unique")
+        source_group = value.get("source_group", {})
+        if isinstance(source_group, dict):
+            if len({row.get("day") for row in source_group.get("plan_days", [])}) != 7:
+                errors.append("source plan days must be unique")
+            if len({row.get("day") for row in source_group.get("daily_review_logs", [])}) != 7:
+                errors.append("source daily review days must be unique")
+            if len({row.get("branch") for row in source_group.get("decision_ladder", [])}) != 4:
+                errors.append("source decision branches must be unique")
         self.assertEqual([], errors)
 
     def test_accepted_es_and_en_fixtures_have_closed_cardinalities(self):
@@ -57,6 +65,20 @@ class PrivateFirstInterviewConversionBoardContractTests(unittest.TestCase):
     def test_duplicate_day_is_rejected(self):
         value = self._load_fixture("en")
         value["week"][1]["day"] = value["week"][0]["day"]
+        with self.assertRaises(AssertionError):
+            self._assert_valid(value)
+
+    def test_duplicate_source_plan_day_is_rejected(self):
+        value = self._load_fixture("en")
+        value["source_group"]["plan_days"][1]["day"] = value["source_group"]["plan_days"][0]["day"]
+        self.assertTrue(validate_schema_instance(value, json.loads(SCHEMA_PATH.read_text())))
+        with self.assertRaises(AssertionError):
+            self._assert_valid(value)
+
+    def test_duplicate_source_review_day_is_rejected(self):
+        value = self._load_fixture("en")
+        value["source_group"]["daily_review_logs"][1]["day"] = value["source_group"]["daily_review_logs"][0]["day"]
+        self.assertTrue(validate_schema_instance(value, json.loads(SCHEMA_PATH.read_text())))
         with self.assertRaises(AssertionError):
             self._assert_valid(value)
 
