@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `6791d3d62075f1e12ccacb857c664b7b1b538b8a`
+source_commit: `6a1d812ec887f5fa6bdefe635511b2accfdae54c`
 
-source_tree: `e52fe0d54fbd39bbb1a1b6090075d90ab84dad88`
+source_tree: `bcd1244e486396a17e2f57dbe72759a871b82058`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826121730`
+installed_cache_version: `0.2.0+codex.20260826122256`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `5fc93069830460347c2358da2a059f26a882a5056697f211b16193e12fd917d9`
+source_aggregate_sha256: `1120452a2dc3d051f7716dcef667eb36691845b99b5a500a95393f3fbdfa9e39`
 
-cache_aggregate_sha256: `5fc93069830460347c2358da2a059f26a882a5056697f211b16193e12fd917d9`
+cache_aggregate_sha256: `1120452a2dc3d051f7716dcef667eb36691845b99b5a500a95393f3fbdfa9e39`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826121730`.
+- Cachebuster identifier: `20260826122256`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -108,6 +108,8 @@ external_action_state: `not_executed`
   focused tests.
 - The current forced-colors increment adds an explicit system `Highlight` focus indicator for
   internal section-navigation links; the exact installed cache passed 52/52 focused tests.
+- The current decision-ladder increment renders each branch's measurement signal and script
+  boundary in localized escaped copy; the exact installed cache passed 54/54 focused tests.
 - The broader inherited suite remains bounded by the known legacy
   executive-dossier skill-size and pressure-binding checks; official validator
   checksum gates, package checks, and the expanded root privacy scan passed,
