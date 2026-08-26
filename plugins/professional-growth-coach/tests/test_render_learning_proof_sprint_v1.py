@@ -91,6 +91,8 @@ class LearningProofSprintRendererTests(unittest.TestCase):
 
     def validated_snapshot(self):
         source_path = Path(__file__).resolve().parents[3] / "tests" / "test_learning_proof_sprint_v1.py"
+        if not source_path.is_file():
+            self.skipTest("repository-only contract fixture is not bundled in the extracted plugin")
         spec = importlib.util.spec_from_file_location("learning_proof_sprint_contract_fixture_for_renderer", source_path)
         module = importlib.util.module_from_spec(spec)
         assert spec.loader is not None
@@ -193,17 +195,7 @@ class LearningProofSprintRendererTests(unittest.TestCase):
         with self.assertRaises(self.renderer.LearningProofSprintRenderValidationError):
             self.renderer.render_learning_proof_sprint_html(sample_sprint())
 
-        source_path = Path(__file__).resolve().parents[3] / "tests" / "test_learning_proof_sprint_v1.py"
-        spec = importlib.util.spec_from_file_location("learning_proof_sprint_contract_fixture", source_path)
-        module = importlib.util.module_from_spec(spec)
-        assert spec.loader is not None
-        sys.modules[spec.name] = module
-        spec.loader.exec_module(module)
-        builder = load_renderer().VALIDATOR._builder
-        artifact = builder.build_learning_proof_sprint_v1(module.source_group(locale="en"))
-        validated = load_renderer().VALIDATOR.validate_learning_proof_sprint_v1(
-            artifact, module.source_group(locale="en")
-        )
+        validated = self.validated_snapshot()
         rendered = self.renderer.render_learning_proof_sprint_v1(validated)
         self.assertIn("Private learning proof sprint", rendered)
         self.assertEqual(5, rendered.count('class="sprint-day"'))
