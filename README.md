@@ -101,7 +101,8 @@ Its short chat summary uses the same terminal language, so the closed cycle is
 clear even before opening the private artifact.
 Ready boards and unanswered sessions also show a static private re-entry
 capsule with the expected context/action/result shape; blocked and final states
-omit it.
+omit it. On ready boards, the shape is also presented as a localized three-step
+visual recipe so the next private response is easy to scan without a form.
 The v2 board keeps its closed schema enums internal and renders risk topics,
 signal quality, pre-response score, authorization, and blocked actions with
 localized human labels; an unknown enum fails closed without being echoed.

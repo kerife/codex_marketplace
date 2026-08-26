@@ -98,6 +98,12 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         "practice_pause": "Práctica en pausa. Reanuda solo después de una revisión manual con un cambio útil." if es else "Practice is paused. Resume only after a manual review with a useful change.",
         "reentry_title": "Cómo continuar en privado" if es else "How to continue privately",
         "reentry_text": "Vuelve a la conversación privada y responde con contexto breve, acción concreta y resultado observado. La respuesta se usa una sola vez y no se guarda." if es else "Return to the private conversation and respond with brief context, a concrete action, and an observed result. Your answer is used once and is not saved.",
+        "reentry_recipe_title": "Receta de respuesta" if es else "Response recipe",
+        "reentry_recipe": {
+            "context": ("Contexto breve", "Qué pasó y qué está confirmado.") if es else ("Brief context", "What happened and what is confirmed."),
+            "action": ("Acción concreta", "Qué hiciste o harás en privado.") if es else ("Concrete action", "What you did or will do privately."),
+            "result": ("Resultado observado", "Qué observaste, sin prometer un resultado.") if es else ("Observed result", "What you observed, without promising an outcome."),
+        },
         "do_not_share_response": "No envíes, compartas ni publiques esta respuesta." if es else "Do not send, share, or publish this response.",
         "decision_states": {
             "ready": "Lista para revisión" if es else "Ready for review",
@@ -215,7 +221,12 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
             practice_instruction = labels["practice_pause"]
         practice_gate = f'<section class="board-practice-gate" data-board-state="{_e(state)}" aria-labelledby="practice-gate-heading"><h2 id="practice-gate-heading" tabindex="-1">{_e(labels["practice_gate"])}</h2><p class="board-practice-question"><strong>{_e(rehearsal.get("question"))}</strong></p><dl class="board-facts">{_paragraph(labels["response_structure"], rehearsal.get("response_structure"))}{_paragraph(labels["score_before_response"], _closed_label(rehearsal.get("pre_response_score"), labels["scores"]))}</dl><p class="board-practice-instruction">{_e(practice_instruction)}</p><p class="board-boundary">{_e(labels["do_not_share_response"])}</p></section>'
         reentry_capsule = (
-            f'<aside class="board-reentry-capsule" aria-labelledby="reentry-capsule-heading"><h2 id="reentry-capsule-heading">{_e(labels["reentry_title"])}</h2><p>{_e(labels["reentry_text"])}</p></aside>'
+            f'<aside class="board-reentry-capsule" aria-labelledby="reentry-capsule-heading"><h2 id="reentry-capsule-heading">{_e(labels["reentry_title"])}</h2><p>{_e(labels["reentry_text"])}</p><p class="board-reentry-recipe-label">{_e(labels["reentry_recipe_title"])}</p><ol class="board-reentry-recipe">'
+            + "".join(
+                f'<li><span class="board-reentry-step">{index}</span><span><strong>{_e(labels["reentry_recipe"][key][0])}</strong><span>{_e(labels["reentry_recipe"][key][1])}</span></span></li>'
+                for index, key in enumerate(("context", "action", "result"), 1)
+            )
+            + "</ol></aside>"
             if state == "ready"
             else ""
         )

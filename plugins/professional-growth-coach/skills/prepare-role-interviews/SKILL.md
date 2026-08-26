@@ -55,7 +55,10 @@ The rendered session exposes the current step in a semantic
 does not invite another rehearsal.
 Ready boards and unanswered sessions may show a static re-entry capsule that
 describes the bounded context/action/result answer shape; it is omitted for
-blocked and terminal states and never creates a form or external action.
+blocked and terminal states and never creates a form or external action. On a
+ready board, the capsule may present the same shape as a localized,
+non-interactive three-step recipe: brief context, concrete action, and observed
+result. It is guidance only and never collects or stores the response.
 Visible board labels for risk topics, signal quality, the pre-response score,
 authorization, and prohibited actions are localized projections of closed
 internal enums. If a value is outside those maps, fail closed with the generic

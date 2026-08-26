@@ -160,7 +160,9 @@ handoff. A single explicit revision may create `attempt=2,
 final_attempt=true`; feedback from that handoff closes the practice cycle and
 must not invite a third attempt. Ready boards and awaiting sessions may include
 only a static re-entry capsule describing the bounded answer shape; blocked and
-terminal states omit it. No external action is performed.
+terminal states omit it. On a ready board, the capsule may render the
+context/action/result shape as a localized three-step visual recipe without
+creating a form or storing an answer. No external action is performed.
 The rendered board localizes its closed risk, quality, score, authorization, and
 prohibited-action enums. Unknown values fail closed without raw enum disclosure.
 For long boards, the renderer may add localized in-page navigation; it remains

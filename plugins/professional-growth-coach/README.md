@@ -151,7 +151,9 @@ The short chat summary mirrors that terminal state without exposing the answer,
 feedback, or provenance metadata.
 Ready boards and awaiting sessions include a localized, non-interactive
 re-entry capsule that explains the bounded answer shape; blocked and final
-states do not invite another response.
+states do not invite another response. Ready boards also render that shape as
+a three-step visual recipe—brief context, concrete action, and observed
+result—without collecting or storing an answer.
 The board also projects every closed risk, quality, score, authorization, and
 blocked-action enum into localized human copy. Unknown enum values fail closed
 and never appear in the rendered artifact.

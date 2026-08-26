@@ -135,6 +135,17 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
                 blocked_output = renderer.render_private_first_interview_conversion_board_v2(blocked)
                 self.assertNotIn('class="board-reentry-capsule"', blocked_output)
 
+    def test_ready_reentry_capsule_exposes_a_localized_three_step_private_recipe(self):
+        for locale, labels in (
+            ("en", ("Brief context", "Concrete action", "Observed result")),
+            ("es", ("Contexto breve", "Acción concreta", "Resultado observado")),
+        ):
+            with self.subTest(locale=locale):
+                output = renderer.render_private_first_interview_conversion_board_v2(self._proof(locale))
+                self.assertIn('class="board-reentry-recipe"', output)
+                for label in labels:
+                    self.assertIn(label, output)
+
     def test_localizes_closed_enums_in_visible_board_copy(self):
         expected = {
             "es": {

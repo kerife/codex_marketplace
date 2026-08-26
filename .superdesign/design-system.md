@@ -228,7 +228,9 @@ The chat summary mirrors that closure with a short terminal message while
 keeping answer text and provenance metadata out of the summary.
 Ready boards and awaiting sessions use a compact re-entry capsule for the one
 private next action; it remains static, localized, and absent from blocked or
-terminal states.
+terminal states. The ready capsule presents the bounded context/action/result
+shape as a three-step visual recipe; it is guidance only and never collects or
+stores a response.
 The visual layer renders closed risk, quality, score, authorization, and
 prohibited-action enums as localized human labels; unsupported values stay out
 of the UI through a generic fail-closed diagnostic.
