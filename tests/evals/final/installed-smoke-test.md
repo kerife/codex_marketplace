@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `dbdee5e5c885689704318a27f72df90f90de937f`
+source_commit: `43798ece2591c2e96b0a5038d26e98db5e32f8fd`
 
-source_tree: `5f4cbc82736292c100c184425303588c736beb46`
+source_tree: `a2ea36264790b1ddaceb19d9834ec9bd917b3232`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826082913`
+installed_cache_version: `0.2.0+codex.20260826085104`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `efc1457ec7f263f01c44f2f052aa4a538ec10ef3e845f2e01a322647ff01afd1`
+source_aggregate_sha256: `7ca3f296626ba4bb9e8f1438d5a08abd1be46af306cfd98481b8a72abe6d1980`
 
-cache_aggregate_sha256: `efc1457ec7f263f01c44f2f052aa4a538ec10ef3e845f2e01a322647ff01afd1`
+cache_aggregate_sha256: `7ca3f296626ba4bb9e8f1438d5a08abd1be46af306cfd98481b8a72abe6d1980`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826082913`.
+- Cachebuster identifier: `20260826085104`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -86,14 +86,12 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- The focused learning-proof renderer and token suites passed 18/18 tests,
-  including localized closed-value rendering, escaped fallback behavior, the
-  static Start here card, and practice-family token coverage.
-- The source plugin suite passed 265/265 tests; no fixture or module-discovery
-  errors remained. Static validation passed the private-schema, dossier-handoff,
-  and package checks.
-- Installed semantic smokes passed 39/39 accepted and 9/9 rejected cases; the
-  installed packet matrix passed 6/6 accepted and 12/12 rejected cases.
+- Focused source verification passed 47/47 tests across practice-gate rendering,
+  design-token parity, the private interview v2 contract/writer, and release
+  structure checks.
+- Installed private-interview v2/practice-gate smokes passed 25/25 tests.
+- The broader inherited suite remains bounded by the known legacy
+  executive-dossier validation timeout; no full-suite green claim is made.
 - Repository-only conformance is not claimed from the installed cache, and
   visual/browser/assistive-technology QA remains unrun.
 
@@ -119,6 +117,10 @@ external_action_state: `not_executed`
 - Private interview v2 installed semantic smokes: 9/9; writer and renderer
   smokes: passed. Public fixtures are identity-free and contain no source
   digest; visual/browser/assistive-technology QA remains not run/not claimed.
+
+- Private interview practice gate installed smokes: one localized rehearsal
+  question, one pre-response `unknown` score, explicit later-request boundary,
+  and no-send/share/publish action surface; no external action executed.
 
 - Accepted groups: response mapping, recurrence routes, non-learning routes,
   provider lifecycle, the complete ES action matrix, closed EN copy, exact
