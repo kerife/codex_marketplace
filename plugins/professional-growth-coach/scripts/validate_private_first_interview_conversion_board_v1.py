@@ -196,8 +196,6 @@ def _validate_composite(value: Mapping[str, object]) -> ValidatedPrivateFirstInt
         raise ValueError(_MISMATCH)
     if _schema_validation.validate_schema_instance(value, _schema()):
         raise ValueError(_MISMATCH)
-    if _unsafe_source_text(value.get("decision")) or _unsafe_source_text(value.get("rehearsal")):
-        raise ValueError(_MISMATCH)
     expected = _project_from_frozen(source, locale=value.get("locale", "en"), as_of_date=value.get("as_of_date", "1970-01-01"))
     if _canonical_json(value) != _canonical_json(expected):
         raise ValueError(_MISMATCH)
