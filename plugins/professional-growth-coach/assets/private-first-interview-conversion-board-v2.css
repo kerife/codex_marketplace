@@ -18,6 +18,7 @@ main:focus-visible { outline: 3px solid var(--coral); outline-offset: 4px; }
 h1, h2, h3 { font-family: var(--serif); }
 h1 { margin: .2rem 0 0; font-size: clamp(2rem, 6vw, 3.25rem); font-style: italic; line-height: 1.04; }
 h2 { margin: 0; color: var(--forest); font-size: clamp(1.35rem, 3vw, 1.85rem); line-height: 1.16; }
+.board-main h2 { scroll-margin-top: 1rem; }
 h3 { margin: 0; font-size: 1.12rem; line-height: 1.2; }
 .board-state { display: inline-flex; align-items: center; min-height: 2.25rem; padding: .4rem .75rem; border: 1px solid currentColor; color: var(--forest); font-size: .875rem; font-weight: 700; text-align: center; }
 .board-main { padding: 1.5rem 0 3rem; }
@@ -42,7 +43,7 @@ h3 { margin: 0; font-size: 1.12rem; line-height: 1.2; }
 .board-section-nav { margin-top: 1.5rem; padding: .75rem 1rem; border: 1px solid var(--line); background: var(--surface); }
 .board-section-nav-label { margin: 0; color: var(--muted); font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .board-section-nav ul { display: flex; flex-wrap: wrap; gap: .5rem .75rem; margin: .5rem 0 0; padding: 0; list-style: none; }
-.board-section-nav a { display: inline-block; padding: .35rem .6rem; color: var(--forest); font-weight: 700; text-decoration-thickness: .12em; text-underline-offset: .16em; }
+.board-section-nav a { display: inline-flex; min-height: 44px; align-items: center; padding: .35rem .6rem; color: var(--forest); font-weight: 700; text-decoration-thickness: .12em; text-underline-offset: .16em; }
 .board-section-nav a:hover { color: var(--coral); }
 .board-approval-boundary { margin-top: 1.5rem; padding: 1rem; background: var(--coral-soft); border: 2px solid var(--coral); }
 .board-approval-boundary h2 { color: var(--ink); }

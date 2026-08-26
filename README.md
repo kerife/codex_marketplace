@@ -108,6 +108,8 @@ localized human labels; an unknown enum fails closed without being echoed.
 Long boards include localized in-page navigation to the decision, practice,
 risk, plan, review, and private-boundary sections; stop states expose only
 safe decision, provenance, and boundary destinations.
+The navigation also covers the ladder, sequence, and proof sections, gives
+each destination a keyboard-focus target, and is hidden in print.
 
 ## Installation
 

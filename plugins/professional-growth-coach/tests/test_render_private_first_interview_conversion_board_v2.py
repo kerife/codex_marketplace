@@ -209,12 +209,13 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
 
     def test_long_board_exposes_localized_section_navigation_and_stop_only_safe_destinations(self):
         for locale, nav_label, links in (
-            ("es", "Ir a una sección", ("Decisión", "Procedencia", "Práctica", "Riesgos", "Plan", "Revisión", "Límite privado")),
-            ("en", "Jump to a section", ("Decision", "Provenance", "Practice", "Risks", "Plan", "Review", "Private boundary")),
+            ("es", "Ir a una sección", ("Decisión", "Procedencia", "Escalera", "Práctica", "Secuencia", "Pruebas", "Riesgos", "Plan", "Revisión", "Límite privado")),
+            ("en", "Jump to a section", ("Decision", "Provenance", "Ladder", "Practice", "Sequence", "Proof", "Risks", "Plan", "Review", "Private boundary")),
         ):
             with self.subTest(locale=locale):
                 output = renderer.render_private_first_interview_conversion_board_v2(self._proof(locale))
-                self.assertIn(f'<nav class="board-section-nav" aria-label="{nav_label}">', output)
+                self.assertIn('<nav class="board-section-nav" aria-labelledby="section-nav-label">', output)
+                self.assertIn(f'<p id="section-nav-label" class="board-section-nav-label">{nav_label}</p>', output)
                 for link in links:
                     self.assertIn(link, output)
                 self.assertLess(output.index('<nav class="board-section-nav"'), output.index('<section class="board-ladder"'))
@@ -231,6 +232,16 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
                 self.assertIn('href="#approval-heading"', stop_output)
                 self.assertNotIn('href="#practice-gate-heading"', stop_output)
                 self.assertNotIn('href="#risks-heading"', stop_output)
+
+    def test_section_navigation_covers_every_destination_and_focus_target(self):
+        output = renderer.render_private_first_interview_conversion_board_v2(self._proof("en"))
+        targets = ("decision-heading", "trust-heading", "ladder-heading", "practice-gate-heading", "sequence-heading", "proof-heading", "risks-heading", "week-heading", "reviews-heading", "approval-heading")
+        for target in targets:
+            with self.subTest(target=target):
+                self.assertIn(f'href="#{target}"', output)
+                self.assertIn(f'<h2 id="{target}" tabindex="-1">', output)
+        css = Path(renderer.CSS_PATH).read_text(encoding="utf-8")
+        self.assertIn("min-height: 44px", css)
 
     def test_practice_gate_escapes_rehearsal_copy_and_stop_omits_it(self):
         proof = self._proof()

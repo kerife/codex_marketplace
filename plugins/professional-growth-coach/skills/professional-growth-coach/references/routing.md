@@ -166,6 +166,8 @@ prohibited-action enums. Unknown values fail closed without raw enum disclosure.
 For long boards, the renderer may add localized in-page navigation; it remains
 static and private, and stop states link only to safe decision/provenance/
 boundary sections.
+Normal-state navigation covers all detailed sections and targets headings that
+can receive focus; print output omits the navigation strip.
 
 ## Multi-module routing
 

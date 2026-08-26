@@ -157,6 +157,8 @@ blocked-action enum into localized human copy. Unknown enum values fail closed
 and never appear in the rendered artifact.
 Long boards expose a static, localized section navigation for faster review;
 stop-state boards keep only safe decision, provenance, and boundary links.
+It covers every detailed section, uses keyboard-focusable headings as targets,
+and hides itself in print while preserving the private boundary.
 Unsafe answers, crossed sessions, and stale handoffs fail closed. No external
 action is performed.
 

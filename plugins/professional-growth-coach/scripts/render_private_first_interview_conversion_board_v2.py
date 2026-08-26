@@ -115,7 +115,10 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         "section_links": {
             "decision-heading": "Decisión" if es else "Decision",
             "trust-heading": "Procedencia" if es else "Provenance",
+            "ladder-heading": "Escalera" if es else "Ladder",
             "practice-gate-heading": "Práctica" if es else "Practice",
+            "sequence-heading": "Secuencia" if es else "Sequence",
+            "proof-heading": "Pruebas" if es else "Proof",
             "risks-heading": "Riesgos" if es else "Risks",
             "week-heading": "Plan" if es else "Plan",
             "reviews-heading": "Revisión" if es else "Review",
@@ -163,7 +166,7 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         f'<p class="board-state">{_e(state_label)}</p></header>'
     )
     decision_html = (
-        f'<section class="board-decision board-decision-cockpit" data-board-state="{_e(state)}" aria-labelledby="decision-heading"><h2 id="decision-heading">'
+        f'<section class="board-decision board-decision-cockpit" data-board-state="{_e(state)}" aria-labelledby="decision-heading"><h2 id="decision-heading" tabindex="-1">'
         f'{_e(labels["cockpit"])}</h2><dl>{_paragraph(labels["state"], state_label)}'
         f'{_paragraph(labels["objective"], decision.get("objective"))}{_paragraph(labels["current"], decision.get("current_state"))}'
         f'{_paragraph(labels["next"], decision.get("next_safe_action"))}{_paragraph(labels["signal"], decision.get("signal"))}</dl>'
@@ -175,16 +178,16 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         raise PrivateFirstInterviewConversionBoardV2RenderError("private board artifact is unavailable")
     trust_copy = labels["synthetic"] if provenance_state == "synthetic_fixture" else labels["composition"]
     trust = (
-        '<section class="board-trust-strip" aria-labelledby="trust-heading"><h2 id="trust-heading">'
+        '<section class="board-trust-strip" aria-labelledby="trust-heading"><h2 id="trust-heading" tabindex="-1">'
         f'{_e(labels["trust"])}</h2><ul><li>{_e(trust_copy)}</li><li>{_e(labels["not_stored"])}</li>'
         f'<li>{_e(labels["manual"])}</li></ul></section>'
     )
     nav_targets = ["decision-heading", "trust-heading"]
     if state != "stop":
-        nav_targets.extend(("practice-gate-heading", "risks-heading", "week-heading", "reviews-heading"))
+        nav_targets.extend(("ladder-heading", "practice-gate-heading", "sequence-heading", "proof-heading", "risks-heading", "week-heading", "reviews-heading"))
     nav_targets.append("approval-heading")
     section_nav = (
-        f'<nav class="board-section-nav" aria-label="{_e(labels["section_nav"])}"><p class="board-section-nav-label">{_e(labels["section_nav"])}</p><ul>'
+        f'<nav class="board-section-nav" aria-labelledby="section-nav-label"><p id="section-nav-label" class="board-section-nav-label">{_e(labels["section_nav"])}</p><ul>'
         + "".join(f'<li><a href="#{_e(target)}">{_e(labels["section_links"][target])}</a></li>' for target in nav_targets)
         + "</ul></nav>"
     )
@@ -210,7 +213,7 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
             practice_instruction = labels["practice_clarify"]
         else:
             practice_instruction = labels["practice_pause"]
-        practice_gate = f'<section class="board-practice-gate" data-board-state="{_e(state)}" aria-labelledby="practice-gate-heading"><h2 id="practice-gate-heading">{_e(labels["practice_gate"])}</h2><p class="board-practice-question"><strong>{_e(rehearsal.get("question"))}</strong></p><dl class="board-facts">{_paragraph(labels["response_structure"], rehearsal.get("response_structure"))}{_paragraph(labels["score_before_response"], _closed_label(rehearsal.get("pre_response_score"), labels["scores"]))}</dl><p class="board-practice-instruction">{_e(practice_instruction)}</p><p class="board-boundary">{_e(labels["do_not_share_response"])}</p></section>'
+        practice_gate = f'<section class="board-practice-gate" data-board-state="{_e(state)}" aria-labelledby="practice-gate-heading"><h2 id="practice-gate-heading" tabindex="-1">{_e(labels["practice_gate"])}</h2><p class="board-practice-question"><strong>{_e(rehearsal.get("question"))}</strong></p><dl class="board-facts">{_paragraph(labels["response_structure"], rehearsal.get("response_structure"))}{_paragraph(labels["score_before_response"], _closed_label(rehearsal.get("pre_response_score"), labels["scores"]))}</dl><p class="board-practice-instruction">{_e(practice_instruction)}</p><p class="board-boundary">{_e(labels["do_not_share_response"])}</p></section>'
         reentry_capsule = (
             f'<aside class="board-reentry-capsule" aria-labelledby="reentry-capsule-heading"><h2 id="reentry-capsule-heading">{_e(labels["reentry_title"])}</h2><p>{_e(labels["reentry_text"])}</p></aside>'
             if state == "ready"
@@ -218,12 +221,12 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         )
         week = _list_rows(artifact.get("week"), lambda row, i: f'<li class="board-day"><h3>{_e(labels["day"])} {_e(row.get("day"))}</h3><p><strong>{_e(row.get("private_action"))}</strong></p><dl>{_paragraph("Límite de evidencia" if es else "Evidence boundary", row.get("evidence_boundary"))}{_paragraph("Punto de revisión" if es else "Review checkpoint", row.get("review_checkpoint"))}{_paragraph("Señal observable" if es else "Observable signal", row.get("observable_signal"))}{_paragraph("Alternativa" if es else "Fallback", row.get("fallback"))}{_paragraph("Regla de parada" if es else "Stop rule", row.get("stop_rule"))}</dl></li>')
         reviews = _list_rows(artifact.get("daily_reviews"), lambda row, i: f'<li class="board-review"><h3>{_e(labels["day"])} {_e(row.get("day"))}</h3><p><strong>{_e(_branch_label(row))}</strong> · {_e(_closed_label(row.get("signal_quality"), labels["signal_quality"]))}</p><dl>{_paragraph("Señal" if es else "Signal", row.get("observed_signal"))}{_paragraph("Registro" if es else "Evidence log", row.get("evidence_log"))}{_paragraph("Siguiente acción" if es else "Next action", row.get("next_safe_action"))}{_paragraph("Pregunta del coach" if es else "Coach question", row.get("coach_question"))}</dl></li>')
-        sections.extend((f'<section class="board-ladder" aria-labelledby="ladder-heading"><h2 id="ladder-heading">{_e(labels["ladder"])}</h2><ol class="board-ladder-list">{ladder}</ol></section>', practice_gate, reentry_capsule, f'<section class="board-sequence" aria-labelledby="sequence-heading"><h2 id="sequence-heading">{_e(labels["sequence"])}</h2><ol>{sequence}</ol></section>', f'<section class="board-proof" aria-labelledby="proof-heading"><h2 id="proof-heading">{_e(labels["proof"])}</h2><ul class="board-proof-list">{proof}</ul></section>', f'<section class="board-risks" aria-labelledby="risks-heading"><h2 id="risks-heading">{_e(labels["risks"])}</h2><ul class="board-risk-list">{risks}</ul></section>', f'<section class="board-week" aria-labelledby="week-heading"><h2 id="week-heading">{_e(labels["week"])}</h2><ol class="board-week-list">{week}</ol></section>', f'<section class="board-reviews" aria-labelledby="reviews-heading"><h2 id="reviews-heading">{_e(labels["reviews"])}</h2><ol class="board-review-list">{reviews}</ol></section>'))
+        sections.extend((f'<section class="board-ladder" aria-labelledby="ladder-heading"><h2 id="ladder-heading" tabindex="-1">{_e(labels["ladder"])}</h2><ol class="board-ladder-list">{ladder}</ol></section>', practice_gate, reentry_capsule, f'<section class="board-sequence" aria-labelledby="sequence-heading"><h2 id="sequence-heading" tabindex="-1">{_e(labels["sequence"])}</h2><ol>{sequence}</ol></section>', f'<section class="board-proof" aria-labelledby="proof-heading"><h2 id="proof-heading" tabindex="-1">{_e(labels["proof"])}</h2><ul class="board-proof-list">{proof}</ul></section>', f'<section class="board-risks" aria-labelledby="risks-heading"><h2 id="risks-heading" tabindex="-1">{_e(labels["risks"])}</h2><ul class="board-risk-list">{risks}</ul></section>', f'<section class="board-week" aria-labelledby="week-heading"><h2 id="week-heading" tabindex="-1">{_e(labels["week"])}</h2><ol class="board-week-list">{week}</ol></section>', f'<section class="board-reviews" aria-labelledby="reviews-heading"><h2 id="reviews-heading" tabindex="-1">{_e(labels["reviews"])}</h2><ol class="board-review-list">{reviews}</ol></section>'))
     boundary = artifact.get("approval_boundary")
     if not isinstance(boundary, Mapping) or not isinstance(boundary.get("prohibited_actions"), list):
         raise PrivateFirstInterviewConversionBoardV2RenderError("private board artifact is unavailable")
     prohibited = "".join(f"<li>{_e(_closed_label(action, labels["prohibited_actions"]))}</li>" for action in boundary["prohibited_actions"])
-    approval = f'<section class="board-approval-boundary" aria-labelledby="approval-heading"><h2 id="approval-heading">{_e(labels["private"])}</h2><p><strong>{_e("Siguiente paso permitido" if es else "Allowed next step")}:</strong> {_e(_closed_label(boundary.get("allowed_next_step"), labels["allowed_next_steps"]))}</p><p><strong>{_e("Autorización requerida" if es else "Authorization required")}:</strong> {_e(_closed_label(boundary.get("authorization_required"), labels["authorization"]))}</p><p>{_e("Acciones prohibidas" if es else "Prohibited actions")}:</p><ul>{prohibited}</ul><p class="board-boundary"><strong>{_e("Límite de autorización" if es else "Authorization boundary")}:</strong> {_e("Mantén esta revisión privada; no ejecutes ninguna acción externa." if es else "Keep this review private; do not execute any external action.")}</p></section>'
+    approval = f'<section class="board-approval-boundary" aria-labelledby="approval-heading"><h2 id="approval-heading" tabindex="-1">{_e(labels["private"])}</h2><p><strong>{_e("Siguiente paso permitido" if es else "Allowed next step")}:</strong> {_e(_closed_label(boundary.get("allowed_next_step"), labels["allowed_next_steps"]))}</p><p><strong>{_e("Autorización requerida" if es else "Authorization required")}:</strong> {_e(_closed_label(boundary.get("authorization_required"), labels["authorization"]))}</p><p>{_e("Acciones prohibidas" if es else "Prohibited actions")}:</p><ul>{prohibited}</ul><p class="board-boundary"><strong>{_e("Límite de autorización" if es else "Authorization boundary")}:</strong> {_e("Mantén esta revisión privada; no ejecutes ninguna acción externa." if es else "Keep this review private; do not execute any external action.")}</p></section>'
     footer = f'<footer class="board-footer"><strong>{_e(labels["private"])}</strong><p>{_e(labels["footer"])} {_e(labels["manual"])}</p><p>{_e("Acciones externas desactivadas." if es else "External actions remain disabled.")}</p></footer>'
     template = ASSET_LOADER.read_private_asset(ASSET_ROOT.parent, TEMPLATE_PATH)
     css = ASSET_LOADER.read_private_asset(ASSET_ROOT.parent, CSS_PATH)
