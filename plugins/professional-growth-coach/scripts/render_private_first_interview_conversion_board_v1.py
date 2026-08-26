@@ -78,10 +78,18 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         reviews = "".join(f'<li class="board-review"><h3>{_e(labels["day"])} {_e(row["day"])}</h3><p><strong>{_e(row["decision"])}</strong> · {_e(row["signal_quality"])}</p><dl>{_paragraph("Señal" if es else "Signal", row["observed_signal"])}{_paragraph("Registro" if es else "Evidence log", row["evidence_log"])}{_paragraph("Siguiente acción" if es else "Next action", row["next_safe_action"])}{_paragraph("Pregunta del coach" if es else "Coach question", row["coach_question"])}</dl></li>' for row in artifact["daily_reviews"])
         sections.extend((f'<section class="board-sequence"><h2>{_e(labels["sequence"])}</h2><ol>{sequence}</ol></section>', f'<section class="board-proof"><h2>{_e(labels["proof"])}</h2><ul class="board-proof-list">{proof}</ul></section>', f'<section class="board-risks"><h2>{_e(labels["risks"])}</h2><ul class="board-risk-list">{risks}</ul></section>', rehearsal_html, f'<section class="board-week"><h2>{_e(labels["week"])}</h2><ol class="board-week-list">{week}</ol></section>', f'<section class="board-ladder"><h2>{_e(labels["ladder"])}</h2><ol class="board-ladder-list">{ladder}</ol></section>', f'<section class="board-reviews"><h2>{_e(labels["reviews"])}</h2><ol class="board-review-list">{reviews}</ol></section>'))
     boundary = artifact["approval_boundary"]
+    prohibited = "".join(f"<li>{_e(action)}</li>" for action in boundary["prohibited_actions"])
+    approval = (
+        f'<section class="board-approval-boundary"><h2>{_e(labels["private"])}</h2>'
+        f'<p><strong>{_e("Siguiente paso permitido" if es else "Allowed next step")}:</strong> {_e(boundary["allowed_next_step"])}</p>'
+        f'<p><strong>{_e("Autorización requerida" if es else "Authorization required")}:</strong> {_e(str(boundary["authorization_required"]).lower())}</p>'
+        f'<p>{_e("Acciones prohibidas" if es else "Prohibited actions")}:</p><ul>{prohibited}</ul>'
+        f'<p class="board-boundary"><strong>{_e("Límite de autorización" if es else "Authorization boundary")}:</strong> {_e("Mantén esta revisión privada; no ejecutes ninguna acción externa." if es else "Keep this review private; do not execute any external action.")}</p></section>'
+    )
     footer = f'<footer class="board-footer"><strong>{_e(labels["private"])}</strong><p>{_e(labels["footer"])} {_e("Revisión manual requerida." if es else "Manual private review is required.")}</p><p>{_e("Acciones externas desactivadas." if es else "External actions remain disabled.")}</p></footer>'
     template = ASSET_LOADER.read_private_asset(ASSET_ROOT.parent, TEMPLATE_PATH)
     css = ASSET_LOADER.read_private_asset(ASSET_ROOT.parent, CSS_PATH)
-    values = {"{{LANG}}": _e(locale), "{{TITLE}}": _e(labels["title"]), "{{INLINE_CSS}}": css, "{{SKIP}}": _e(labels["skip"]), "{{HEADER}}": header, "{{MAIN}}": '<div class="board-main">' + ''.join(sections) + '</div>', "{{FOOTER}}": footer}
+    values = {"{{LANG}}": _e(locale), "{{TITLE}}": _e(labels["title"]), "{{INLINE_CSS}}": css, "{{SKIP}}": _e(labels["skip"]), "{{HEADER}}": header, "{{MAIN}}": '<div class="board-main">' + ''.join(sections) + approval + '</div>', "{{FOOTER}}": footer}
     for token, value in values.items():
         if template.count(token) != 1:
             raise RuntimeError("private board template token contract is invalid")

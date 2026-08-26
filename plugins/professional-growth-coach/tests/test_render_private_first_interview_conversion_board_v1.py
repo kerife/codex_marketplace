@@ -70,6 +70,8 @@ class PrivateFirstInterviewBoardRendererTests(unittest.TestCase):
                 self.assertNotIn("http://", output.lower())
                 self.assertNotIn("https://", output.lower())
                 self.assertIn("private", output.lower())
+                self.assertIn("manual_private_review", output)
+                self.assertRegex(output, r"(?i)(message|mensaje).*(schedule|agenda).*(apply|aplica)")
 
     def test_source_values_are_escaped_and_internal_values_are_not_echoed(self):
         proof = self._proof()
@@ -98,6 +100,8 @@ class PrivateFirstInterviewBoardRendererTests(unittest.TestCase):
         rendered = renderer.render_private_first_interview_conversion_board_v1(validator.validate_private_first_interview_conversion_board_v1(source))
         self.assertIn("board-decision", rendered)
         self.assertIn("board-boundary", rendered)
+        self.assertIn("manual_private_review", rendered)
+        self.assertIn("message", rendered)
         for section in ("board-sequence", "board-proof", "board-risks", "board-rehearsal", "board-week", "board-ladder", "board-reviews"):
             self.assertNotIn(f'<section class="{section}"', rendered)
 

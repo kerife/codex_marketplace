@@ -35,6 +35,9 @@ h3 { margin: 0; font-size: 1.12rem; line-height: 1.2; }
 .board-decision dt { color: var(--gold); font-weight: 700; }
 .board-decision dd, .board-facts dd { margin: 0; }
 .board-boundary { margin: 1rem 0 0; padding: .85rem 1rem; background: var(--coral-soft); border: 1px solid var(--coral); color: var(--ink); font-weight: 650; }
+.board-approval-boundary { margin-top: 1.5rem; padding: 1rem; background: var(--coral-soft); border: 2px solid var(--coral); }
+.board-approval-boundary h2 { color: var(--ink); }
+.board-approval-boundary ul { columns: 3; margin: .5rem 0 0; padding-left: 1.25rem; }
 .board-sequence ol, .board-week-list, .board-review-list, .board-ladder-list, .board-proof-list, .board-risk-list { display: grid; gap: 1rem; margin: 1rem 0 0; padding: 0; list-style: none; }
 .board-sequence ol { grid-template-columns: repeat(4, 1fr); }
 .board-sequence li, .board-proof-card, .board-risk-card, .board-rehearsal, .board-day, .board-branch, .board-review { min-width: 0; padding: 1rem; background: var(--surface); border: 1px solid var(--line); }
@@ -75,11 +78,12 @@ h3 { margin: 0; font-size: 1.12rem; line-height: 1.2; }
   .board-shell { width: 100%; }
   .board-header, .board-decision, .board-sequence, .board-proof, .board-risks, .board-rehearsal, .board-week, .board-ladder, .board-reviews, .board-boundary, .board-footer { break-inside: avoid; page-break-inside: avoid; }
   .board-decision, .board-boundary { color: #000; border: 1px solid #000; background: #fff; }
+  .board-approval-boundary { border: 2px solid #000; background: #fff; color: #000; }
   .skip-link { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
 @media (forced-colors: active) {
   .skip-link, .board-decision, .board-sequence li, .board-proof-card, .board-risk-card, .board-rehearsal, .board-day, .board-branch, .board-review { background: Canvas; color: CanvasText; border-color: CanvasText; }
   .skip-link:focus-visible { outline: 2px solid Highlight; }
-  .board-decision h2, .board-decision dt, .board-decision dd, .board-kicker, .board-label, h2, strong { color: CanvasText; }
+  .board-decision h2, .board-decision dt, .board-decision dd, .board-kicker, .board-label, .board-approval-boundary h2, h2, strong { color: CanvasText; }
 }
