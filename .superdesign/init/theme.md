@@ -1011,6 +1011,11 @@ html { color-scheme: light; background: var(--paper); }
 .recruiter-practice-document .state-chip--awaiting_answer { color: #5c4a12; background: #f5ecd8; }
 .recruiter-practice-document main { padding-block: 1.5rem 3rem; }
 
+.recruiter-practice-document .practice-progress { max-width: var(--measure); }
+.recruiter-practice-document .practice-progress ol { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.recruiter-practice-document .practice-progress li { padding: 0.55rem 0.65rem; border: 1px solid var(--line); color: #46534d; font-size: 0.8rem; font-weight: 700; text-align: center; }
+.recruiter-practice-document .practice-progress li[aria-current="step"] { border-color: var(--forest); background: var(--forest-soft); color: var(--forest); }
+
 .recruiter-practice-document .practice-session {
   min-width: 0;
   padding: clamp(1.15rem, 3vw, 2rem);
@@ -1047,6 +1052,12 @@ html { color-scheme: light; background: var(--paper); }
 .recruiter-practice-document .practice-handoff p { max-width: var(--measure); margin: 0.45rem 0 0; }
 .recruiter-practice-document .practice-handoff--dossier { border-left: 4px solid var(--forest); }
 .recruiter-practice-document .practice-handoff--reply { border-left: 4px solid var(--coral); }
+.recruiter-practice-document .practice-attempt-notice { padding: 1rem; border: 1px solid var(--coral); background: var(--coral-soft); }
+.recruiter-practice-document .practice-attempt-notice h2 { font-family: var(--sans); font-size: 1.15rem; }
+.recruiter-practice-document .practice-attempt-notice p { max-width: var(--measure); margin: 0.45rem 0 0; }
+.recruiter-practice-document .practice-reentry-capsule { padding: 1rem; border: 1px solid var(--forest); border-left: 4px solid var(--forest); background: var(--forest-soft); }
+.recruiter-practice-document .practice-reentry-capsule h2 { font-family: var(--sans); font-size: 1.15rem; }
+.recruiter-practice-document .practice-reentry-capsule p { max-width: var(--measure); margin: 0.45rem 0 0; }
 .recruiter-practice-document .practice-rehearsal-hint { max-width: var(--measure); margin: 0.45rem 0 0; color: #46534d; }
 .recruiter-practice-document .practice-rehearsal ol { display: grid; gap: 0.5rem; margin: 0.65rem 0 0; padding-left: 1.5rem; }
 .recruiter-practice-document .practice-rehearsal li::marker { color: var(--forest); font-weight: 700; }
@@ -1132,7 +1143,11 @@ html { color-scheme: light; background: var(--paper); }
   .recruiter-practice-document .state-chip--feedback_available { color: var(--coral); background: var(--coral-soft); }
   .recruiter-practice-document .state-chip--awaiting_answer { color: var(--decision-term); background: var(--forest-soft); }
   .recruiter-practice-document .practice-rehearsal,
-  .recruiter-practice-document .practice-handoff { background: var(--surface); }
+  .recruiter-practice-document .practice-handoff,
+  .recruiter-practice-document .practice-progress li { background: var(--surface); }
+  .recruiter-practice-document .practice-progress li[aria-current="step"] { background: var(--forest-soft); color: var(--forest); }
+  .recruiter-practice-document .practice-attempt-notice { background: var(--coral-soft); }
+  .recruiter-practice-document .practice-reentry-capsule { background: var(--forest-soft); }
   .recruiter-practice-document .practice-rehearsal-hint { color: var(--muted); }
   .recruiter-practice-document .practice-next-action,
   .recruiter-practice-document .practice-decision { background: var(--forest-soft); color: var(--ink); }
@@ -1176,6 +1191,7 @@ html { color-scheme: light; background: var(--paper); }
   .recruiter-practice-document main:focus-visible { outline-color: Highlight; }
   .recruiter-practice-document .practice-context,
   .recruiter-practice-document .practice-prompt,
+  .recruiter-practice-document .practice-progress,
   .recruiter-practice-document .practice-rehearsal,
   .recruiter-practice-document .practice-evidence,
   .recruiter-practice-document .practice-boundary { background: Canvas; color: CanvasText; border-color: CanvasText; }
@@ -1191,6 +1207,12 @@ html { color-scheme: light; background: var(--paper); }
   .recruiter-practice-document .practice-rehearsal li::marker { color: CanvasText; }
   .recruiter-practice-document .practice-handoff { border: 1px dashed CanvasText; background: Canvas; color: CanvasText; }
   .recruiter-practice-document .practice-handoff h2 { color: CanvasText; }
+  .recruiter-practice-document .practice-progress li,
+  .recruiter-practice-document .practice-progress li[aria-current="step"] { border-color: CanvasText; background: Canvas; color: CanvasText; }
+  .recruiter-practice-document .practice-attempt-notice { border-color: CanvasText; background: Canvas; color: CanvasText; }
+  .recruiter-practice-document .practice-attempt-notice h2 { color: CanvasText; }
+  .recruiter-practice-document .practice-reentry-capsule { border-color: CanvasText; background: Canvas; color: CanvasText; }
+  .recruiter-practice-document .practice-reentry-capsule h2 { color: CanvasText; }
   .recruiter-practice-document .practice-next-action { background: Canvas; color: CanvasText; border-color: CanvasText; }
   .recruiter-practice-document .practice-next-action h2 { color: CanvasText; }
   .recruiter-practice-document .practice-next-action--ready_to_practice,
@@ -1211,6 +1233,9 @@ html { color-scheme: light; background: var(--paper); }
   .recruiter-practice-document .state-chip,
   .recruiter-practice-document .practice-next-action,
   .recruiter-practice-document .practice-handoff,
+  .recruiter-practice-document .practice-attempt-notice,
+  .recruiter-practice-document .practice-progress li,
+  .recruiter-practice-document .practice-reentry-capsule,
   .recruiter-practice-document .practice-feedback,
   .recruiter-practice-document .feedback-item,
   .recruiter-practice-document .practice-decision { border-width: 2px; }
@@ -1226,14 +1251,17 @@ html { color-scheme: light; background: var(--paper); }
   .recruiter-practice-document .practice-session,
   .recruiter-practice-document .practice-context,
   .recruiter-practice-document .practice-prompt,
+  .recruiter-practice-document .practice-progress,
   .recruiter-practice-document .practice-rehearsal,
   .recruiter-practice-document .practice-next-action,
   .recruiter-practice-document .practice-evidence,
   .recruiter-practice-document .practice-boundary,
-  .recruiter-practice-document .practice-feedback {
+  .recruiter-practice-document .practice-feedback,
+  .recruiter-practice-document .practice-attempt-notice {
     break-inside: avoid;
     page-break-inside: avoid;
   }
+  .recruiter-practice-document .practice-reentry-capsule { break-inside: avoid; page-break-inside: avoid; }
   .recruiter-practice-document .practice-handoff {
     break-inside: avoid;
     page-break-inside: avoid;
