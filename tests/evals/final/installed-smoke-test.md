@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `669c3f783c90ab0e193940a35ef818b44b1e0d2a`
+source_commit: `6791d3d62075f1e12ccacb857c664b7b1b538b8a`
 
-source_tree: `4e75e0322231f45fcdc7808a6a6ee1f459d42f30`
+source_tree: `e52fe0d54fbd39bbb1a1b6090075d90ab84dad88`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826121029`
+installed_cache_version: `0.2.0+codex.20260826121730`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `0890aa9aaef76860b8843450f068c78420b1d3697d98a3041b67faf79a845fb3`
+source_aggregate_sha256: `5fc93069830460347c2358da2a059f26a882a5056697f211b16193e12fd917d9`
 
-cache_aggregate_sha256: `0890aa9aaef76860b8843450f068c78420b1d3697d98a3041b67faf79a845fb3`
+cache_aggregate_sha256: `5fc93069830460347c2358da2a059f26a882a5056697f211b16193e12fd917d9`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826121029`.
+- Cachebuster identifier: `20260826121730`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -103,6 +103,9 @@ external_action_state: `not_executed`
   recruiter-practice-session surfaces.
 - The current print-atomicity increment added one renderer case; the exact installed cache
   passed the resulting 51/51 focused handoff, feedback, conversion-board, and renderer tests.
+- The current assistive-technology increment marks the three visible recipe ordinals as
+  decorative while retaining ordered-list semantics; the exact installed cache passed 53/53
+  focused tests.
 - The current forced-colors increment adds an explicit system `Highlight` focus indicator for
   internal section-navigation links; the exact installed cache passed 52/52 focused tests.
 - The broader inherited suite remains bounded by the known legacy
