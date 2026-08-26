@@ -106,6 +106,15 @@ does not claim external provenance. The board is local, draft-only, identity-fre
 and never performs an external action. It writes only a mode-600 private draft
 after exact proof revalidation.
 
+| Úsalo cuando | Necesitas | Recibes | Siguiente paso |
+| --- | --- | --- | --- |
+| Ya existe una observación privada de triage o conversión y quieres preparar la primera entrevista. | La referencia privada validada de esa observación; si falta contexto, una confirmación breve y sin identidad. | Un tablero privado con centro de decisión, límite de procedencia, escalera de decisión y secuencia de revisión. | Revisa la rama segura de la escalera en privado y solicita autorización separada antes de una acción externa. |
+
+No se pide JSON crudo, filas fuente ni valores de procedencia al cliente: la
+fuente validada opaca es un límite interno. El centro de decisión localizado va
+antes del límite de procedencia; la escalera va inmediatamente después de ese
+límite y antes de la secuencia para hacer visible primero la rama segura.
+
 `private-first-interview-conversion-board-v1` is frozen legacy compatibility
 only. New requests must use v2.
 

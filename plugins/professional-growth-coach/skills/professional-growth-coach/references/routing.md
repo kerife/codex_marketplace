@@ -100,6 +100,14 @@ over the frozen legacy compatibility surface. It is opt-in and does not replace
 ordinary recruiter triage, recruiter practice, or interview preparation when
 the request is absent.
 
+| Úsalo cuando | Necesitas | Recibes | Siguiente paso |
+| --- | --- | --- | --- |
+| Ya existe una observación privada de triage o conversión y quieres decidir cómo preparar la primera entrevista. | La referencia privada validada que originó esa observación; pide sólo una confirmación breve y sin identidad si falta el contexto. | Un tablero local en borrador con centro de decisión, límite de procedencia, escalera de decisión y secuencia de revisión. | Revisa la rama aplicable de la escalera en privado; solicita autorización separada antes de cualquier acción externa. |
+
+Never ask the client to paste raw JSON, source rows, provenance values, or a
+final board. The opaque validated source bundle is an internal boundary, not a
+client intake format.
+
 Require one opaque, validated private source bundle. The v2 builder derives a
 sanitized decision, sequence, proof cards, risk checks, rehearsal, seven-day
 plan, decision ladder, and daily reviews; callers cannot supply raw source
@@ -108,7 +116,10 @@ rows, final board rows, or provenance metadata. The only provenance states are
 boundary and does not assert upstream provenance. Missing, crossed, stale,
 mutated, unsafe, or incomplete inputs fail closed without a fallback artifact.
 
-The output is a private offline JSON/HTML draft for manual review only. It
+The output is a private offline JSON/HTML draft for manual review only. The
+localized decision cockpit appears first, followed by the provenance boundary
+and the decision ladder before the review sequence so the next safe branch is
+visible before planning detail. It
 keeps `draft_only=true`, `external_actions_authorized=false`,
 `no_message_action=true`, and `no_calendar_action=true`. It must not send,
 reply, connect, apply, publish, upload, schedule, or auto-start

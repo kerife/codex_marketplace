@@ -52,8 +52,11 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
         with self.assertRaisesRegex(renderer.PrivateFirstInterviewConversionBoardV2RenderError, "validated private board is required"):
             renderer.render_private_first_interview_conversion_board_v2(self._proof().artifact)
 
-    def test_semantic_document_has_localized_trust_strip_before_sequence(self):
-        for locale, trust in (("en", "Synthetic test source"), ("es", "Fuente sintética de prueba")):
+    def test_semantic_document_has_localized_decision_cockpit_and_trust_strip_before_ladder_and_sequence(self):
+        for locale, trust, cockpit, decide_now in (
+            ("en", "Synthetic test source", "Decision cockpit", "Decide now"),
+            ("es", "Fuente sintética de prueba", "Centro de decisión", "Decide ahora"),
+        ):
             with self.subTest(locale=locale):
                 output = renderer.render_private_first_interview_conversion_board_v2(self._proof(locale))
                 parsed = _Parser()
@@ -61,9 +64,18 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
                 self.assertEqual(1, parsed.tags.count("h1"))
                 self.assertIn(("main", {"id": "main-content", "class": "board-shell", "tabindex": "-1", "aria-labelledby": "board-heading"}), parsed.attrs)
                 self.assertIn('class="skip-link" href="#main-content"', output)
+                self.assertEqual(1, output.count('class="board-decision board-decision-cockpit"'))
+                self.assertIn(cockpit, output)
+                self.assertIn(decide_now, output)
                 self.assertEqual(1, output.count('class="board-trust-strip"'))
-                self.assertLess(output.index("board-decision"), output.index("board-trust-strip"))
-                self.assertLess(output.index("board-trust-strip"), output.index("board-sequence"))
+                decision_section = '<section class="board-decision board-decision-cockpit"'
+                trust_section = '<section class="board-trust-strip"'
+                ladder_section = '<section class="board-ladder"'
+                sequence_section = '<section class="board-sequence"'
+                self.assertLess(output.index(decision_section), output.index(trust_section))
+                self.assertLess(output.index(trust_section), output.index(ladder_section))
+                self.assertLess(output.index(trust_section), output.index(sequence_section))
+                self.assertLess(output.index(ladder_section), output.index(sequence_section))
                 self.assertIn(trust, output)
                 self.assertIn("Original text is not stored" if locale == "en" else "Texto original no almacenado", output)
                 self.assertIn("Manual review required" if locale == "en" else "Revisión manual requerida", output)
@@ -115,12 +127,14 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
             "@media print", "prefers-color-scheme: dark", "forced-colors: active",
             "prefers-reduced-motion: reduce", "main:focus-visible", "minmax(",
             ".board-trust-strip", ".board-approval-boundary", "grid-template-columns: 1fr",
+            ".board-decision-cockpit", ".board-cockpit-prompt",
         ):
             self.assertIn(hook, css)
         print_block = css.split("@media print", 1)[1].split("@media (prefers-reduced-motion", 1)[0]
         for token in (
             "--paper: #fff", "--surface: #fff", "--ink: #000", "--muted: #536158",
             "--forest: #000", "--coral: #000", "--gold: #000", "color-scheme: light",
+            ".board-cockpit-prompt { background: var(--paper); border-color: var(--line); }",
         ):
             self.assertIn(token, print_block)
         template = (ROOT / "assets" / "private-first-interview-conversion-board-v2.html").read_text(encoding="utf-8")
