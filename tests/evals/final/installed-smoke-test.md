@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `6a1d812ec887f5fa6bdefe635511b2accfdae54c`
+source_commit: `2b47ad5cbcd0fa21c6c43cf8807249d41e592f41`
 
-source_tree: `bcd1244e486396a17e2f57dbe72759a871b82058`
+source_tree: `9670542b256934825050698553f3d1f2a199ff16`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826122256`
+installed_cache_version: `0.2.0+codex.20260826123748`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `1120452a2dc3d051f7716dcef667eb36691845b99b5a500a95393f3fbdfa9e39`
+source_aggregate_sha256: `7da101a5d2316721189ef2c8eb709b4c24976d798019d8334ba68d8fa981123d`
 
-cache_aggregate_sha256: `1120452a2dc3d051f7716dcef667eb36691845b99b5a500a95393f3fbdfa9e39`
+cache_aggregate_sha256: `7da101a5d2316721189ef2c8eb709b4c24976d798019d8334ba68d8fa981123d`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826122256`.
+- Cachebuster identifier: `20260826123748`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -86,7 +86,7 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- Focused source verification passed 66/66 plugin tests plus 54/54 root
+- Focused source verification passed 339/339 plugin tests plus 55/55 root
   renderer tests across the private-first
   interview handoff, ephemeral feedback continuation, proof-bound rendering,
   state-aware conversion-board rendering, private re-entry capsules, localized
@@ -110,6 +110,9 @@ external_action_state: `not_executed`
   internal section-navigation links; the exact installed cache passed 52/52 focused tests.
 - The current decision-ladder increment renders each branch's measurement signal and script
   boundary in localized escaped copy; the exact installed cache passed 54/54 focused tests.
+- The current practice-structure increment aligns the first-conversation rehearsal and
+  question-aware next-step copy to the four board criteria; focused renderer coverage passed
+  55/55 root tests and the package matrix passed 339/339 tests.
 - The broader inherited suite remains bounded by the known legacy
   executive-dossier skill-size and pressure-binding checks; official validator
   checksum gates, package checks, and the expanded root privacy scan passed,
