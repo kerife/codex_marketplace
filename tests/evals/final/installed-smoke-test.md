@@ -12,27 +12,27 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `87ef3b7580d6db62db73168631b27166f486fb9f`
+source_commit: `3f9cce60373d102e80f0317dfb7554e26d0448cb`
 
-source_tree: `faed4896da7d69cd2faa5d6ff64d511b1143730a`
+source_tree: `426819ca5368865e0a5b4b641ee3b024469bd341`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826052500`
+installed_cache_version: `0.2.0+codex.20260826081125`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
-source_file_count: `183`
+source_file_count: `199`
 
-installed_file_count: `183`
+installed_file_count: `199`
 
 sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `678a91572bd5c34f3fb210facb0a949b6239a31ad1c9fd38ddaaac9795034a9e`
+source_aggregate_sha256: `b9b794ba2ead935dab0b38d28f3a4429d9e008bbc370bb9c553ce11552a71caa`
 
-cache_aggregate_sha256: `678a91572bd5c34f3fb210facb0a949b6239a31ad1c9fd38ddaaac9795034a9e`
+cache_aggregate_sha256: `b9b794ba2ead935dab0b38d28f3a4429d9e008bbc370bb9c553ce11552a71caa`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826052500`.
+- Cachebuster identifier: `20260826081125`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -115,6 +115,10 @@ external_action_state: `not_executed`
   isolation from an active same-user process.
 
 ## Installed semantic evidence
+
+- Private interview v2 installed semantic smokes: 9/9; writer and renderer
+  smokes: passed. Public fixtures are identity-free and contain no source
+  digest; visual/browser/assistive-technology QA remains not run/not claimed.
 
 - Accepted groups: response mapping, recurrence routes, non-learning routes,
   provider lifecycle, the complete ES action matrix, closed EN copy, exact
