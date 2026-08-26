@@ -74,6 +74,19 @@ PRIVATE_FIRST_INTERVIEW_BOARD_SOURCE_INVENTORY_PATHS = (
     Path("plugins/professional-growth-coach/tests/test_render_private_first_interview_conversion_board_v2.py"),
     Path("plugins/professional-growth-coach/tests/fixtures/private-first-interview-conversion-board-v2/accepted-es.json"),
     Path("plugins/professional-growth-coach/tests/fixtures/private-first-interview-conversion-board-v2/accepted-en.json"),
+    Path("plugins/professional-growth-coach/schemas/private-first-interview-practice-handoff-v1.schema.json"),
+    Path("plugins/professional-growth-coach/scripts/private_first_interview_practice_handoff_identity.py"),
+    Path("plugins/professional-growth-coach/scripts/validate_private_first_interview_practice_handoff.py"),
+    Path("plugins/professional-growth-coach/scripts/build_private_first_interview_practice_handoff.py"),
+    Path("plugins/professional-growth-coach/tests/test_private_first_interview_practice_handoff.py"),
+    Path("plugins/professional-growth-coach/tests/fixtures/private-first-interview-practice-handoff/accepted-es.json"),
+    Path("plugins/professional-growth-coach/tests/fixtures/private-first-interview-practice-handoff/accepted-en.json"),
+    Path("plugins/professional-growth-coach/schemas/private-first-interview-practice-feedback-v1.schema.json"),
+    Path("plugins/professional-growth-coach/scripts/private_first_interview_practice_feedback_identity.py"),
+    Path("plugins/professional-growth-coach/scripts/build_private_first_interview_practice_feedback.py"),
+    Path("plugins/professional-growth-coach/scripts/build_private_first_interview_practice_revision.py"),
+    Path("plugins/professional-growth-coach/scripts/render_private_first_interview_practice.py"),
+    Path("plugins/professional-growth-coach/tests/test_private_first_interview_practice_feedback.py"),
 )
 PRIVATE_FIRST_INTERVIEW_BOARD_V2_ARTIFACT_PATHS = frozenset(
     {

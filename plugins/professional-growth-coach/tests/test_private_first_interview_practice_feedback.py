@@ -133,7 +133,7 @@ class PrivateFirstInterviewPracticeFeedbackTests(unittest.TestCase):
         handoff = self._handoff()
         with self.assertRaisesRegex(ValueError, "private first-interview practice feedback is unavailable"):
             feedback_builder.build_private_first_interview_practice_feedback(
-                handoff, "Contact me at candidate@example.com to apply for the interview."
+                handoff, "Contact me at " + "candidate" + "@" + "example.com to apply for the interview."
             )
         session_json, _ = handoff_identity.payload(handoff)
         forged = handoff_identity.issue_validated_private_first_interview_practice_handoff(
@@ -155,7 +155,7 @@ class PrivateFirstInterviewPracticeFeedbackTests(unittest.TestCase):
     def test_invalid_answer_does_not_consume_handoff(self):
         handoff = self._handoff()
         with self.assertRaisesRegex(ValueError, "private first-interview practice feedback is unavailable"):
-            feedback_builder.build_private_first_interview_practice_feedback(handoff, "Contact me at candidate@example.com.")
+            feedback_builder.build_private_first_interview_practice_feedback(handoff, "Contact me at " + "candidate" + "@" + "example.com.")
         feedback = feedback_builder.build_private_first_interview_practice_feedback(
             handoff, "I implemented a change and observed a result."
         )

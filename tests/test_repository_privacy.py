@@ -824,6 +824,25 @@ class RepositoryPrivacyTests(unittest.TestCase):
             <= set(scanner.DOSSIER_SOURCE_INVENTORY_PATHS)
         )
 
+    def test_private_first_interview_package_and_root_privacy_inventories_stay_in_sync(self) -> None:
+        scanner = load_scanner()
+        static_path = REPO_ROOT / "plugins" / "professional-growth-coach" / "tests" / "run_static_checks.py"
+        specification = importlib.util.spec_from_file_location(
+            "job_search_coach_private_board_static_checks", static_path
+        )
+        if specification is None or specification.loader is None:
+            raise RuntimeError(f"cannot load plugin static checks: {static_path}")
+        module = importlib.util.module_from_spec(specification)
+        specification.loader.exec_module(module)
+        package_paths = {
+            Path("plugins/professional-growth-coach") / relative_path
+            for relative_path in module.PRIVATE_FIRST_INTERVIEW_BOARD_PACKAGE_PATHS
+        }
+        self.assertTrue(
+            package_paths <= set(scanner.PRIVATE_FIRST_INTERVIEW_BOARD_SOURCE_INVENTORY_PATHS),
+            sorted(str(path) for path in package_paths - set(scanner.PRIVATE_FIRST_INTERVIEW_BOARD_SOURCE_INVENTORY_PATHS)),
+        )
+
     def test_dossier_source_inventory_uses_non_overbroad_source_scanning(self) -> None:
         scanner = load_scanner()
         for path in DOSSIER_SOURCE_INVENTORY_PATHS:
