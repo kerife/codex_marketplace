@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `3c3cac7751852d724237cc9c71b433127f7e3df4`
+source_commit: `0f9e3a342923393b88ba1c176a7c88a0dfcd4705`
 
-source_tree: `f6d8641633cc00b7aa8224dbb36236c354bf7379`
+source_tree: `b6950e14be1f62972e3bdc59ca8426aba5f17c09`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826111216`
+installed_cache_version: `0.2.0+codex.20260826114920`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `cb9aa370b9d30c41938863866f8ad9b9dafd422cfffaa5e9c23e55d740dc13e4`
+source_aggregate_sha256: `e869ab44bb04e45f677d4b8a312d12ccd6e6f59bc2f34cb8b9b7e1b4b3e8919c`
 
-cache_aggregate_sha256: `cb9aa370b9d30c41938863866f8ad9b9dafd422cfffaa5e9c23e55d740dc13e4`
+cache_aggregate_sha256: `e869ab44bb04e45f677d4b8a312d12ccd6e6f59bc2f34cb8b9b7e1b4b3e8919c`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826111216`.
+- Cachebuster identifier: `20260826114920`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -86,22 +86,25 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- Focused source verification passed 65/65 plugin tests plus 54/54 root
+- Focused source verification passed 66/66 plugin tests plus 54/54 root
   renderer tests across the private-first
   interview handoff, ephemeral feedback continuation, proof-bound rendering,
   state-aware conversion-board rendering, private re-entry capsules, localized
   closed-enum projections, keyboard-accessible section navigation, fragment-
-  target orientation highlight,
+  target orientation highlight, localized private response recipe,
   recruiter-practice-session
   compatibility, and release checks; the prior cycle's 131/131 source matrix
   remains covered by the same package history.
-- Installed exact-cache revision smoke passed 49/49 focused tests across the handoff, feedback,
+- Installed exact-cache revision smoke passed 50/50 focused tests across the handoff, feedback,
   private re-entry capsules, localized closed-enum projections, keyboard-
   accessible section navigation, fragment-target orientation highlight,
+  localized private response recipe, Python 3.11 renderer compatibility,
   final-attempt revision, and terminal
   recruiter-practice-session surfaces.
 - The broader inherited suite remains bounded by the known legacy
-  executive-dossier validation timeout; no full-suite green claim is made.
+  executive-dossier skill-size and pressure-binding checks; official validator
+  checksum gates, package checks, and the expanded root privacy scan passed,
+  but no full-suite green claim is made.
 - Repository-only conformance is not claimed from the installed cache, and
   visual/browser/assistive-technology QA remains unrun.
 
@@ -155,6 +158,14 @@ external_action_state: `not_executed`
   destinations with keyboard-ready headings, 44px links, and a visible
   `h2:target` outline for the selected fragment; stop boards expose only
   decision, provenance, and private-boundary destinations.
+
+- Private response recipe installed smoke: ready boards render localized,
+  non-interactive context/action/result steps; clarify, pause, and stop boards
+  do not render the ready-only recipe, and no answer is collected or stored.
+
+- Root privacy inventory parity smoke: every private first-interview package
+  path is covered by the repository scanner; synthetic email rejection tests
+  retain coverage without literal email values in scanned source.
 
 - Accepted groups: response mapping, recurrence routes, non-learning routes,
   provider lifecycle, the complete ES action matrix, closed EN copy, exact
