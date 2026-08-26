@@ -142,6 +142,9 @@ to `confirm` when bounded negation or uncertainty cues are present; this is
 diagnostic coaching, not semantic verification.
 Each validated handoff is single-use for feedback; replay and concurrent reuse
 fail closed, while an invalid answer does not consume it.
+One explicit revision request can issue a second and final answer handoff from
+an exact feedback proof; it carries no prior answer or feedback, and no third
+attempt exists.
 Unsafe answers, crossed sessions, and stale handoffs fail closed. No external
 action is performed.
 

@@ -4,17 +4,22 @@
 from __future__ import annotations
 
 import json
+import weakref
+from threading import Lock
 
 
 _UNAVAILABLE = "private first-interview practice feedback is unavailable"
 _CONSTRUCTOR_TOKEN = object()
 _ISSUER_MARKER = object()
+_STATE_LOCK = Lock()
+_REVISION_IN_FLIGHT: weakref.WeakSet[object] = weakref.WeakSet()
+_REVISED: weakref.WeakSet[object] = weakref.WeakSet()
 
 
 class ValidatedPrivateFirstInterviewPracticeFeedback:
     """Immutable feedback carrying one in-memory session projection."""
 
-    __slots__ = ("__issuer_marker", "__session_json", "__proof_binding")
+    __slots__ = ("__issuer_marker", "__session_json", "__proof_binding", "__weakref__")
 
     def __new__(cls, token: object = None, session_json: str = "", proof_binding: str = ""):
         if token is not _CONSTRUCTOR_TOKEN:
@@ -62,3 +67,25 @@ def payload(value: object) -> tuple[str, str]:
     if marker is not _ISSUER_MARKER or not isinstance(session_json, str) or not isinstance(proof_binding, str):
         raise ValueError(_UNAVAILABLE)
     return session_json, proof_binding
+
+
+def reserve_revision(value: object) -> None:
+    """Atomically reserve one exact feedback proof for a single revision."""
+    payload(value)
+    with _STATE_LOCK:
+        if value in _REVISION_IN_FLIGHT or value in _REVISED:
+            raise ValueError(_UNAVAILABLE)
+        _REVISION_IN_FLIGHT.add(value)
+
+
+def commit_revision(value: object) -> None:
+    with _STATE_LOCK:
+        if value not in _REVISION_IN_FLIGHT:
+            raise ValueError(_UNAVAILABLE)
+        _REVISION_IN_FLIGHT.discard(value)
+        _REVISED.add(value)
+
+
+def release_revision(value: object) -> None:
+    with _STATE_LOCK:
+        _REVISION_IN_FLIGHT.discard(value)

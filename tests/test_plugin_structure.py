@@ -149,6 +149,7 @@ PRIVATE_FIRST_INTERVIEW_BOARD_RELEASE_PATHS = (
     "schemas/private-first-interview-practice-feedback-v1.schema.json",
     "scripts/private_first_interview_practice_feedback_identity.py",
     "scripts/build_private_first_interview_practice_feedback.py",
+    "scripts/build_private_first_interview_practice_revision.py",
     "scripts/render_private_first_interview_practice.py",
     "tests/test_private_first_interview_practice_feedback.py",
 )

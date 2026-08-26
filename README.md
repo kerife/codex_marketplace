@@ -92,6 +92,9 @@ when it contains bounded negation or uncertainty cues; this remains coaching
 diagnostic, not semantic verification.
 Each validated handoff is single-use for feedback; replay and concurrent reuse
 fail closed, while an invalid answer does not consume it.
+From a completed feedback proof, one explicit revision request may issue a
+second and final answer handoff; the prior answer and feedback are not reused,
+and a third attempt is unavailable.
 
 ## Installation
 

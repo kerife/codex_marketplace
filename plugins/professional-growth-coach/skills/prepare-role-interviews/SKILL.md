@@ -47,6 +47,9 @@ from the artifact.
 The exact handoff is consumed once when feedback succeeds; replay and
 concurrent reuse fail closed, while an invalid answer leaves the handoff
 available for one corrected attempt.
+After feedback, only one explicit revision request is allowed. It emits a
+second and final `awaiting_answer` handoff without reusing the prior answer or
+feedback; a third attempt fails closed.
 
 The private first-interview handoff may be advanced only by the explicit
 `build_private_first_interview_practice_feedback` boundary. It accepts one

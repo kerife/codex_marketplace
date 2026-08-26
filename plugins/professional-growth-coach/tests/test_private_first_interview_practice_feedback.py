@@ -15,6 +15,7 @@ from validate_json_schema_subset import validate_schema_instance
 import build_private_first_interview_conversion_board_v2 as board_builder
 import build_private_first_interview_practice_feedback as feedback_builder
 import build_private_first_interview_practice_handoff as handoff_builder
+import build_private_first_interview_practice_revision as revision_builder
 import private_first_interview_source_bundle as source_bundle
 import private_first_interview_practice_handoff_identity as handoff_identity
 import render_private_first_interview_practice as proof_renderer
@@ -30,6 +31,14 @@ def _source():
 def _feedback_result(handoff, answer):
     try:
         feedback_builder.build_private_first_interview_practice_feedback(handoff, answer)
+    except ValueError:
+        return False
+    return True
+
+
+def _revision_result(feedback):
+    try:
+        revision_builder.build_private_first_interview_practice_revision(feedback)
     except ValueError:
         return False
     return True
@@ -165,6 +174,50 @@ class PrivateFirstInterviewPracticeFeedbackTests(unittest.TestCase):
                 )
             )
         self.assertEqual([True], [result for result in results if result is True])
+        self.assertEqual(1, sum(result is False for result in results))
+
+    def test_explicit_revision_returns_clean_second_attempt(self):
+        handoff = self._handoff()
+        feedback = feedback_builder.build_private_first_interview_practice_feedback(
+            handoff, "I implemented a change and observed a result."
+        )
+        revised = revision_builder.build_private_first_interview_practice_revision(feedback)
+        session = revised.session
+        self.assertEqual("awaiting_answer", session["state"])
+        self.assertEqual(2, session["handoff_context"]["attempt"])
+        self.assertIsNone(session["observed_answer"])
+        self.assertEqual("unknown", session["feedback"]["score_state"])
+        self.assertEqual([], session["feedback"]["observations"])
+        self.assertEqual(
+            session["handoff_context"]["source_snapshot"],
+            feedback.session["handoff_context"]["source_snapshot"],
+        )
+        rendered = proof_renderer.render_private_first_interview_practice_handoff(revised)
+        self.assertIn("second and final version", rendered)
+        self.assertNotIn("I implemented a change and observed a result.", rendered)
+
+    def test_revision_is_single_use_and_maximum_two_attempts(self):
+        handoff = self._handoff()
+        feedback = feedback_builder.build_private_first_interview_practice_feedback(
+            handoff, "I implemented a change and observed a result."
+        )
+        revised = revision_builder.build_private_first_interview_practice_revision(feedback)
+        with self.assertRaisesRegex(ValueError, "private first-interview practice revision is unavailable"):
+            revision_builder.build_private_first_interview_practice_revision(feedback)
+        second_feedback = feedback_builder.build_private_first_interview_practice_feedback(
+            revised, "I redesigned a process and observed an improvement."
+        )
+        with self.assertRaisesRegex(ValueError, "private first-interview practice revision is unavailable"):
+            revision_builder.build_private_first_interview_practice_revision(second_feedback)
+
+    def test_concurrent_revision_requests_allow_exactly_one_handoff(self):
+        handoff = self._handoff()
+        feedback = feedback_builder.build_private_first_interview_practice_feedback(
+            handoff, "I implemented a change and observed a result."
+        )
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(lambda _: _revision_result(feedback), (1, 2)))
+        self.assertEqual(1, sum(result is True for result in results))
         self.assertEqual(1, sum(result is False for result in results))
 
     def test_feedback_wrapper_schema_is_closed(self):

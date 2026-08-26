@@ -115,6 +115,8 @@ COPY = {
         "footer": "No se realizó ninguna acción externa.",
         "employment_boundary": "Este análisis evalúa opciones profesionales; no recomienda renunciar, dejar un empleo ni abandonar tu búsqueda; tú decides qué sigue.",
         "summary": "Práctica privada: ",
+        "attempt_heading": "Último intento",
+        "attempt_text": "Esta es la segunda y última versión de esta práctica. La respuesta anterior no se reutilizó.",
     },
     "en": {
         "title": "Private recruiter practice",
@@ -161,6 +163,8 @@ COPY = {
         "footer": "No external action was taken.",
         "employment_boundary": "This analysis evaluates professional options; it does not recommend resigning, leaving a job, or stopping your job search; you decide what comes next.",
         "summary": "Private practice: ",
+        "attempt_heading": "Final attempt",
+        "attempt_text": "This is the second and final version of this practice. The previous answer was not reused.",
     },
 }
 
@@ -502,6 +506,9 @@ def _render_main(
         else:
             text_key, source_class = "handoff_text_dossier", "dossier"
         handoff = f'''<aside class="practice-handoff practice-handoff--{source_class}" aria-labelledby="practice-handoff-title" aria-describedby="prompt-title practice-question-text"><h2 id="practice-handoff-title">{labels["handoff_title"]}</h2><p>{labels[text_key]}</p></aside>'''
+    attempt_notice = ""
+    if sourced and _mapping(session["handoff_context"]).get("attempt") == 2:
+        attempt_notice = f'''<aside class="practice-attempt-notice" aria-labelledby="attempt-notice-title"><h2 id="attempt-notice-title">{labels["attempt_heading"]}</h2><p>{labels["attempt_text"]}</p></aside>'''
     if state == "feedback_available":
         feedback_data = _mapping(session["feedback"])
         observations = _rows(feedback_data["observations"])
@@ -509,10 +516,10 @@ def _render_main(
         governing_label = _governing_feedback_label(feedback_labels)
         feedback = _render_feedback(locale, question_kind, feedback_labels, labels)
         decision = _render_decision(locale, question_kind, governing_label, labels)
-        practice_sequence = f"{rehearsal}{feedback}{decision}{handoff}"
+        practice_sequence = f"{attempt_notice}{rehearsal}{feedback}{decision}{handoff}"
     elif sourced:
         next_action = _render_next_action(state, labels, sourced=sourced)
-        practice_sequence = f"{next_action}{rehearsal}{handoff}"
+        practice_sequence = f"{attempt_notice}{next_action}{rehearsal}{handoff}"
     else:
         next_action = _render_next_action(state, labels, sourced=sourced)
         practice_sequence = f"{rehearsal}{next_action}"

@@ -405,12 +405,12 @@ def validate_session(value: object) -> list[str]:
 
     handoff = session.get("handoff_context")
     if handoff is not None:
-        handoff_fields = frozenset({"source", "source_snapshot", "question_rank", "question_id", "requirement_id", "fact_ids", "claim_ids", "evidence_ids", "question_kind", "draft_only", "external_actions_authorized"})
-        handoff_required = handoff_fields - {"claim_ids", "evidence_ids", "question_kind"}
+        handoff_fields = frozenset({"source", "source_snapshot", "question_rank", "question_id", "requirement_id", "fact_ids", "claim_ids", "evidence_ids", "question_kind", "draft_only", "external_actions_authorized", "attempt", "final_attempt"})
+        handoff_required = handoff_fields - {"claim_ids", "evidence_ids", "question_kind", "attempt", "final_attempt"}
         if isinstance(handoff, Mapping) and handoff.get("source") == "executive_career_dossier":
-            handoff_required = handoff_fields - {"question_kind"}
+            handoff_required = handoff_fields - {"question_kind", "attempt", "final_attempt"}
         elif isinstance(handoff, Mapping) and handoff.get("source") == "private_recruiter_reply_triage":
-            handoff_required = handoff_fields - {"claim_ids", "evidence_ids"}
+            handoff_required = handoff_fields - {"claim_ids", "evidence_ids", "attempt", "final_attempt"}
         handoff = _closed(handoff, "handoff_context", handoff_fields, errors, required=handoff_required)
         if handoff is not None:
             if not _enum(handoff.get("source"), {"executive_career_dossier", "private_recruiter_reply_triage", "private_first_interview_conversion_board"}): errors.append("handoff_context.source has invalid value")
@@ -432,6 +432,12 @@ def validate_session(value: object) -> list[str]:
             elif handoff.get("source") == "private_first_interview_conversion_board" and not source_snapshot.startswith("snap-practice-board-sha256-"):
                 errors.append("handoff_context.source_snapshot must match private_first_interview_conversion_board source")
             if isinstance(handoff.get("question_rank"), bool) or handoff.get("question_rank") != 1: errors.append("handoff_context.question_rank must be 1")
+            if "attempt" in handoff and (isinstance(handoff.get("attempt"), bool) or handoff.get("attempt") not in {1, 2}):
+                errors.append("handoff_context.attempt must be 1 or 2")
+            if "final_attempt" in handoff and handoff.get("final_attempt") is not True:
+                errors.append("handoff_context.final_attempt must be true")
+            if handoff.get("final_attempt") is True and handoff.get("attempt") != 2:
+                errors.append("handoff_context.final_attempt requires attempt 2")
             if handoff.get("draft_only") is not True: errors.append("handoff_context.draft_only must be true")
             if handoff.get("external_actions_authorized") is not False: errors.append("handoff_context.external_actions_authorized must be false")
             if handoff.get("source") == "private_recruiter_reply_triage" and "question_kind" in handoff:
