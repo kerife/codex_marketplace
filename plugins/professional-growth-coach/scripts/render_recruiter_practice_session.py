@@ -121,6 +121,8 @@ COPY = {
         "summary": "Práctica privada: ",
         "summary_terminal": "Práctica completada: ",
         "summary_terminal_boundary": " No hay un tercer intento disponible.",
+        "reentry_title": "Cómo continuar en privado",
+        "reentry_text": "Vuelve a la conversación privada y responde con contexto breve, acción concreta y resultado observado. La respuesta se usa una sola vez y no se guarda.",
         "attempt_heading": "Último intento",
         "attempt_text": "Esta es la segunda y última versión de esta práctica. La respuesta anterior no se reutilizó.",
         "progress": "Progreso de práctica",
@@ -179,6 +181,8 @@ COPY = {
         "summary": "Private practice: ",
         "summary_terminal": "Practice complete: ",
         "summary_terminal_boundary": " No third attempt is available.",
+        "reentry_title": "How to continue privately",
+        "reentry_text": "Return to the private conversation and respond with brief context, a concrete action, and an observed result. Your answer is used once and is not saved.",
         "attempt_heading": "Final attempt",
         "attempt_text": "This is the second and final version of this practice. The previous answer was not reused.",
         "progress": "Practice progress",
@@ -525,6 +529,10 @@ def _render_progress(state: str, labels: Mapping[str, str]) -> str:
     return f'<nav class="practice-progress" aria-label="{labels["progress"]}"><ol>{items}</ol></nav>'
 
 
+def _render_reentry_capsule(labels: Mapping[str, str]) -> str:
+    return f'<aside class="practice-reentry-capsule" aria-labelledby="reentry-capsule-title"><h2 id="reentry-capsule-title">{labels["reentry_title"]}</h2><p>{labels["reentry_text"]}</p></aside>'
+
+
 def _render_main(
     session: Mapping[str, object], ui_locale: str, content_locale: str | None = None
 ) -> str:
@@ -552,8 +560,14 @@ def _render_main(
             text_key, source_class = "handoff_text_dossier", "dossier"
         handoff = f'''<aside class="practice-handoff practice-handoff--{source_class}" aria-labelledby="practice-handoff-title" aria-describedby="prompt-title practice-question-text"><h2 id="practice-handoff-title">{labels["handoff_title"]}</h2><p>{labels[text_key]}</p></aside>'''
     attempt_notice = ""
+    final_attempt = (
+        sourced
+        and _mapping(session["handoff_context"]).get("attempt") == 2
+        and _mapping(session["handoff_context"]).get("final_attempt") is True
+    )
     if sourced and _mapping(session["handoff_context"]).get("attempt") == 2:
         attempt_notice = f'''<aside class="practice-attempt-notice" aria-labelledby="attempt-notice-title"><h2 id="attempt-notice-title">{labels["attempt_heading"]}</h2><p>{labels["attempt_text"]}</p></aside>'''
+    reentry_capsule = _render_reentry_capsule(labels) if sourced and state == "awaiting_answer" and not final_attempt else ""
     if state == "feedback_available":
         feedback_data = _mapping(session["feedback"])
         observations = _rows(feedback_data["observations"])
@@ -571,7 +585,7 @@ def _render_main(
         practice_sequence = f"{attempt_notice}{rehearsal}{feedback}{decision}{handoff}"
     elif sourced:
         next_action = _render_next_action(state, labels, sourced=sourced)
-        practice_sequence = f"{attempt_notice}{next_action}{rehearsal}{handoff}"
+        practice_sequence = f"{attempt_notice}{next_action}{reentry_capsule}{rehearsal}{handoff}"
     else:
         next_action = _render_next_action(state, labels, sourced=sourced)
         practice_sequence = f"{rehearsal}{next_action}"

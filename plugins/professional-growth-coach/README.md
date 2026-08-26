@@ -149,6 +149,9 @@ The artifact shows `prepare → answer → review`; on the final attempt it clea
 closes the cycle rather than suggesting a third rehearsal.
 The short chat summary mirrors that terminal state without exposing the answer,
 feedback, or provenance metadata.
+Ready boards and awaiting sessions include a localized, non-interactive
+re-entry capsule that explains the bounded answer shape; blocked and final
+states do not invite another response.
 Unsafe answers, crossed sessions, and stale handoffs fail closed. No external
 action is performed.
 

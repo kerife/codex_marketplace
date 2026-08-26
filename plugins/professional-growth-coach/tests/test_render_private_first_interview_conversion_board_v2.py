@@ -117,6 +117,24 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
                     self.assertNotIn(f"<h3>{raw_enum}</h3>", output.lower())
                     self.assertNotIn(f"<strong>{raw_enum}</strong>", output.lower())
 
+    def test_ready_board_shows_private_reentry_capsule_but_blocked_states_do_not(self):
+        for locale, title, instruction in (
+            ("en", "How to continue privately", "Your answer is used once and is not saved."),
+            ("es", "Cómo continuar en privado", "La respuesta se usa una sola vez y no se guarda."),
+        ):
+            with self.subTest(locale=locale):
+                ready = self._proof(locale)
+                output = renderer.render_private_first_interview_conversion_board_v2(ready)
+                self.assertIn('class="board-reentry-capsule"', output)
+                self.assertIn(title, output)
+                self.assertIn(instruction, output)
+                blocked_source = copy.deepcopy(_source())
+                blocked_source["first_interview_7_day_plan"]["state"] = "pause"
+                _rebind_snapshot(blocked_source)
+                blocked = self._proof(locale, source=blocked_source)
+                blocked_output = renderer.render_private_first_interview_conversion_board_v2(blocked)
+                self.assertNotIn('class="board-reentry-capsule"', blocked_output)
+
     def test_practice_gate_escapes_rehearsal_copy_and_stop_omits_it(self):
         proof = self._proof()
         artifact = proof.artifact

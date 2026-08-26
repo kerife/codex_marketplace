@@ -53,6 +53,9 @@ feedback; a third attempt fails closed.
 The rendered session exposes the current step in a semantic
 `prepare → answer → review` track. Feedback from attempt two is terminal and
 does not invite another rehearsal.
+Ready boards and unanswered sessions may show a static re-entry capsule that
+describes the bounded context/action/result answer shape; it is omitted for
+blocked and terminal states and never creates a form or external action.
 
 The private first-interview handoff may be advanced only by the explicit
 `build_private_first_interview_practice_feedback` boundary. It accepts one

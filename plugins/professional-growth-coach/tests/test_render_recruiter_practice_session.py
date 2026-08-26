@@ -258,6 +258,42 @@ class RecruiterPracticeRendererTests(unittest.TestCase):
             self.assertIn(f'data-step="{current}" aria-current="step"', progress)
             self.assertIn('aria-label="Practice progress"', rendered)
 
+    def test_awaiting_answer_shows_private_reentry_capsule_only_before_final_feedback(self):
+        awaiting = self._feedback_session([])
+        awaiting["state"] = "awaiting_answer"
+        awaiting["observed_answer"] = None
+        awaiting["feedback"] = {"score": "unknown", "score_state": "unknown", "observations": []}
+        awaiting["handoff_context"] = {
+            "source": "executive_career_dossier",
+            "source_snapshot": "snap-dossier-sha256-" + "a" * 64,
+            "question_rank": 1,
+            "question_id": "Q-001",
+            "requirement_id": "R-001",
+            "fact_ids": ["F-001"],
+            "claim_ids": ["C-001"],
+            "evidence_ids": ["E-001"],
+            "draft_only": True,
+            "external_actions_authorized": False,
+        }
+        rendered = renderer.render_session_html(awaiting)
+        self.assertIn('class="practice-reentry-capsule"', rendered)
+        self.assertIn("responde con contexto breve, acción concreta y resultado observado", rendered)
+        independent = copy.deepcopy(awaiting)
+        independent.pop("handoff_context")
+        self.assertNotIn('class="practice-reentry-capsule"', renderer.render_session_html(independent))
+        final = copy.deepcopy(awaiting)
+        final["schema_version"] = "recruiter-practice-session-v2"
+        final["ui_locale"] = "en"
+        final["content_locale"] = "en"
+        final.pop("locale")
+        final["handoff_context"]["source"] = "private_first_interview_conversion_board"
+        final["handoff_context"]["source_snapshot"] = "snap-practice-board-sha256-" + "b" * 64
+        final["handoff_context"].pop("claim_ids")
+        final["handoff_context"].pop("evidence_ids")
+        final["handoff_context"]["attempt"] = 2
+        final["handoff_context"]["final_attempt"] = True
+        self.assertNotIn('class="practice-reentry-capsule"', renderer.render_session_html(final))
+
     def test_next_action_forced_colors_uses_explicit_system_color_surface_in_both_locales(self):
         session = {
             "schema_version": "recruiter-practice-session-v1",

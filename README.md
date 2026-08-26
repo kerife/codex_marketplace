@@ -99,6 +99,9 @@ The renderer also exposes a semantic three-step progress track and makes the
 second attempt terminal instead of suggesting another rehearsal.
 Its short chat summary uses the same terminal language, so the closed cycle is
 clear even before opening the private artifact.
+Ready boards and unanswered sessions also show a static private re-entry
+capsule with the expected context/action/result shape; blocked and final states
+omit it.
 
 ## Installation
 

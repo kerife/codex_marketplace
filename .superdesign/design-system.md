@@ -226,3 +226,6 @@ attempt adds a localized final-attempt notice, and its terminal feedback card
 closes the cycle without inviting a third rehearsal.
 The chat summary mirrors that closure with a short terminal message while
 keeping answer text and provenance metadata out of the summary.
+Ready boards and awaiting sessions use a compact re-entry capsule for the one
+private next action; it remains static, localized, and absent from blocked or
+terminal states.
