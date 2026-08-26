@@ -12,27 +12,27 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `43798ece2591c2e96b0a5038d26e98db5e32f8fd`
+source_commit: `4967973ab4919933380f689b5cd949f98fd36cbd`
 
-source_tree: `a2ea36264790b1ddaceb19d9834ec9bd917b3232`
+source_tree: `645d2344c5654bac8eb822f70b3861a162a34f1d`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826085104`
+installed_cache_version: `0.2.0+codex.20260826092044`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
-source_file_count: `199`
+source_file_count: `206`
 
-installed_file_count: `199`
+installed_file_count: `206`
 
 sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `7ca3f296626ba4bb9e8f1438d5a08abd1be46af306cfd98481b8a72abe6d1980`
+source_aggregate_sha256: `7b47b649ba61ff6912481bf84a9408897a2ad237fa24ebb12214a7d2eb2e757c`
 
-cache_aggregate_sha256: `7ca3f296626ba4bb9e8f1438d5a08abd1be46af306cfd98481b8a72abe6d1980`
+cache_aggregate_sha256: `7b47b649ba61ff6912481bf84a9408897a2ad237fa24ebb12214a7d2eb2e757c`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826085104`.
+- Cachebuster identifier: `20260826092044`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -86,10 +86,12 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- Focused source verification passed 47/47 tests across practice-gate rendering,
-  design-token parity, the private interview v2 contract/writer, and release
-  structure checks.
-- Installed private-interview v2/practice-gate smokes passed 25/25 tests.
+- Focused source verification passed 131/131 tests across the private-first
+  interview practice handoff, state-aware conversion-board rendering,
+  recruiter-practice-session compatibility, package structure, and release
+  checks.
+- Installed exact-cache package smokes passed 43/43 tests across the handoff,
+  conversion-board, writer, and recruiter-practice-session surfaces.
 - The broader inherited suite remains bounded by the known legacy
   executive-dossier validation timeout; no full-suite green claim is made.
 - Repository-only conformance is not claimed from the installed cache, and
@@ -99,7 +101,7 @@ external_action_state: `not_executed`
 
 - Source was extracted from the published source commit with `git archive`; no mutable-worktree
   content comparison was used.
-- Source and cache each contained 183 non-empty sorted POSIX relative files.
+- Source and cache each contained 206 non-empty sorted POSIX relative files.
   Every path and lowercase per-file SHA-256 matched, and the aggregate digest
   over `path + NUL + file hash + LF` matched on both sides.
 - `diff -qr` was silent. Source and cache contained no `.pyc`, `.pyo`,
@@ -121,6 +123,12 @@ external_action_state: `not_executed`
 - Private interview practice gate installed smokes: one localized rehearsal
   question, one pre-response `unknown` score, explicit later-request boundary,
   and no-send/share/publish action surface; no external action executed.
+
+- Private first-interview practice handoff installed smokes: only a validated
+  `ready` board can project one `recruiter-practice-session-v2` session in
+  `awaiting_answer` state, with `unknown` score, ephemeral answer handling,
+  and board-origin copy. Snapshot/digest/internal IDs stay out of HTML and no
+  external action is available; non-ready board states fail closed.
 
 - Accepted groups: response mapping, recurrence routes, non-learning routes,
   provider lifecycle, the complete ES action matrix, closed EN copy, exact
