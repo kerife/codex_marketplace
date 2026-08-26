@@ -188,6 +188,7 @@ class RecruiterPracticeRendererTests(unittest.TestCase):
         self.assertIn("Impacto observado directo", rendered)
         self.assertNotIn("Contexto breve", rendered)
         self.assertIn('class="practice-rehearsal-hint"', rendered)
+
         self.assertIn('aria-labelledby="rehearsal-title"', rendered)
         self.assertIn("Siguiente paso", rendered)
         self.assertIn("Responde con contexto breve, acción concreta y resultado observado", rendered)
@@ -229,6 +230,33 @@ class RecruiterPracticeRendererTests(unittest.TestCase):
             "Regresa a la conversación privada de Codex que originó esta práctica",
             sourced_html,
         )
+
+    def test_progress_track_marks_the_current_practice_step(self):
+        expected_current = {
+            "ready_to_practice": "prepare",
+            "awaiting_answer": "answer",
+            "feedback_available": "review",
+        }
+        for state, current in expected_current.items():
+            session = self._feedback_session(
+                [self._observation("solid")]
+                if state == "feedback_available"
+                else []
+            )
+            session["locale"] = "en"
+            session["state"] = state
+            if state != "feedback_available":
+                session["observed_answer"] = None
+                session["feedback"] = {
+                    "score": "unknown",
+                    "score_state": "unknown",
+                    "observations": [],
+                }
+            rendered = renderer.render_session_html(session)
+            progress = rendered.split('<nav class="practice-progress"', 1)[1].split("</nav>", 1)[0]
+            self.assertEqual(1, progress.count('aria-current="step"'))
+            self.assertIn(f'data-step="{current}" aria-current="step"', progress)
+            self.assertIn('aria-label="Practice progress"', rendered)
 
     def test_next_action_forced_colors_uses_explicit_system_color_surface_in_both_locales(self):
         session = {

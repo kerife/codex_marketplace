@@ -145,6 +145,8 @@ fail closed, while an invalid answer does not consume it.
 One explicit revision request can issue a second and final answer handoff from
 an exact feedback proof; it carries no prior answer or feedback, and no third
 attempt exists.
+The artifact shows `prepare → answer → review`; on the final attempt it clearly
+closes the cycle rather than suggesting a third rehearsal.
 Unsafe answers, crossed sessions, and stale handoffs fail closed. No external
 action is performed.
 

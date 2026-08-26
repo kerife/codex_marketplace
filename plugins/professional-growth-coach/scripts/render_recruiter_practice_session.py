@@ -105,6 +105,10 @@ COPY = {
         "decision_target": "Objetivo de esta respuesta",
         "decision_action": "Decisión antes de volver a practicar",
         "decision_explanation": "Cuando aparecen varias señales, la que requiere más cautela guía la siguiente versión.",
+        "terminal_heading": "Ciclo de práctica cerrado",
+        "terminal_explanation": "No hay un tercer intento disponible; esta revisión fue la última y la respuesta anterior no se reutilizó.",
+        "terminal_action": "No hay un tercer intento; la respuesta de este ciclo no se guarda.",
+        "terminal_action_heading": "Cierre del ciclo",
         "handoff_title": "Origen de práctica",
         "handoff_text_dossier": "Esta pregunta proviene de un dossier de carrera y se practica en privado; no se realizó ninguna acción externa.",
         "handoff_text_reply": "Esta pregunta proviene de un triaje privado de respuesta de reclutador y se practica en privado; no se realizó ninguna acción externa.",
@@ -117,6 +121,10 @@ COPY = {
         "summary": "Práctica privada: ",
         "attempt_heading": "Último intento",
         "attempt_text": "Esta es la segunda y última versión de esta práctica. La respuesta anterior no se reutilizó.",
+        "progress": "Progreso de práctica",
+        "progress_prepare": "Preparar",
+        "progress_answer": "Responder",
+        "progress_review": "Revisar",
     },
     "en": {
         "title": "Private recruiter practice",
@@ -153,6 +161,10 @@ COPY = {
         "decision_target": "Target for this answer",
         "decision_action": "Decision before rehearsing again",
         "decision_explanation": "When several signals appear, the one requiring the most caution guides the next version.",
+        "terminal_heading": "Practice cycle complete",
+        "terminal_explanation": "No third attempt is available; this was the final revision and the previous answer was not reused.",
+        "terminal_action": "There is no third attempt; this cycle's answer is not saved.",
+        "terminal_action_heading": "Cycle closure",
         "handoff_title": "Practice source",
         "handoff_text_dossier": "This question came from a career dossier and is practiced privately; no external action was taken.",
         "handoff_text_reply": "This question came from a private recruiter-reply triage and is practiced privately; no external action was taken.",
@@ -165,6 +177,10 @@ COPY = {
         "summary": "Private practice: ",
         "attempt_heading": "Final attempt",
         "attempt_text": "This is the second and final version of this practice. The previous answer was not reused.",
+        "progress": "Practice progress",
+        "progress_prepare": "Prepare",
+        "progress_answer": "Answer",
+        "progress_review": "Review",
     },
 }
 
@@ -428,17 +444,22 @@ def _render_decision(
     question_kind: str,
     governing_label: str,
     labels: Mapping[str, str],
+    *,
+    terminal: bool = False,
 ) -> str:
     _require_locale(locale)
     _require_question_kind(question_kind)
     _require_feedback_label(governing_label)
+    heading = labels["terminal_heading"] if terminal else labels["decision_heading"]
+    explanation = labels["terminal_explanation"] if terminal else labels["decision_explanation"]
+    action = labels["terminal_action"] if terminal else _decision_action(locale, governing_label)
     return f'''<section class="practice-decision" aria-labelledby="decision-title">
-      <h2 id="decision-title">{labels["decision_heading"]}</h2>
-      <p class="practice-decision-explanation">{labels["decision_explanation"]}</p>
+      <h2 id="decision-title">{heading}</h2>
+      <p class="practice-decision-explanation">{explanation}</p>
       <dl>
         <dt>{labels["decision_governing"]}</dt><dd>{labels[governing_label]}</dd>
         <dt>{labels["decision_target"]}</dt><dd>{html.escape(_decision_target(locale, question_kind))}</dd>
-        <dt>{labels["decision_action"]}</dt><dd>{html.escape(_decision_action(locale, governing_label))}</dd>
+        <dt>{labels["terminal_action_heading"] if terminal else labels["decision_action"]}</dt><dd>{html.escape(action)}</dd>
       </dl>
     </section>'''
 
@@ -481,6 +502,25 @@ def _render_next_action(
     </section>'''
 
 
+def _render_progress(state: str, labels: Mapping[str, str]) -> str:
+    current = {
+        "ready_to_practice": "prepare",
+        "awaiting_answer": "answer",
+        "feedback_available": "review",
+    }.get(state)
+    if current is None:
+        raise ValueError(f"unsupported recruiter practice state: {state}")
+    steps = (("prepare", "progress_prepare"), ("answer", "progress_answer"), ("review", "progress_review"))
+    def _item(step: str, label: str) -> str:
+        current_attr = ' aria-current="step"' if step == current else ""
+        return f'<li data-step="{step}"{current_attr}>{labels[label]}</li>'
+    items = "".join(
+        _item(step, label)
+        for step, label in steps
+    )
+    return f'<nav class="practice-progress" aria-label="{labels["progress"]}"><ol>{items}</ol></nav>'
+
+
 def _render_main(
     session: Mapping[str, object], ui_locale: str, content_locale: str | None = None
 ) -> str:
@@ -494,6 +534,7 @@ def _render_main(
     fact = _rows(session["facts"])[0]
     rubric = _mapping(session["rubric"])
     state = _text(session["state"])
+    progress = _render_progress(state, labels)
     rehearsal = _render_rehearsal_scaffold(locale, question_kind, labels)
     sourced = session.get("handoff_context") is not None
     handoff = ""
@@ -515,7 +556,14 @@ def _render_main(
         feedback_labels = tuple(_text(observation["label"]) for observation in observations)
         governing_label = _governing_feedback_label(feedback_labels)
         feedback = _render_feedback(locale, question_kind, feedback_labels, labels)
-        decision = _render_decision(locale, question_kind, governing_label, labels)
+        terminal = (
+            sourced
+            and _mapping(session["handoff_context"]).get("attempt") == 2
+            and _mapping(session["handoff_context"]).get("final_attempt") is True
+        )
+        decision = _render_decision(
+            locale, question_kind, governing_label, labels, terminal=terminal
+        )
         practice_sequence = f"{attempt_notice}{rehearsal}{feedback}{decision}{handoff}"
     elif sourced:
         next_action = _render_next_action(state, labels, sourced=sourced)
@@ -526,6 +574,7 @@ def _render_main(
     return f'''<main id="main-content" class="practice-shell" tabindex="-1">
     <section class="practice-session" aria-labelledby="practice-session-title" aria-describedby="practice-session-state">
       <p id="practice-session-state" class="state-chip state-chip--{html.escape(state)}">{labels[state]}</p>
+      {progress}
       <section class="practice-context" aria-labelledby="context-title">
         <h2 id="context-title">{labels["context"]}</h2>
         <p class="practice-summary"{dynamic_lang}>{html.escape(_text(context["summary"]))}</p>

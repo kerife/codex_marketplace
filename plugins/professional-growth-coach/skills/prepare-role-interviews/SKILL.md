@@ -50,6 +50,9 @@ available for one corrected attempt.
 After feedback, only one explicit revision request is allowed. It emits a
 second and final `awaiting_answer` handoff without reusing the prior answer or
 feedback; a third attempt fails closed.
+The rendered session exposes the current step in a semantic
+`prepare → answer → review` track. Feedback from attempt two is terminal and
+does not invite another rehearsal.
 
 The private first-interview handoff may be advanced only by the explicit
 `build_private_first_interview_practice_feedback` boundary. It accepts one

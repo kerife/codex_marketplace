@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests" / "fixtures" / "private-first-interview-conversion-board-v1" / "accepted-en.json"
 SCHEMA = ROOT / "schemas" / "private-first-interview-practice-feedback-v1.schema.json"
+SESSION_SCHEMA = ROOT / "schemas" / "recruiter-practice-session-v2.schema.json"
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from validate_json_schema_subset import validate_schema_instance
@@ -207,6 +208,10 @@ class PrivateFirstInterviewPracticeFeedbackTests(unittest.TestCase):
         second_feedback = feedback_builder.build_private_first_interview_practice_feedback(
             revised, "I redesigned a process and observed an improvement."
         )
+        terminal = proof_renderer.render_private_first_interview_practice_feedback(second_feedback)
+        self.assertIn("Practice cycle complete", terminal)
+        self.assertIn("No third attempt", terminal)
+        self.assertNotIn("Decision before rehearsing again", terminal)
         with self.assertRaisesRegex(ValueError, "private first-interview practice revision is unavailable"):
             revision_builder.build_private_first_interview_practice_revision(second_feedback)
 
@@ -219,6 +224,27 @@ class PrivateFirstInterviewPracticeFeedbackTests(unittest.TestCase):
             results = list(executor.map(lambda _: _revision_result(feedback), (1, 2)))
         self.assertEqual(1, sum(result is True for result in results))
         self.assertEqual(1, sum(result is False for result in results))
+
+    def test_revision_session_matches_canonical_schema(self):
+        handoff = self._handoff()
+        feedback = feedback_builder.build_private_first_interview_practice_feedback(
+            handoff, "I implemented a change and observed a result."
+        )
+        revised = revision_builder.build_private_first_interview_practice_revision(feedback)
+        errors = validate_schema_instance(
+            revised.session, json.loads(SESSION_SCHEMA.read_text(encoding="utf-8"))
+        )
+        self.assertEqual([], errors)
+
+    def test_attempt_metadata_is_restricted_to_final_board_revision(self):
+        session = self._handoff().session
+        session["handoff_context"]["attempt"] = 2
+        errors = session_validator.validate_session(session)
+        self.assertTrue(any("final_attempt" in error for error in errors))
+        session["handoff_context"]["final_attempt"] = True
+        session["handoff_context"]["source"] = "executive_career_dossier"
+        errors = session_validator.validate_session(session)
+        self.assertTrue(any("only supported" in error for error in errors))
 
     def test_feedback_wrapper_schema_is_closed(self):
         feedback = feedback_builder.build_private_first_interview_practice_feedback(

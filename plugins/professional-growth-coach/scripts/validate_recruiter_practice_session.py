@@ -432,12 +432,21 @@ def validate_session(value: object) -> list[str]:
             elif handoff.get("source") == "private_first_interview_conversion_board" and not source_snapshot.startswith("snap-practice-board-sha256-"):
                 errors.append("handoff_context.source_snapshot must match private_first_interview_conversion_board source")
             if isinstance(handoff.get("question_rank"), bool) or handoff.get("question_rank") != 1: errors.append("handoff_context.question_rank must be 1")
-            if "attempt" in handoff and (isinstance(handoff.get("attempt"), bool) or handoff.get("attempt") not in {1, 2}):
-                errors.append("handoff_context.attempt must be 1 or 2")
+            if "attempt" in handoff and (isinstance(handoff.get("attempt"), bool) or handoff.get("attempt") != 2):
+                errors.append("handoff_context.attempt must be 2")
             if "final_attempt" in handoff and handoff.get("final_attempt") is not True:
                 errors.append("handoff_context.final_attempt must be true")
-            if handoff.get("final_attempt") is True and handoff.get("attempt") != 2:
-                errors.append("handoff_context.final_attempt requires attempt 2")
+            if handoff.get("source") != "private_first_interview_conversion_board" and (
+                "attempt" in handoff or "final_attempt" in handoff
+            ):
+                errors.append("handoff_context.attempt is only supported for private_first_interview_conversion_board")
+            if handoff.get("source") == "private_first_interview_conversion_board":
+                attempt = handoff.get("attempt")
+                final_attempt = handoff.get("final_attempt")
+                if attempt == 2 and final_attempt is not True:
+                    errors.append("handoff_context.attempt 2 requires final_attempt true")
+                if final_attempt is True and attempt != 2:
+                    errors.append("handoff_context.final_attempt requires attempt 2")
             if handoff.get("draft_only") is not True: errors.append("handoff_context.draft_only must be true")
             if handoff.get("external_actions_authorized") is not False: errors.append("handoff_context.external_actions_authorized must be false")
             if handoff.get("source") == "private_recruiter_reply_triage" and "question_kind" in handoff:

@@ -223,8 +223,9 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
         rehearsal = sourced.index('<section class="practice-rehearsal"')
         evidence = sourced.index('<section class="practice-evidence"')
         boundary = sourced.index('<aside class="practice-boundary"')
-        self.assertLess(handoff, next_action)
         self.assertLess(next_action, rehearsal)
+        self.assertLess(rehearsal, handoff)
+        self.assertLess(handoff, evidence)
         self.assertLess(rehearsal, evidence)
         self.assertLess(evidence, boundary)
         self.assertIn("Regresa a la conversación privada de Codex que originó esta práctica", sourced)
@@ -319,10 +320,10 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
         ]
         feedback = self.renderer.render_session_html(session)
         markers = (
-            '<aside class="practice-handoff ',
             '<section class="practice-rehearsal"',
             '<section class="practice-feedback"',
             '<section class="practice-decision"',
+            '<aside class="practice-handoff ',
             '<section class="practice-evidence"',
             '<aside class="practice-boundary"',
         )
@@ -401,11 +402,11 @@ class RecruiterPracticeSessionRendererTests(unittest.TestCase):
 
     def test_sequence_matrix_preserves_order_and_resolved_aria_references(self) -> None:
         cases = (
-            ("sourced-ready", self.awaiting_session | {"state": "ready_to_practice"}, ("handoff", "next", "rehearsal", "evidence", "boundary"), "prompt-title practice-question-text"),
-            ("sourced-awaiting", self.awaiting_session, ("handoff", "next", "rehearsal", "evidence", "boundary"), "prompt-title practice-question-text"),
+            ("sourced-ready", self.awaiting_session | {"state": "ready_to_practice"}, ("next", "rehearsal", "handoff", "evidence", "boundary"), "prompt-title practice-question-text"),
+            ("sourced-awaiting", self.awaiting_session, ("next", "rehearsal", "handoff", "evidence", "boundary"), "prompt-title practice-question-text"),
             ("independent-ready", {key: value for key, value in (self.awaiting_session | {"state": "ready_to_practice"}).items() if key != "handoff_context"}, ("rehearsal", "next", "evidence", "boundary"), "prompt-title rehearsal-title"),
             ("independent-awaiting", {key: value for key, value in self.awaiting_session.items() if key != "handoff_context"}, ("rehearsal", "next", "evidence", "boundary"), "prompt-title rehearsal-title"),
-            ("sourced-feedback", self.feedback_session(), ("handoff", "rehearsal", "feedback", "decision", "evidence", "boundary"), None),
+            ("sourced-feedback", self.feedback_session(), ("rehearsal", "feedback", "decision", "handoff", "evidence", "boundary"), None),
             ("independent-feedback", {key: value for key, value in self.feedback_session().items() if key != "handoff_context"}, ("rehearsal", "feedback", "decision", "evidence", "boundary"), None),
         )
         markers = {
