@@ -634,12 +634,18 @@ main:focus-visible { outline: 3px solid var(--coral); outline-offset: 4px; }
 h1, h2, h3 { font-family: var(--serif); }
 h1 { margin: .2rem 0 0; font-size: clamp(2rem, 6vw, 3.25rem); font-style: italic; line-height: 1.04; }
 h2 { margin: 0; color: var(--forest); font-size: clamp(1.35rem, 3vw, 1.85rem); line-height: 1.16; }
+.board-main h2 { scroll-margin-top: 1rem; }
+h2:target { outline: 3px solid var(--gold); outline-offset: .35rem; }
 h3 { margin: 0; font-size: 1.12rem; line-height: 1.2; }
 .board-state { display: inline-flex; align-items: center; min-height: 2.25rem; padding: .4rem .75rem; border: 1px solid currentColor; color: var(--forest); font-size: .875rem; font-weight: 700; text-align: center; }
 .board-main { padding: 1.5rem 0 3rem; }
 .board-main > section + section { margin-top: 1.5rem; }
 .board-decision { padding: clamp(1.15rem, 3vw, 2rem); background: var(--forest); border-left: 4px solid var(--gold); color: #fff; }
 .board-decision-cockpit { box-shadow: 0 .65rem 1.75rem rgb(23 62 48 / .14); }
+.board-decision-cockpit[data-board-state="ready"] { border-left-color: var(--gold); }
+.board-decision-cockpit[data-board-state="clarify"] { border-left-color: var(--coral); }
+.board-decision-cockpit[data-board-state="pause"] { border-left-color: var(--gold); box-shadow: 0 .65rem 1.75rem rgb(185 81 58 / .12); }
+.board-decision-cockpit[data-board-state="stop"] { border-left-color: var(--coral); box-shadow: none; }
 .board-decision h2 { color: #fff; }
 .board-decision p { max-width: 72ch; }
 .board-decision dl, .board-facts { display: grid; grid-template-columns: minmax(10rem, .35fr) minmax(0, 1fr); gap: .55rem 1rem; margin: 1rem 0 0; }
@@ -651,6 +657,11 @@ h3 { margin: 0; font-size: 1.12rem; line-height: 1.2; }
 .board-trust-strip ul { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: .65rem 0 0; padding: 0; list-style: none; font-weight: 700; }
 .board-trust-strip li { display: flex; align-items: center; gap: .35rem; }
 .board-trust-strip li::before { content: "•"; color: var(--coral); }
+.board-section-nav { margin-top: 1.5rem; padding: .75rem 1rem; border: 1px solid var(--line); background: var(--surface); }
+.board-section-nav-label { margin: 0; color: var(--muted); font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.board-section-nav ul { display: flex; flex-wrap: wrap; gap: .5rem .75rem; margin: .5rem 0 0; padding: 0; list-style: none; }
+.board-section-nav a { display: inline-flex; min-height: 44px; align-items: center; padding: .35rem .6rem; color: var(--forest); font-weight: 700; text-decoration-thickness: .12em; text-underline-offset: .16em; }
+.board-section-nav a:hover { color: var(--coral); }
 .board-approval-boundary { margin-top: 1.5rem; padding: 1rem; background: var(--coral-soft); border: 2px solid var(--coral); }
 .board-approval-boundary h2 { color: var(--ink); }
 .board-approval-boundary ul { columns: 3; margin: .5rem 0 0; padding-left: 1.25rem; }
@@ -666,9 +677,20 @@ h3 { margin: 0; font-size: 1.12rem; line-height: 1.2; }
 .board-risk-card dt, .board-day dt, .board-review dt, .board-branch dt { margin-top: .6rem; color: var(--muted); font-size: .8rem; font-weight: 700; }
 .board-risk-card dd, .board-day dd, .board-review dd, .board-branch dd { margin: .1rem 0 0; }
 .board-practice-gate { background: var(--coral-soft); border-left: 4px solid var(--coral); }
+.board-practice-gate[data-board-state="ready"] { border-left-color: var(--coral); }
+.board-practice-gate[data-board-state="clarify"] { background: var(--forest-soft); border-left-color: var(--gold); }
+.board-practice-gate[data-board-state="pause"] { background: var(--paper); border-left-color: var(--gold); }
 .board-practice-gate p { max-width: 72ch; }
 .board-practice-question { margin: .85rem 0 0; font-size: 1.05rem; }
 .board-practice-instruction { margin: 1rem 0 0; font-weight: 700; }
+.board-reentry-capsule { padding: 1rem; background: var(--forest-soft); border: 1px solid var(--forest); border-left: 4px solid var(--forest); }
+.board-reentry-capsule p { max-width: 72ch; margin: .45rem 0 0; }
+.board-reentry-recipe-label { color: var(--muted); font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.board-reentry-recipe { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin: .65rem 0 0; padding: 0; list-style: none; }
+.board-reentry-recipe li { display: grid; grid-template-columns: auto 1fr; gap: .6rem; min-width: 0; padding: .75rem; background: var(--surface); border: 1px solid var(--forest); }
+.board-reentry-step { display: grid; width: 1.7rem; height: 1.7rem; place-items: center; border-radius: 50%; background: var(--forest); color: #fff; font-size: .8rem; font-weight: 700; }
+.board-reentry-recipe strong, .board-reentry-recipe li > span:last-child > span { display: block; }
+.board-reentry-recipe li > span:last-child > span { margin-top: .2rem; color: var(--muted); font-size: .9rem; }
 .board-day { border-top: 4px solid var(--forest); }
 .board-day strong, .board-review strong, .board-branch strong { color: var(--forest); }
 .board-day dl, .board-review dl, .board-branch dl { display: grid; gap: .55rem; margin: .8rem 0 0; }
@@ -676,11 +698,11 @@ h3 { margin: 0; font-size: 1.12rem; line-height: 1.2; }
 .board-footer { padding: 1rem max(1rem, calc((100% - 920px) / 2)) 2rem; border-top: 1px solid var(--forest); color: var(--muted); font-size: .88rem; }
 .board-footer p { margin: .4rem 0 0; }
 @media (min-width: 641px) and (max-width: 900px) { .board-sequence ol { grid-template-columns: repeat(2, minmax(0, 1fr)); } .board-approval-boundary ul { columns: 2; } }
-@media (max-width: 640px) { .board-header { display: block; } .board-state { margin-top: 1rem; } .board-sequence ol, .board-proof-list, .board-risk-list, .board-week-list, .board-review-list, .board-ladder-list { grid-template-columns: 1fr; } .board-decision dl, .board-facts { grid-template-columns: 1fr; gap: .25rem; } .board-decision dt { margin-top: .6rem; } .board-trust-strip ul { display: grid; grid-template-columns: 1fr; } .board-approval-boundary ul { columns: 1; } }
-@media screen and (prefers-color-scheme: dark) { :root { color-scheme: dark; --paper: #101521; --surface: #182235; --ink: #f3f6ff; --muted: #b8c4d8; --forest: #8fc9b0; --forest-soft: #244337; --coral: #ff9b83; --coral-soft: #4a2829; --gold: #f2d28a; --line: #5f718e; } .board-decision, .board-decision h2 { color: var(--ink); } }
-@media print { :root { color-scheme: light; --paper: #fff; --surface: #fff; --ink: #000; --muted: #536158; --forest: #000; --forest-soft: #fff; --coral: #000; --coral-soft: #fff; --gold: #000; --line: #000; } html, body { background: var(--paper); color: var(--ink); } .board-shell { width: 100%; } .board-header, .board-decision, .board-trust-strip, .board-practice-gate, .board-sequence, .board-proof, .board-risks, .board-week, .board-ladder, .board-reviews, .board-boundary, .board-approval-boundary, .board-footer { break-inside: avoid; page-break-inside: avoid; } .board-decision, .board-boundary, .board-trust-strip, .board-practice-gate, .board-approval-boundary { color: var(--ink); border-color: var(--line); background: var(--paper); } .board-decision-cockpit { box-shadow: none; } .board-cockpit-prompt { background: var(--paper); border-color: var(--line); } .skip-link { display: none; } }
+@media (max-width: 640px) { .board-header { display: block; } .board-state { margin-top: 1rem; } .board-sequence ol, .board-proof-list, .board-risk-list, .board-week-list, .board-review-list, .board-ladder-list, .board-reentry-recipe { grid-template-columns: 1fr; } .board-decision dl, .board-facts { grid-template-columns: 1fr; gap: .25rem; } .board-decision dt { margin-top: .6rem; } .board-trust-strip ul { display: grid; grid-template-columns: 1fr; } .board-approval-boundary ul { columns: 1; } }
+@media screen and (prefers-color-scheme: dark) { :root { color-scheme: dark; --paper: #101521; --surface: #182235; --ink: #f3f6ff; --muted: #b8c4d8; --forest: #8fc9b0; --forest-soft: #244337; --coral: #ff9b83; --coral-soft: #4a2829; --gold: #f2d28a; --line: #5f718e; } .board-decision { background: #173e30; } .board-decision, .board-decision h2 { color: var(--ink); } }
+@media print { :root { color-scheme: light; --paper: #fff; --surface: #fff; --ink: #000; --muted: #536158; --forest: #000; --forest-soft: #fff; --coral: #000; --coral-soft: #fff; --gold: #000; --line: #000; } html, body { background: var(--paper); color: var(--ink); } .board-shell { width: 100%; } .board-header, .board-decision, .board-trust-strip, .board-section-nav, .board-practice-gate, .board-reentry-capsule, .board-sequence, .board-proof, .board-risks, .board-week, .board-ladder, .board-reviews, .board-boundary, .board-approval-boundary, .board-footer { break-inside: avoid; page-break-inside: avoid; } .board-sequence li, .board-proof-card, .board-risk-card, .board-day, .board-branch, .board-review, .board-reentry-recipe li { break-inside: avoid; page-break-inside: avoid; } .board-section-nav { display: none; } .board-main h2:target { outline: 0; } .board-decision, .board-boundary, .board-trust-strip, .board-practice-gate, .board-reentry-capsule, .board-approval-boundary { color: var(--ink); border-color: var(--line); background: var(--paper); } .board-reentry-recipe li { border-color: var(--line); } .board-reentry-step { color: var(--ink); background: var(--paper); border: 1px solid var(--line); } .board-decision-cockpit { box-shadow: none; } .board-cockpit-prompt { background: var(--paper); border-color: var(--line); } .skip-link { display: none; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
-@media (forced-colors: active) { .skip-link, .board-decision, .board-trust-strip, .board-practice-gate, .board-approval-boundary, .board-sequence li, .board-proof-card, .board-risk-card, .board-day, .board-branch, .board-review { background: Canvas; color: CanvasText; border-color: CanvasText; } .skip-link:focus-visible, main:focus-visible { outline: 2px solid Highlight; } .board-decision h2, .board-decision dt, .board-decision dd, .board-kicker, .board-approval-boundary h2, h2, strong { color: CanvasText; } }
+@media (forced-colors: active) { .skip-link, .board-decision, .board-trust-strip, .board-section-nav, .board-practice-gate, .board-reentry-capsule, .board-approval-boundary, .board-sequence li, .board-proof-card, .board-risk-card, .board-day, .board-branch, .board-review, .board-reentry-recipe li { background: Canvas; color: CanvasText; border-color: CanvasText; } .skip-link:focus-visible, main:focus-visible, h2:target, .board-section-nav a:focus-visible { outline: 2px solid Highlight; outline-offset: 3px; } .board-section-nav a, .board-decision h2, .board-decision dt, .board-decision dd, .board-kicker, .board-approval-boundary h2, h2, strong { color: CanvasText; } .board-reentry-step { color: Canvas; background: CanvasText; border-color: CanvasText; } .board-reentry-recipe li > span:last-child > span { color: CanvasText; } }
 ```
 
 ### `plugins/professional-growth-coach/assets/private-recruiter-reply-triage-v1.css`
