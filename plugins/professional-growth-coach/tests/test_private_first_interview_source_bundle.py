@@ -70,9 +70,6 @@ class PrivateFirstInterviewSourceBundleTests(unittest.TestCase):
         self.assertEqual(SOURCE_KINDS, source_bundle.metadata(first)["source_kinds"])
 
     def test_provenance_states_are_distinct_and_v1_adapter_never_upgrades(self):
-        upstream = source_bundle.issue_validated_private_first_interview_source_bundle(
-            synthetic_source(), provenance_state="upstream_attested"
-        )
         fixture = source_bundle.issue_validated_private_first_interview_source_bundle(
             synthetic_source(), provenance_state="synthetic_fixture"
         )
@@ -82,13 +79,26 @@ class PrivateFirstInterviewSourceBundleTests(unittest.TestCase):
         self.assertIs(type(v1_proof), ValidatedPrivateFirstInterviewConversionBoard)
         composed = source_bundle.adapt_v1_private_first_interview_proof(v1_proof)
 
-        self.assertEqual("upstream_attested", source_bundle.metadata(upstream)["provenance_state"])
         self.assertEqual("synthetic_fixture", source_bundle.metadata(fixture)["provenance_state"])
         self.assertEqual("composition_only", source_bundle.metadata(composed)["provenance_state"])
         self.assertEqual(
-            source_bundle.metadata(upstream)["source_digest"],
+            source_bundle.metadata(fixture)["source_digest"],
             source_bundle.metadata(composed)["source_digest"],
         )
+
+    def test_raw_issuer_is_fixture_only_and_upstream_path_requires_private_capability(self):
+        with self.assertRaisesRegex(ValueError, "source bundle is unavailable"):
+            source_bundle.issue_validated_private_first_interview_source_bundle(
+                synthetic_source(), provenance_state="upstream_attested"
+            )
+        with self.assertRaisesRegex(ValueError, "source bundle is unavailable"):
+            source_bundle._issue_upstream_attested_private(
+                synthetic_source(), capability=object()
+            )
+        fixture = source_bundle.issue_validated_private_first_interview_source_bundle(
+            synthetic_source(), provenance_state="synthetic_fixture"
+        )
+        self.assertEqual("synthetic_fixture", source_bundle.metadata(fixture)["provenance_state"])
 
     def test_issuer_rejects_invalid_or_unsafe_inputs_without_echoing_them(self):
         unsafe = "candidate Maria Brown secret material"
@@ -131,6 +141,48 @@ class PrivateFirstInterviewSourceBundleTests(unittest.TestCase):
             source_bundle.adapt_v1_private_first_interview_proof(ForgedV1())
         with self.assertRaisesRegex(TypeError, "source bundle is unavailable"):
             source_bundle.adapt_v1_private_first_interview_proof(synthetic_source())
+
+    def test_exact_class_payload_forgery_and_invalid_digest_fail_closed(self):
+        forged = object.__new__(source_bundle.ValidatedPrivateFirstInterviewSourceBundle)
+        object.__setattr__(
+            forged,
+            "_ValidatedPrivateFirstInterviewSourceBundle__source_group_json",
+            json.dumps(synthetic_source()),
+        )
+        object.__setattr__(
+            forged,
+            "_ValidatedPrivateFirstInterviewSourceBundle__metadata_json",
+            json.dumps(
+                {
+                    "source_contract": "private-first-interview-source-bundle-v1",
+                    "provenance_state": "synthetic_fixture",
+                    "source_digest": "not-a-digest",
+                    "source_kinds": SOURCE_KINDS,
+                }
+            ),
+        )
+        with self.assertRaisesRegex(TypeError, "source bundle is unavailable"):
+            source_bundle._payload_json(forged)
+        with self.assertRaisesRegex(TypeError, "source bundle is unavailable"):
+            source_bundle.metadata(forged)
+
+        issued = source_bundle.issue_validated_private_first_interview_source_bundle(
+            synthetic_source(), provenance_state="synthetic_fixture"
+        )
+        object.__setattr__(
+            issued,
+            "_ValidatedPrivateFirstInterviewSourceBundle__metadata_json",
+            json.dumps(
+                {
+                    "source_contract": "private-first-interview-source-bundle-v1",
+                    "provenance_state": "synthetic_fixture",
+                    "source_digest": "not-a-digest",
+                    "source_kinds": SOURCE_KINDS,
+                }
+            ),
+        )
+        with self.assertRaisesRegex(ValueError, "source bundle is unavailable"):
+            source_bundle.metadata(issued)
 
     @staticmethod
     def _with_unsafe_prose(value: str) -> dict[str, object]:

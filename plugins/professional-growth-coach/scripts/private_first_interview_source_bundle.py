@@ -7,6 +7,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import sys
 from collections.abc import Mapping
 from pathlib import Path
@@ -15,7 +16,10 @@ from typing import Any
 
 _UNAVAILABLE = "source bundle is unavailable"
 _CONTRACT = "private-first-interview-source-bundle-v1"
-_ISSUER_STATES = frozenset({"upstream_attested", "synthetic_fixture"})
+_PROVENANCE_STATES = frozenset(
+    {"upstream_attested", "synthetic_fixture", "composition_only"}
+)
+_DIGEST_PATTERN = re.compile(r"^snap-private-first-interview-v1-sha256-[0-9a-f]{64}$")
 _SOURCE_KINDS = (
     "recruiter_outreach_lab",
     "quality_gate",
@@ -25,9 +29,6 @@ _SOURCE_KINDS = (
     "plan_days",
     "daily_review_logs",
 )
-_CONSTRUCTOR_TOKEN = object()
-
-
 def _sibling(name: str) -> Any:
     path = Path(__file__).with_name(name)
     origin = os.path.realpath(os.fspath(path))
@@ -50,42 +51,75 @@ _snapshot = _sibling("semantic_provenance_snapshot.py")
 _v1_validator = _sibling("validate_private_first_interview_conversion_board_v1.py")
 
 
-class ValidatedPrivateFirstInterviewSourceBundle:
-    """Immutable source payload with a deliberately metadata-only public boundary."""
+def _proof_boundary():
+    issuer_marker = object()
 
-    __slots__ = ("__source_group_json", "__metadata_json")
+    class ValidatedPrivateFirstInterviewSourceBundle:
+        """Immutable source payload with a deliberately metadata-only public boundary."""
 
-    def __new__(
-        cls,
-        token: object = None,
-        source_group_json: str = "",
-        metadata_json: str = "",
-    ):
-        if token is not _CONSTRUCTOR_TOKEN:
-            raise TypeError(_UNAVAILABLE)
-        return super().__new__(cls)
+        __slots__ = ("__issuer_marker", "__source_group_json", "__metadata_json")
 
-    def __init__(
-        self,
-        token: object = None,
-        source_group_json: str = "",
-        metadata_json: str = "",
-    ) -> None:
-        if token is not _CONSTRUCTOR_TOKEN:
-            raise TypeError(_UNAVAILABLE)
-        object.__setattr__(
+        def __new__(
+            cls,
+            token: object = None,
+            source_group_json: str = "",
+            metadata_json: str = "",
+        ):
+            if token is not issuer_marker:
+                raise TypeError(_UNAVAILABLE)
+            return super().__new__(cls)
+
+        def __init__(
             self,
-            "_ValidatedPrivateFirstInterviewSourceBundle__source_group_json",
-            source_group_json,
-        )
-        object.__setattr__(
-            self,
-            "_ValidatedPrivateFirstInterviewSourceBundle__metadata_json",
-            metadata_json,
+            token: object = None,
+            source_group_json: str = "",
+            metadata_json: str = "",
+        ) -> None:
+            if token is not issuer_marker:
+                raise TypeError(_UNAVAILABLE)
+            object.__setattr__(
+                self,
+                "_ValidatedPrivateFirstInterviewSourceBundle__issuer_marker",
+                issuer_marker,
+            )
+            object.__setattr__(
+                self,
+                "_ValidatedPrivateFirstInterviewSourceBundle__source_group_json",
+                source_group_json,
+            )
+            object.__setattr__(
+                self,
+                "_ValidatedPrivateFirstInterviewSourceBundle__metadata_json",
+                metadata_json,
+            )
+
+        def __setattr__(self, name: str, value: object) -> None:
+            raise AttributeError("source bundle is immutable")
+
+    def issue(source_group_json: str, metadata_json: str) -> ValidatedPrivateFirstInterviewSourceBundle:
+        return ValidatedPrivateFirstInterviewSourceBundle(
+            issuer_marker, source_group_json, metadata_json
         )
 
-    def __setattr__(self, name: str, value: object) -> None:
-        raise AttributeError("source bundle is immutable")
+    def is_issued(value: object) -> bool:
+        try:
+            return (
+                type(value) is ValidatedPrivateFirstInterviewSourceBundle
+                and value._ValidatedPrivateFirstInterviewSourceBundle__issuer_marker
+                is issuer_marker
+            )
+        except AttributeError:
+            return False
+
+    return ValidatedPrivateFirstInterviewSourceBundle, issue, is_issued
+
+
+(
+    ValidatedPrivateFirstInterviewSourceBundle,
+    _issue_bundle,
+    _is_issued_bundle,
+) = _proof_boundary()
+del _proof_boundary
 
 
 def _canonical_json(value: object) -> str:
@@ -104,9 +138,7 @@ def _metadata_for(source_group: Mapping[str, object], provenance_state: str) -> 
     }
 
 
-def _issue_from_frozen(
-    source_group: Mapping[str, object], *, provenance_state: str
-) -> ValidatedPrivateFirstInterviewSourceBundle:
+def _capture_validated_source(source_group: Mapping[str, object]) -> dict[str, object]:
     if not _v1_validator._source_group_shape(source_group):
         raise ValueError(_UNAVAILABLE)
     if _v1_validator._unsafe_source_text(source_group):
@@ -114,26 +146,52 @@ def _issue_from_frozen(
     proof = _v1_validator.validate_private_first_interview_conversion_board_v1(
         source_group
     )
-    validated_source = proof.source_group
-    metadata_value = _metadata_for(validated_source, provenance_state)
-    return ValidatedPrivateFirstInterviewSourceBundle(
-        _CONSTRUCTOR_TOKEN,
+    return proof.source_group
+
+
+def _bundle_from_source(
+    source_group: Mapping[str, object], *, provenance_state: str
+) -> ValidatedPrivateFirstInterviewSourceBundle:
+    validated_source = _capture_validated_source(source_group)
+    return _issue_bundle(
         _canonical_json(validated_source),
-        _canonical_json(metadata_value),
+        _canonical_json(_metadata_for(validated_source, provenance_state)),
     )
 
 
 def issue_validated_private_first_interview_source_bundle(
     source_group: object, *, provenance_state: str
 ) -> ValidatedPrivateFirstInterviewSourceBundle:
-    """Issue an opaque bundle from one bounded, validated upstream snapshot."""
+    """Issue a synthetic fixture bundle from one bounded source snapshot."""
     try:
-        if provenance_state not in _ISSUER_STATES:
+        if provenance_state != "synthetic_fixture":
             raise ValueError(_UNAVAILABLE)
         frozen = _snapshot.bounded_plain_snapshot(source_group)
-        return _issue_from_frozen(frozen, provenance_state=provenance_state)
+        return _bundle_from_source(frozen, provenance_state="synthetic_fixture")
     except Exception:
         raise ValueError(_UNAVAILABLE) from None
+
+
+def _private_upstream_issuer():
+    capability = object()
+
+    def issue(
+        source_group: object, *, capability: object
+    ) -> ValidatedPrivateFirstInterviewSourceBundle:
+        try:
+            if capability is not issue_capability:
+                raise ValueError(_UNAVAILABLE)
+            frozen = _snapshot.bounded_plain_snapshot(source_group)
+            return _bundle_from_source(frozen, provenance_state="upstream_attested")
+        except Exception:
+            raise ValueError(_UNAVAILABLE) from None
+
+    issue_capability = capability
+    return issue
+
+
+_issue_upstream_attested_private = _private_upstream_issuer()
+del _private_upstream_issuer
 
 
 def adapt_v1_private_first_interview_proof(
@@ -148,7 +206,7 @@ def adapt_v1_private_first_interview_proof(
         )
         source_group = artifact.get("source_group")
         frozen = _snapshot.bounded_plain_snapshot(source_group)
-        return _issue_from_frozen(frozen, provenance_state="composition_only")
+        return _bundle_from_source(frozen, provenance_state="composition_only")
     except TypeError:
         raise TypeError(_UNAVAILABLE) from None
     except Exception:
@@ -157,11 +215,39 @@ def adapt_v1_private_first_interview_proof(
 
 def _payload_json(value: object) -> tuple[str, str]:
     """Return private canonical payloads only for this exact proof class."""
-    if type(value) is not ValidatedPrivateFirstInterviewSourceBundle:
+    if not _is_issued_bundle(value):
         raise TypeError(_UNAVAILABLE)
+    try:
+        source_group_json = value._ValidatedPrivateFirstInterviewSourceBundle__source_group_json
+        metadata_json = value._ValidatedPrivateFirstInterviewSourceBundle__metadata_json
+        if not isinstance(source_group_json, str) or not isinstance(metadata_json, str):
+            raise ValueError(_UNAVAILABLE)
+        parsed = json.loads(metadata_json)
+        if not _metadata_is_valid(parsed):
+            raise ValueError(_UNAVAILABLE)
+        return source_group_json, metadata_json
+    except (AttributeError, TypeError):
+        raise TypeError(_UNAVAILABLE) from None
+    except Exception:
+        raise ValueError(_UNAVAILABLE) from None
+
+
+def _metadata_is_valid(value: object) -> bool:
+    if not isinstance(value, dict):
+        return False
+    digest = value.get("source_digest")
     return (
-        value._ValidatedPrivateFirstInterviewSourceBundle__source_group_json,
-        value._ValidatedPrivateFirstInterviewSourceBundle__metadata_json,
+        set(value) == {
+            "source_contract",
+            "provenance_state",
+            "source_digest",
+            "source_kinds",
+        }
+        and value["source_contract"] == _CONTRACT
+        and value["provenance_state"] in _PROVENANCE_STATES
+        and isinstance(digest, str)
+        and _DIGEST_PATTERN.fullmatch(digest) is not None
+        and value["source_kinds"] == list(_SOURCE_KINDS)
     )
 
 
@@ -170,26 +256,7 @@ def metadata(value: object) -> dict[str, object]:
     try:
         _, metadata_json = _payload_json(value)
         parsed = json.loads(metadata_json)
-        if not isinstance(parsed, dict):
-            raise ValueError(_UNAVAILABLE)
-        if set(parsed) != {
-            "source_contract",
-            "provenance_state",
-            "source_digest",
-            "source_kinds",
-        }:
-            raise ValueError(_UNAVAILABLE)
-        if parsed["source_contract"] != _CONTRACT:
-            raise ValueError(_UNAVAILABLE)
-        if parsed["provenance_state"] not in {
-            "upstream_attested",
-            "synthetic_fixture",
-            "composition_only",
-        }:
-            raise ValueError(_UNAVAILABLE)
-        if parsed["source_kinds"] != list(_SOURCE_KINDS):
-            raise ValueError(_UNAVAILABLE)
-        if not isinstance(parsed["source_digest"], str):
+        if not _metadata_is_valid(parsed):
             raise ValueError(_UNAVAILABLE)
         return parsed
     except TypeError:
