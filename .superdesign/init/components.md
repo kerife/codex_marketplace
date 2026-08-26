@@ -45,6 +45,7 @@ The exact HTML templates and CSS implementation are included in `layouts.md` and
 - Description: decision-first private board with one decision, four sequence stages, up to three proof cards, five risk checks, one rehearsal, seven days, four decision branches, and seven daily review templates.
 - Inputs: one same-group opaque validator-issued snapshot; callers cannot supply final rows.
 - Privacy boundary: offline, identity-free, draft-only, no forms/buttons/scripts/external resources, and no send, calendar, apply, publish, upload, schedule, or automatic interview handoff. V2 adds a provenance trust strip before sequence content and never renders a digest, source ID, or source prose. `stop` keeps the decision, trust strip, and approval boundary while suppressing detailed preparation and tracking. Visual browser and assistive-technology QA were not run.
+- V2 presentation: `board-section-nav` is static and localized; navigation hides in print, and the `board-reentry-recipe` appears only on ready boards while forced-colors preserves system focus indicators.
 
 ## VacancyApplicationPacketShell
 

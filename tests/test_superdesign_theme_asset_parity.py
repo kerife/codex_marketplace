@@ -108,6 +108,17 @@ class SuperdesignThemeAssetParityTests(unittest.TestCase):
             with self.subTest(contract=contract):
                 self.assertTrue(any(contract in document for document in documents))
 
+    def test_superdesign_component_map_covers_v2_navigation_and_recipe(self):
+        components = " ".join(COMPONENTS.read_text(encoding="utf-8").split())
+        for contract in (
+            "board-section-nav",
+            "board-reentry-recipe",
+            "navigation hides in print",
+            "appears only on ready boards",
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, components)
+
     def test_superdesign_maps_describe_v3_weekly_decision_composition(self):
         pages = " ".join(PAGES.read_text(encoding="utf-8").split())
         routes = " ".join(ROUTES.read_text(encoding="utf-8").split())
