@@ -12,27 +12,27 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `9436d9d4b136f84522442e1427e98d5a18966f36`
+source_commit: `87ef3b7580d6db62db73168631b27166f486fb9f`
 
-source_tree: `3e2c3c8380342b7be55d874e8a0c17108f1dca92`
+source_tree: `faed4896da7d69cd2faa5d6ff64d511b1143730a`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826031158`
+installed_cache_version: `0.2.0+codex.20260826052500`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
-source_file_count: `171`
+source_file_count: `183`
 
-installed_file_count: `171`
+installed_file_count: `183`
 
 sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `05aba8ff0cd2b8d78450cfadbfd26bcc0d8cb5474bb770cabbae255b26e29b92`
+source_aggregate_sha256: `678a91572bd5c34f3fb210facb0a949b6239a31ad1c9fd38ddaaac9795034a9e`
 
-cache_aggregate_sha256: `05aba8ff0cd2b8d78450cfadbfd26bcc0d8cb5474bb770cabbae255b26e29b92`
+cache_aggregate_sha256: `678a91572bd5c34f3fb210facb0a949b6239a31ad1c9fd38ddaaac9795034a9e`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826031158`.
+- Cachebuster identifier: `20260826052500`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -89,7 +89,7 @@ external_action_state: `not_executed`
 - The focused learning-proof renderer and token suites passed 18/18 tests,
   including localized closed-value rendering, escaped fallback behavior, the
   static Start here card, and practice-family token coverage.
-- The source plugin suite passed 236/236 tests; no fixture or module-discovery
+- The source plugin suite passed 265/265 tests; no fixture or module-discovery
   errors remained. Static validation passed the private-schema, dossier-handoff,
   and package checks.
 - Installed semantic smokes passed 39/39 accepted and 9/9 rejected cases; the
@@ -101,7 +101,7 @@ external_action_state: `not_executed`
 
 - Source was extracted from the published source commit with `git archive`; no mutable-worktree
   content comparison was used.
-- Source and cache each contained 171 non-empty sorted POSIX relative files.
+- Source and cache each contained 183 non-empty sorted POSIX relative files.
   Every path and lowercase per-file SHA-256 matched, and the aggregate digest
   over `path + NUL + file hash + LF` matched on both sides.
 - `diff -qr` was silent. Source and cache contained no `.pyc`, `.pyo`,
