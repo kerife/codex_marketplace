@@ -223,6 +223,18 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
         for forbidden in ("source_digest", "source_group_json", "upstream_attested"):
             self.assertNotIn(forbidden, combined)
 
+    def test_private_first_interview_routing_prefers_v2_and_keeps_v1_legacy(self) -> None:
+        routing = (
+            PLUGIN_ROOT / "skills" / "professional-growth-coach" / "references" / "routing.md"
+        ).read_text(encoding="utf-8")
+        v2 = "private-first-interview-conversion-board-v2"
+        v1 = "private-first-interview-conversion-board-v1"
+        self.assertIn(v2, routing)
+        self.assertLess(routing.index(v2), routing.index(v1))
+        self.assertIn("frozen legacy compatibility only", routing)
+        self.assertIn("composition-only", routing)
+        self.assertNotIn("upstream attestation", routing.casefold())
+
     def test_private_packet_skill_routing_surface_is_regular_and_versioned(self) -> None:
         """Break caught: routing points to a missing, linked, or unversioned contract."""
 

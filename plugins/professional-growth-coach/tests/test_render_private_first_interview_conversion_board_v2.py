@@ -117,6 +117,12 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
             ".board-trust-strip", ".board-approval-boundary", "grid-template-columns: 1fr",
         ):
             self.assertIn(hook, css)
+        print_block = css.split("@media print", 1)[1].split("@media (prefers-reduced-motion", 1)[0]
+        for token in (
+            "--paper: #fff", "--surface: #fff", "--ink: #000", "--muted: #333",
+            "--forest: #000", "--coral: #000", "--gold: #000", "color-scheme: light",
+        ):
+            self.assertIn(token, print_block)
         template = (ROOT / "assets" / "private-first-interview-conversion-board-v2.html").read_text(encoding="utf-8")
         for token in ("{{LANG}}", "{{TITLE}}", "{{INLINE_CSS}}", "{{SKIP}}", "{{HEADER}}", "{{MAIN}}", "{{FOOTER}}"):
             self.assertEqual(1, template.count(token))

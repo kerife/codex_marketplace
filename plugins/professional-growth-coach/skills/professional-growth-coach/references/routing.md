@@ -95,16 +95,18 @@ For `ready_for_private_prep`, the closed handoff is only a manual re-entry cue f
 
 After an explicit private recruiter-reply triage or conversion observation, and
 before manual `prepare-role-interviews`, check for an explicit request for
-`private-first-interview-conversion-board-v1`. This branch is opt-in and does
-not replace ordinary recruiter triage, recruiter practice, or interview
-preparation when the request is absent.
+`private-first-interview-conversion-board-v2`. This new branch has precedence
+over the frozen legacy compatibility surface. It is opt-in and does not replace
+ordinary recruiter triage, recruiter practice, or interview preparation when
+the request is absent.
 
-Require one same-group validated recruiter outreach lab, quality gate, and
-`first_interview_7_day_plan` composition. The builder derives the decision,
-sequence, proof cards, risk checks, rehearsal, seven-day plan, decision ladder,
-and daily reviews; callers cannot supply final board rows. Missing, crossed,
-stale, mutated, unsafe, or incomplete inputs fail closed without a fallback
-artifact.
+Require one opaque, validated private source bundle. The v2 builder derives a
+sanitized decision, sequence, proof cards, risk checks, rehearsal, seven-day
+plan, decision ladder, and daily reviews; callers cannot supply raw source
+rows, final board rows, or provenance metadata. The only provenance states are
+`synthetic_fixture` and `composition_only`; composition-only is a migration
+boundary and does not assert upstream provenance. Missing, crossed, stale,
+mutated, unsafe, or incomplete inputs fail closed without a fallback artifact.
 
 The output is a private offline JSON/HTML draft for manual review only. It
 keeps `draft_only=true`, `external_actions_authorized=false`,
@@ -113,6 +115,9 @@ reply, connect, apply, publish, upload, schedule, or auto-start
 `prepare-role-interviews`. The only next step is a separately authorized
 manual review; a `stop` decision exposes the boundary and suppresses detailed
 proof, rehearsal, week, and tracking surfaces.
+
+The `private-first-interview-conversion-board-v1` route remains frozen legacy compatibility only. Do not select v1 for new requests; use v2 above. Existing
+v1 artifacts and historical checks remain supported without modification.
 
 ## Multi-module routing
 
