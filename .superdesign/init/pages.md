@@ -89,6 +89,12 @@ input group. Historical v1/v2 pages do not load the v3 stylesheet.
 
 ## PrivateFirstInterviewConversionBoard
 
+- v2 renderer: `plugins/professional-growth-coach/scripts/render_private_first_interview_conversion_board_v2.py`
+  - `plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v2.html`
+  - `plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v2.css`
+  - accepts only the sanitized v2 proof and presents one provenance trust strip
+    between the decision and the review sequence; no digest or source identity
+    reaches the surface.
 - `plugins/professional-growth-coach/scripts/render_private_first_interview_conversion_board_v1.py`
   - `plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v1.html`
   - `plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v1.css`
@@ -98,4 +104,5 @@ Explicit private branch after recruiter triage and before manual interview
 preparation. Decision-first seven-day board with proof, risk, rehearsal,
 ladder, and daily-review surfaces. `stop` keeps only decision and boundary.
 Static package checks cover offline modes; visual browser, print-preview, and
-assistive-technology QA were not run.
+assistive-technology QA were not run. The v2 route adds deterministic DOM/CSS
+coverage for its trust boundary, not runtime visual or assistive evidence.

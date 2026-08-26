@@ -27,6 +27,7 @@ ASSET_NAMES = (
     "private-recruiter-conversion-outcome-v1.css",
     "private-vacancy-application-packet-v1.css",
     "private-first-interview-conversion-board-v1.css",
+    "private-first-interview-conversion-board-v2.css",
     "learning-proof-sprint-v1.css",
 )
 EXPECTED_THEME_ASSET_NAMES = {
@@ -40,6 +41,7 @@ EXPECTED_THEME_ASSET_NAMES = {
     "private-recruiter-conversion-outcome-v1.css",
     "private-vacancy-application-packet-v1.css",
     "private-first-interview-conversion-board-v1.css",
+    "private-first-interview-conversion-board-v2.css",
     "learning-proof-sprint-v1.css",
 }
 HTML_ASSET_NAMES = (
@@ -50,6 +52,7 @@ HTML_ASSET_NAMES = (
     "private-recruiter-conversion-outcome-v1.html",
     "private-vacancy-application-packet-v1.html",
     "private-first-interview-conversion-board-v1.html",
+    "private-first-interview-conversion-board-v2.html",
 )
 EXPECTED_LAYOUT_SOURCES = {
     f"plugins/professional-growth-coach/assets/{name}" for name in HTML_ASSET_NAMES

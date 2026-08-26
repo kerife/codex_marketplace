@@ -40,10 +40,11 @@ The exact HTML templates and CSS implementation are included in `layouts.md` and
 
 ## PrivateFirstInterviewConversionBoard
 
+- V2 sources: `plugins/professional-growth-coach/scripts/render_private_first_interview_conversion_board_v2.py`, `plugins/professional-growth-coach/scripts/validate_private_first_interview_conversion_board_v2.py`, and `plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v2.css`.
 - Sources: `plugins/professional-growth-coach/scripts/build_private_first_interview_conversion_board_v1.py`, `plugins/professional-growth-coach/scripts/validate_private_first_interview_conversion_board_v1.py`, `plugins/professional-growth-coach/scripts/render_private_first_interview_conversion_board_v1.py`, and `plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v1.css`.
 - Description: decision-first private board with one decision, four sequence stages, up to three proof cards, five risk checks, one rehearsal, seven days, four decision branches, and seven daily review templates.
 - Inputs: one same-group opaque validator-issued snapshot; callers cannot supply final rows.
-- Privacy boundary: offline, identity-free, draft-only, no forms/buttons/scripts/external resources, and no send, calendar, apply, publish, upload, schedule, or automatic interview handoff. `stop` suppresses detailed preparation and tracking surfaces. Visual browser and assistive-technology QA were not run.
+- Privacy boundary: offline, identity-free, draft-only, no forms/buttons/scripts/external resources, and no send, calendar, apply, publish, upload, schedule, or automatic interview handoff. V2 adds a provenance trust strip before sequence content and never renders a digest, source ID, or source prose. `stop` keeps the decision, trust strip, and approval boundary while suppressing detailed preparation and tracking. Visual browser and assistive-technology QA were not run.
 
 ## VacancyApplicationPacketShell
 

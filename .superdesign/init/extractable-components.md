@@ -5,7 +5,11 @@
 Decision-first static board composed from one validator-issued snapshot. Reuse
 the decision, sequence, proof, risk, rehearsal, week, ladder, daily-review,
 and approval-boundary surfaces as one private artifact. No controls or
-external-action handoff; visual QA not run.
+external-action handoff; visual QA not run. V2 adds an always-present
+`board-trust-strip` after decision and before sequence. It exposes only the
+closed synthetic-fixture/composition-only trust copy, original-text absence,
+and manual-review requirement; it never accepts or reveals provenance IDs,
+digests, or source prose.
 
 ## PrivateReceiptShell
 

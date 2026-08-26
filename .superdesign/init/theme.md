@@ -1,6 +1,6 @@
 # Superdesign theme context
 
-The plugin uses six offline CSS surfaces. There is no global web framework or remote font system. The compact receipts use a cool paper palette with accent blue, the triage/practice surfaces use scoped green/coral decision cues, and the executive dossier uses a document-like paper/ink system. The learning-proof sprint belongs to the practice/triage family and uses its green/coral cues for proof, risk, and private-boundary decisions.
+The plugin uses offline CSS surfaces with no global web framework or remote font system. The compact receipts use a cool paper palette with accent blue, the triage/practice surfaces use scoped green/coral decision cues, and the executive dossier uses a document-like paper/ink system. The learning-proof sprint and private first-interview board v2 belong to the practice/triage family. V2 adds an explicit provenance trust strip and keeps decision, trust, and approval boundaries distinguishable in dark, print, forced-colors, intermediate-width, and mobile modes.
 
 ## Compact token summary
 
@@ -609,6 +609,74 @@ details summary {
 @media (forced-colors: active) and (prefers-contrast: more) {
   .dossier-document .card { border-color: CanvasText; }
 }
+```
+
+### `plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v2.css`
+
+```css
+:root {
+  --paper: #f6f4ee; --surface: #fff; --ink: #1b1c1a; --muted: #536158;
+  --forest: #173e30; --forest-soft: #dce5e0; --coral: #b9513a;
+  --coral-soft: #f6e0da; --gold: #dfbf70; --line: #6f8175;
+  --serif: Georgia, "Times New Roman", Times, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html { color-scheme: light; background: var(--paper); }
+body { margin: 0; color: var(--ink); background: var(--paper); font: 16px/1.55 var(--sans); overflow-wrap: anywhere; }
+main:focus-visible { outline: 3px solid var(--coral); outline-offset: 4px; }
+.board-shell { width: min(920px, calc(100% - 2rem)); margin-inline: auto; }
+.board-shell :focus-visible { outline: 3px solid var(--coral); outline-offset: 3px; }
+.skip-link { position: fixed; z-index: 2; left: .5rem; top: .5rem; transform: translateY(-200%); padding: .75rem 1rem; background: var(--surface); border: 1px solid var(--forest); color: var(--forest); font-weight: 700; }
+.skip-link:focus { transform: none; }
+.board-header { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding: 2rem 0 1rem; border-bottom: 1px solid var(--forest); }
+.board-kicker { margin: 0; color: var(--forest); font-size: .8125rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+h1, h2, h3 { font-family: var(--serif); }
+h1 { margin: .2rem 0 0; font-size: clamp(2rem, 6vw, 3.25rem); font-style: italic; line-height: 1.04; }
+h2 { margin: 0; color: var(--forest); font-size: clamp(1.35rem, 3vw, 1.85rem); line-height: 1.16; }
+h3 { margin: 0; font-size: 1.12rem; line-height: 1.2; }
+.board-state { display: inline-flex; align-items: center; min-height: 2.25rem; padding: .4rem .75rem; border: 1px solid currentColor; color: var(--forest); font-size: .875rem; font-weight: 700; text-align: center; }
+.board-main { padding: 1.5rem 0 3rem; }
+.board-main > section + section { margin-top: 1.5rem; }
+.board-decision { padding: clamp(1.15rem, 3vw, 2rem); background: var(--forest); border-left: 4px solid var(--gold); color: #fff; }
+.board-decision h2 { color: #fff; }
+.board-decision p { max-width: 72ch; }
+.board-decision dl, .board-facts { display: grid; grid-template-columns: minmax(10rem, .35fr) minmax(0, 1fr); gap: .55rem 1rem; margin: 1rem 0 0; }
+.board-decision dt { color: var(--gold); font-weight: 700; }
+.board-decision dd, .board-facts dd { margin: 0; }
+.board-boundary { margin: 1rem 0 0; padding: .85rem 1rem; background: var(--coral-soft); border: 1px solid var(--coral); color: var(--ink); font-weight: 650; }
+.board-trust-strip { padding: 1rem; border-left: 4px solid var(--gold); background: var(--forest-soft); }
+.board-trust-strip ul { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: .65rem 0 0; padding: 0; list-style: none; font-weight: 700; }
+.board-trust-strip li { display: flex; align-items: center; gap: .35rem; }
+.board-trust-strip li::before { content: "•"; color: var(--coral); }
+.board-approval-boundary { margin-top: 1.5rem; padding: 1rem; background: var(--coral-soft); border: 2px solid var(--coral); }
+.board-approval-boundary h2 { color: var(--ink); }
+.board-approval-boundary ul { columns: 3; margin: .5rem 0 0; padding-left: 1.25rem; }
+.board-sequence ol, .board-week-list, .board-review-list, .board-ladder-list, .board-proof-list, .board-risk-list { display: grid; gap: 1rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.board-sequence ol { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.board-sequence li, .board-proof-card, .board-risk-card, .board-rehearsal, .board-day, .board-branch, .board-review { min-width: 0; padding: 1rem; background: var(--surface); border: 1px solid var(--line); }
+.board-sequence li { border-top: 4px solid var(--forest); }
+.board-number { display: block; color: var(--coral); font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.board-proof-list, .board-risk-list, .board-week-list, .board-review-list, .board-ladder-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.board-proof-card { border-left: 4px solid var(--forest); }
+.board-risk-card { border-left: 4px solid var(--coral); }
+.board-risk-card dl { margin: .75rem 0 0; }
+.board-risk-card dt, .board-day dt, .board-review dt, .board-branch dt { margin-top: .6rem; color: var(--muted); font-size: .8rem; font-weight: 700; }
+.board-risk-card dd, .board-day dd, .board-review dd, .board-branch dd { margin: .1rem 0 0; }
+.board-rehearsal { background: var(--forest-soft); border-left: 4px solid var(--forest); }
+.board-rehearsal p { max-width: 72ch; }
+.board-day { border-top: 4px solid var(--forest); }
+.board-day strong, .board-review strong, .board-branch strong { color: var(--forest); }
+.board-day dl, .board-review dl, .board-branch dl { display: grid; gap: .55rem; margin: .8rem 0 0; }
+.board-branch { border-left: 4px solid var(--gold); }
+.board-footer { padding: 1rem max(1rem, calc((100% - 920px) / 2)) 2rem; border-top: 1px solid var(--forest); color: var(--muted); font-size: .88rem; }
+.board-footer p { margin: .4rem 0 0; }
+@media (min-width: 641px) and (max-width: 900px) { .board-sequence ol { grid-template-columns: repeat(2, minmax(0, 1fr)); } .board-approval-boundary ul { columns: 2; } }
+@media (max-width: 640px) { .board-header { display: block; } .board-state { margin-top: 1rem; } .board-sequence ol, .board-proof-list, .board-risk-list, .board-week-list, .board-review-list, .board-ladder-list { grid-template-columns: 1fr; } .board-decision dl, .board-facts { grid-template-columns: 1fr; gap: .25rem; } .board-decision dt { margin-top: .6rem; } .board-trust-strip ul { display: grid; grid-template-columns: 1fr; } .board-approval-boundary ul { columns: 1; } }
+@media screen and (prefers-color-scheme: dark) { :root { color-scheme: dark; --paper: #101521; --surface: #182235; --ink: #f3f6ff; --muted: #b8c4d8; --forest: #8fc9b0; --forest-soft: #244337; --coral: #ff9b83; --coral-soft: #4a2829; --gold: #f2d28a; --line: #5f718e; } .board-decision, .board-decision h2 { color: var(--ink); } }
+@media print { html, body { background: #fff; } .board-shell { width: 100%; } .board-header, .board-decision, .board-trust-strip, .board-sequence, .board-proof, .board-risks, .board-rehearsal, .board-week, .board-ladder, .board-reviews, .board-boundary, .board-approval-boundary, .board-footer { break-inside: avoid; page-break-inside: avoid; } .board-decision, .board-boundary, .board-trust-strip, .board-approval-boundary { color: #000; border-color: #000; background: #fff; } .skip-link { display: none; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+@media (forced-colors: active) { .skip-link, .board-decision, .board-trust-strip, .board-approval-boundary, .board-sequence li, .board-proof-card, .board-risk-card, .board-rehearsal, .board-day, .board-branch, .board-review { background: Canvas; color: CanvasText; border-color: CanvasText; } .skip-link:focus-visible, main:focus-visible { outline: 2px solid Highlight; } .board-decision h2, .board-decision dt, .board-decision dd, .board-kicker, .board-approval-boundary h2, h2, strong { color: CanvasText; } }
 ```
 
 ### `plugins/professional-growth-coach/assets/private-recruiter-reply-triage-v1.css`

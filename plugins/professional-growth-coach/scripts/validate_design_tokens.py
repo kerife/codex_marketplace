@@ -19,6 +19,7 @@ FAMILY_ASSETS = {
         "assets/private-recruiter-reply-triage-v1.css",
         "assets/learning-proof-sprint-v1.css",
         "assets/private-first-interview-conversion-board-v1.css",
+        "assets/private-first-interview-conversion-board-v2.css",
     ),
     "compact_receipt": (
         "assets/private-recruiter-followthrough-checkpoint-v1.css",

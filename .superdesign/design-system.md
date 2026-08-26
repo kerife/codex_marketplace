@@ -183,3 +183,21 @@ The artifact is identity-free, draft-only, source-bound, and has no controls,
 network resources, or external action. Static parity covers responsive 640px,
 print, dark, forced-colors, and reduced-motion hooks. visual QA not run;
 deterministic DOM/CSS contract only.
+
+## Private first-interview provenance boundary v2
+
+The v2 board is a sanitized, proof-only extension of the frozen v1 board. The
+decision remains the first reading unit. Exactly one `board-trust-strip` follows
+it before the sequence: it labels synthetic test input or composition-only
+provenance, states that original text is not stored, and preserves the manual
+review requirement. It deliberately renders no digest, provenance/source ID,
+raw source prose, URL, control, or external action. `stop` retains the decision,
+trust strip, and approval boundary while omitting all preparation detail.
+
+The 920px practice-triage surface preserves the skip link, focusable labelled
+main landmark, semantic section labels, `minmax()` review layout, one-column
+mobile reset, intermediate-width layout, print atomicity, dark mode,
+forced-colors treatment for both trust and approval boundaries, and
+reduced-motion handling. Browser visual QA, printed-page QA, and
+assistive-technology QA are not run or claimed; evidence is deterministic
+DOM/CSS testing only.
