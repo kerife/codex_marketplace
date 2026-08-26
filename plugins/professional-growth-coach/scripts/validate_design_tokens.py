@@ -17,6 +17,7 @@ FAMILY_ASSETS = {
     "practice_triage": (
         "assets/recruiter-practice-session-v1.css",
         "assets/private-recruiter-reply-triage-v1.css",
+        "assets/learning-proof-sprint-v1.css",
     ),
     "compact_receipt": (
         "assets/private-recruiter-followthrough-checkpoint-v1.css",

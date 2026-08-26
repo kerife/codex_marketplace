@@ -113,6 +113,7 @@ html { color-scheme: light; background: var(--paper); }
 }
 
 .learning-proof-sprint-document .sprint-plan,
+.learning-proof-sprint-document .sprint-start,
 .learning-proof-sprint-document .sprint-timeline-section,
 .learning-proof-sprint-document .sprint-handoffs-section { padding-top: 2rem; }
 
@@ -134,6 +135,27 @@ html { color-scheme: light; background: var(--paper); }
 }
 
 .learning-proof-sprint-document .sprint-plan-grid > div:last-child { grid-column: 1 / -1; }
+
+.learning-proof-sprint-document .sprint-start {
+  padding-bottom: .25rem;
+}
+
+.learning-proof-sprint-document .sprint-start-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--forest);
+  background: var(--forest);
+}
+
+.learning-proof-sprint-document .sprint-start-grid > div {
+  min-width: 0;
+  padding: 1rem;
+  background: var(--forest-soft);
+}
+
+.learning-proof-sprint-document .sprint-start-grid > div:first-child,
+.learning-proof-sprint-document .sprint-start-grid > div:nth-child(3) { grid-column: span 2; }
 
 .learning-proof-sprint-document dt,
 .learning-proof-sprint-document .field-label {
@@ -315,8 +337,11 @@ html { color-scheme: light; background: var(--paper); }
   .learning-proof-sprint-document .sprint-header { align-items: start; flex-direction: column; }
   .learning-proof-sprint-document .sprint-status { text-align: left; }
   .learning-proof-sprint-document .sprint-plan-grid,
+  .learning-proof-sprint-document .sprint-start-grid,
   .learning-proof-sprint-document .sprint-handoffs { grid-template-columns: 1fr; }
   .learning-proof-sprint-document .sprint-plan-grid > div:last-child { grid-column: auto; }
+  .learning-proof-sprint-document .sprint-start-grid > div:first-child,
+  .learning-proof-sprint-document .sprint-start-grid > div:nth-child(3) { grid-column: auto; }
   .learning-proof-sprint-document .sprint-day { grid-template-columns: 2.4rem minmax(0, 1fr); gap: .65rem; }
   .learning-proof-sprint-document .sprint-day-marker { width: 2.3rem; height: 2.3rem; }
   .learning-proof-sprint-document .sprint-timeline::before { left: 1.15rem; }
@@ -337,6 +362,7 @@ html { color-scheme: light; background: var(--paper); }
   .learning-proof-sprint-document .skip-link { background: Canvas; border-color: CanvasText; color: CanvasText; }
   .learning-proof-sprint-document main:focus-visible { outline-color: Highlight; }
   .learning-proof-sprint-document .sprint-plan-grid,
+  .learning-proof-sprint-document .sprint-start-grid,
   .learning-proof-sprint-document .sprint-day-card,
   .learning-proof-sprint-document .sprint-handoff,
   .learning-proof-sprint-document .sprint-boundary,
@@ -379,6 +405,7 @@ html { color-scheme: light; background: var(--paper); }
   .learning-proof-sprint-document .sprint-footer { break-inside: avoid; page-break-inside: avoid; }
   .learning-proof-sprint-document .sprint-day-card,
   .learning-proof-sprint-document .sprint-handoff { box-shadow: none; }
+  .learning-proof-sprint-document .sprint-start-grid { break-inside: avoid; page-break-inside: avoid; }
   .learning-proof-sprint-document .sprint-handoffs { grid-template-columns: 1fr; }
   .learning-proof-sprint-document .sprint-day-marker { background: #fff; }
 }

@@ -45,6 +45,22 @@ The exact HTML templates and CSS implementation are included in `layouts.md` and
 - Inputs: one same-package opaque validated packet snapshot. Only closed renderer copy, closed catalog labels, validated draft copy, and escaped public vacancy title, organization, and date are visible.
 - Privacy boundary: no internal IDs, snapshots, digests, paths, URLs, source prose, raw enums, signal bindings, forms, buttons, scripts, or external assets. Visual, print, and assistive-technology QA were not run; the implemented evidence is deterministic DOM/CSS testing only.
 
+## LearningProofSprintShell
+
+- Sources: `plugins/professional-growth-coach/assets/learning-proof-sprint-v1.html`,
+  `plugins/professional-growth-coach/assets/learning-proof-sprint-v1.css`, and
+  `plugins/professional-growth-coach/scripts/render_learning_proof_sprint_v1.py`.
+- Description: five-day private proof timeline with a prominent static
+  `Start here` / `Empieza aquí` decision card and three private evidence
+  handoffs.
+- Inputs: one same-package opaque validated snapshot. Closed timebox and
+  measurement enums are localized for display; unknown values use escaped
+  fallback text.
+- Privacy boundary: no IDs, snapshots, URLs, controls, scripts, or external
+  resources are rendered. Static tests cover responsive, print, dark,
+  forced-colors, and reduced-motion hooks; browser and assistive-technology QA
+  were not run.
+
 ## WeeklyDecision
 
 - Sources: `plugins/professional-growth-coach/schemas/career-next-action-eligibility-v1.schema.json`, `plugins/professional-growth-coach/schemas/career-learning-decision-v3.schema.json`, `plugins/professional-growth-coach/scripts/render_executive_career_dossier_v2.py`, and `plugins/professional-growth-coach/assets/career-learning-eligibility-v1.css`.

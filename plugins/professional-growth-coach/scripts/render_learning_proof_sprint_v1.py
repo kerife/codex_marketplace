@@ -8,6 +8,7 @@ import html
 import importlib.util
 import json
 import os
+import re
 import secrets
 import stat
 import sys
@@ -66,6 +67,13 @@ COPY = {
         "status": "Draft only · no external action",
         "plan_label": "Sprint brief",
         "plan_heading": "Start with the proof, not the purchase",
+        "start_here_label": "Start here",
+        "start_here_heading": "Make the first private move",
+        "start_here_action": "Next safe action",
+        "start_here_timebox": "Timebox",
+        "start_here_gate": "Review gate",
+        "start_here_progress": "Progress",
+        "start_here_reuse": "Private reuse destination",
         "goal": "Sprint goal",
         "gap": "Target gap",
         "deliverable": "Deliverable",
@@ -109,6 +117,13 @@ COPY = {
         "status": "Solo borrador · sin acción externa",
         "plan_label": "Resumen del sprint",
         "plan_heading": "Empieza por la prueba, no por la compra",
+        "start_here_label": "Empieza aquí",
+        "start_here_heading": "Haz el primer movimiento privado",
+        "start_here_action": "Siguiente acción segura",
+        "start_here_timebox": "Tiempo estimado",
+        "start_here_gate": "Puerta de revisión",
+        "start_here_progress": "Progreso",
+        "start_here_reuse": "Destino de reutilización privada",
         "goal": "Objetivo del sprint",
         "gap": "Brecha objetivo",
         "deliverable": "Entregable",
@@ -185,6 +200,36 @@ def _text(value: object, locale: str) -> str:
 
 def _escaped(value: object, locale: str) -> str:
     return html.escape(_text(value, locale), quote=True)
+
+
+def _display_value(value: object, locale: str) -> str:
+    """Render closed contract values as human copy while preserving a safe fallback."""
+    text = _text(value, locale)
+    if locale == "es":
+        timebox = {"2_hours": "2 horas", "2_minutes": "2 minutos"}
+        if text in timebox:
+            return timebox[text]
+        match = re.fullmatch(r"day_(\d+)_ready_for_private_review", text)
+        if match:
+            return f"Día {match.group(1)} listo para revisión privada"
+        match = re.fullmatch(r"day_(\d+)_ready_for_review", text)
+        if match:
+            return f"Día {match.group(1)} listo para revisión"
+    else:
+        timebox = {"2_hours": "2 hours", "2_minutes": "2 minutes"}
+        if text in timebox:
+            return timebox[text]
+        match = re.fullmatch(r"day_(\d+)_ready_for_private_review", text)
+        if match:
+            return f"Day {match.group(1)} ready for private review"
+        match = re.fullmatch(r"day_(\d+)_ready_for_review", text)
+        if match:
+            return f"Day {match.group(1)} ready for review"
+    return text
+
+
+def _display_escaped(value: object, locale: str) -> str:
+    return html.escape(_display_value(value, locale), quote=True)
 
 
 def _validate(sprint: Mapping[str, object]) -> tuple[str, Mapping[str, object], list[Mapping[str, object]], list[Mapping[str, object]]]:
@@ -276,6 +321,30 @@ def _plan_html(plan: Mapping[str, object], labels: Mapping[str, str], locale: st
     ) + "</dl>"
 
 
+def _start_here_html(
+    day: Mapping[str, object],
+    plan: Mapping[str, object],
+    handoff: Mapping[str, object],
+    labels: Mapping[str, str],
+    locale: str,
+) -> str:
+    progress = "Día 1 de 5" if locale == "es" else "Day 1 of 5"
+    reuse_asset = labels[str(handoff["target_asset"])]
+    return f'''<section class="sprint-start" aria-labelledby="sprint-start-heading">
+      <div class="section-heading">
+        <p class="sprint-label">{labels["start_here_label"]}</p>
+        <h2 id="sprint-start-heading">{labels["start_here_heading"]}</h2>
+      </div>
+      <dl class="sprint-start-grid">
+        <div><dt>{labels["start_here_action"]}</dt><dd>{_display_escaped(day["next_safe_action"], locale)}</dd></div>
+        <div><dt>{labels["start_here_timebox"]}</dt><dd>{_display_escaped(day["candidate_timebox"], locale)}</dd></div>
+        <div><dt>{labels["start_here_gate"]}</dt><dd>{_escaped(plan["publication_gate"], locale)}</dd></div>
+        <div><dt>{labels["start_here_progress"]}</dt><dd>{progress}</dd></div>
+        <div><dt>{labels["start_here_reuse"]}</dt><dd>{html.escape(reuse_asset, quote=True)}</dd></div>
+      </dl>
+    </section>'''
+
+
 def _day_html(day: Mapping[str, object], labels: Mapping[str, str], locale: str) -> str:
     number = int(day["day_number"])
     owner = labels[str(day["owner"])]
@@ -288,9 +357,9 @@ def _day_html(day: Mapping[str, object], labels: Mapping[str, str], locale: str)
         </header>
         <dl class="sprint-day-facts">
           <div><dt>{labels["artifact_piece"]}</dt><dd>{_escaped(day["artifact_piece"], locale)}</dd></div>
-          <div><dt>{labels["timebox"]}</dt><dd>{_escaped(day["candidate_timebox"], locale)}</dd></div>
+          <div><dt>{labels["timebox"]}</dt><dd>{_display_escaped(day["candidate_timebox"], locale)}</dd></div>
           <div><dt>{labels["owner"]}</dt><dd>{html.escape(owner, quote=True)}</dd></div>
-          <div><dt>{labels["measurement_signal"]}</dt><dd>{_escaped(day["measurement_signal"], locale)}</dd></div>
+          <div><dt>{labels["measurement_signal"]}</dt><dd>{_display_escaped(day["measurement_signal"], locale)}</dd></div>
         </dl>
         <div class="sprint-proof-check"><h4>{labels["proof_check"]}</h4><p>{_escaped(day["proof_check"], locale)}</p></div>
         <div class="sprint-risk-check"><h4>{labels["risk_check"]}</h4><p>{_escaped(day["risk_check"], locale)}</p></div>
@@ -342,6 +411,7 @@ def _render_artifact_html(sprint: Mapping[str, object]) -> str:
         "{{PLAN_LABEL}}": labels["plan_label"],
         "{{PLAN_HEADING}}": labels["plan_heading"],
         "{{PLAN}}": _plan_html(plan, labels, locale),
+        "{{START_HERE}}": _start_here_html(days[0], plan, handoffs[0], labels, locale),
         "{{TIMELINE_LABEL}}": labels["timeline_label"],
         "{{TIMELINE_HEADING}}": labels["timeline_heading"],
         "{{DAYS}}": "\n".join(_day_html(day, labels, locale) for day in days),

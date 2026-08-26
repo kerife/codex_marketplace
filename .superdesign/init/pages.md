@@ -56,6 +56,14 @@ for version 1, plus `build_career_market_learning_dossier_v2.py`,
 
 Each tree ends at a self-contained HTML/CSS surface. The renderer is responsible for validated data-to-template binding; the artifact is the visual product.
 
+## Learning proof sprint
+
+- `plugins/professional-growth-coach/scripts/render_learning_proof_sprint_v1.py`
+  - validates one opaque five-day learning proof snapshot
+  - binds the first day, publication gate, and first private handoff into the
+    `Start here` / `Empieza aquí` surface before the timeline
+  - keeps contract IDs, source snapshots, and external actions out of HTML
+
 ## Private vacancy application packet
 
 - `plugins/professional-growth-coach/scripts/render_private_vacancy_application_packet_v1.py`

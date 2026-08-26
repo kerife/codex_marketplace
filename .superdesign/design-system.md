@@ -122,6 +122,17 @@ repeated print privacy/authorization boundary. Browser visual QA, printed-page
 QA, and assistive-technology QA were not run; evidence is limited to static and
 deterministic renderer tests.
 
+## Learning proof sprint
+
+The learning-proof-sprint-v1 surface reuses the practice/triage green-coral
+token family as a five-day private timeline. Its first reading unit is the
+static `Start here` / `Empieza aquí` card: action, timebox, review gate,
+progress, and private reuse destination appear before the detailed timeline.
+Closed contract values are localized into human copy at render time; unknown
+values remain escaped fallback text. The surface stays offline, draft-only,
+non-interactive, and preserves mobile, print, dark, forced-colors, and reduced-
+motion behavior. Browser, print, and assistive-technology QA were not run.
+
 ## Vacancy-first weekly decision v3
 
 Career-learning-decision v3 adds one full-width WeeklyDecision card immediately

@@ -158,6 +158,46 @@ class LearningProofSprintRendererTests(unittest.TestCase):
         self.assertIn("background: Canvas", rendered)
         self.assertIn("animation: none !important", rendered)
 
+    def test_render_humanizes_closed_timeboxes_and_measurement_signals(self):
+        rendered = self.renderer._render_artifact_html(sample_sprint())
+
+        self.assertNotIn("2_hours", rendered)
+        self.assertNotIn("day_1_ready_for_review", rendered)
+        self.assertIn("2 hours", rendered)
+        self.assertIn("Day 1 ready for review", rendered)
+
+        spanish = copy.deepcopy(sample_sprint("es"))
+        for day in spanish["days"]:
+            day["candidate_timebox"] = "2_minutes"
+            day["measurement_signal"] = "day_1_ready_for_private_review"
+        rendered_es = self.renderer._render_artifact_html(spanish)
+        self.assertNotIn("2_minutes", rendered_es)
+        self.assertNotIn("day_1_ready_for_private_review", rendered_es)
+        self.assertIn("2 minutos", rendered_es)
+        self.assertIn("Día 1 listo para revisión privada", rendered_es)
+
+    def test_render_places_start_here_guidance_before_timeline(self):
+        rendered = self.renderer._render_artifact_html(sample_sprint("en"))
+
+        self.assertIn('aria-labelledby="sprint-start-heading"', rendered)
+        self.assertIn("Start here", rendered)
+        self.assertIn("Day 1 ready for review", rendered)
+        self.assertLess(rendered.index("Start here"), rendered.index("Five private checkpoints"))
+
+        rendered_es = self.renderer._render_artifact_html(sample_sprint("es"))
+        self.assertIn("Empieza aquí", rendered_es)
+        self.assertIn("Día 1 listo para revisión", rendered_es)
+
+    def test_render_keeps_unknown_closed_values_as_escaped_fallback_text(self):
+        sprint = sample_sprint()
+        sprint["days"][0]["candidate_timebox"] = "custom <time>"
+        sprint["days"][0]["measurement_signal"] = "custom_signal"
+
+        rendered = self.renderer._render_artifact_html(sprint)
+
+        self.assertIn("custom &lt;time&gt;", rendered)
+        self.assertIn("custom_signal", rendered)
+
     def test_render_rejects_wrong_day_or_handoff_counts_before_output(self):
         renderer = self.renderer
         for key, count in (("days", 4), ("handoffs", 2)):

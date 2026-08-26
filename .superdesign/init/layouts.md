@@ -1,6 +1,6 @@
 # Shared layouts
 
-The plugin renders five offline artifact layouts. Each template is self-contained and has no remote stylesheet, script, image, or font dependency.
+The plugin renders six offline artifact layouts. Each template is self-contained and has no remote stylesheet, script, image, or font dependency.
 
 ## Compact conversion outcome
 
@@ -136,6 +136,14 @@ Source: `plugins/professional-growth-coach/assets/executive-career-dossier-v1.ht
 </body>
 </html>
 ```
+
+## Learning proof sprint
+
+- `plugins/professional-growth-coach/scripts/render_learning_proof_sprint_v1.py`
+  - `plugins/professional-growth-coach/assets/learning-proof-sprint-v1.html`
+  - `plugins/professional-growth-coach/assets/learning-proof-sprint-v1.css`
+  - renders the validated five-day snapshot with the static `Start here` card
+    before the timeline; no browser behavior or external resource is used
 
 ## Private vacancy application packet
 

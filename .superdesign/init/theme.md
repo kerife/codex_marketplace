@@ -1,6 +1,6 @@
 # Superdesign theme context
 
-The plugin uses five offline CSS surfaces. There is no global web framework or remote font system. The compact receipts use a cool paper palette with accent blue, the triage/practice surfaces use scoped green/coral decision cues, and the executive dossier uses a document-like paper/ink system.
+The plugin uses six offline CSS surfaces. There is no global web framework or remote font system. The compact receipts use a cool paper palette with accent blue, the triage/practice surfaces use scoped green/coral decision cues, and the executive dossier uses a document-like paper/ink system. The learning-proof sprint belongs to the practice/triage family and uses its green/coral cues for proof, risk, and private-boundary decisions.
 
 ## Compact token summary
 
