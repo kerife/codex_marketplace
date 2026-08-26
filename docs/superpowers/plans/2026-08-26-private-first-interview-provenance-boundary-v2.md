@@ -4,7 +4,7 @@
 
 **Goal:** Add a v2 private first-interview board that persists no raw source, accepts only opaque validated source bundles, exposes honest provenance, and ships with stronger writer, UX, documentation, and release gates while leaving v1 frozen.
 
-**Architecture:** Capture a source group once behind an immutable `ValidatedPrivateFirstInterviewSourceBundle`; use explicit `upstream_attested`, `synthetic_fixture`, or `composition_only` provenance; derive a sanitized v2 projection and revalidate it from private frozen payloads. Keep the existing v1 implementation unchanged, add a v2 proof/writer/renderer surface, and bind all package/release evidence to the new files.
+**Architecture:** Capture a source group once behind an immutable `ValidatedPrivateFirstInterviewSourceBundle`; use explicit `synthetic_fixture` or `composition_only` provenance; derive a sanitized v2 projection and revalidate it from private frozen payloads. Keep the existing v1 implementation unchanged, add a v2 proof/writer/renderer surface, and bind all package/release evidence to the new files. No upstream-attested state is claimed until a real external issuer/verifier exists.
 
 **Tech Stack:** Python 3.11+, JSON Schema Draft 2020-12 subset validator, stdlib `unittest`, descriptor-anchored filesystem APIs, HTML escaping, self-contained HTML/CSS, existing static/privacy/parity/release harnesses, and saved Superdesign token references.
 
@@ -14,7 +14,7 @@
 
 - Preserve the published v1 schema, fixtures, validator, builder, renderer, bytes, and historical tests exactly.
 - The v2 public builder accepts only the exact `ValidatedPrivateFirstInterviewSourceBundle` class; raw mappings, serialized JSON, caller-authored artifacts, and duck-typed proofs fail with fixed no-echo errors.
-- `upstream_attested` is issued only by the private source-bundle issuer; `synthetic_fixture` is test-only; the exact v1 adapter is always `composition_only` and can never be upgraded.
+- `synthetic_fixture` is issued only by the private fixture issuer; the exact v1 adapter is always `composition_only` and can never be upgraded. No upstream-attested state is emitted in this release.
 - v2 artifacts never contain `source_group`, `source_group_json`, source rows, record/group IDs, raw fact summaries, URLs, PII, secrets, prompt-injection text, or arbitrary confidential prose.
 - The only v2 persisted provenance fields are the closed contract/state/digest/source-kind metadata; digest and IDs never reach HTML, receipts, diagnostics, prompts, or public examples.
 - Every v2 output remains `draft_only=true`, `external_actions_authorized=false`, `no_message_action=true`, `no_calendar_action=true`, all raw-retention flags false, `local_save_mode=disabled`, and `candidate_review_required=true`.
@@ -34,11 +34,11 @@
 
 **Interfaces:**
 - Produces `ValidatedPrivateFirstInterviewSourceBundle` with no public raw-source accessor.
-- Produces `issue_validated_private_first_interview_source_bundle(source_group: object, *, provenance_state: str) -> ValidatedPrivateFirstInterviewSourceBundle` for the private in-process issuer used by trusted upstream adapters and synthetic tests; accepted states are exactly `upstream_attested` and `synthetic_fixture`.
+- Produces `issue_validated_private_first_interview_source_bundle(source_group: object, *, provenance_state: str) -> ValidatedPrivateFirstInterviewSourceBundle` for the private fixture issuer; the only accepted state is `synthetic_fixture`.
 - Produces `adapt_v1_private_first_interview_proof(validated_v1: object) -> ValidatedPrivateFirstInterviewSourceBundle`, accepting only the exact published v1 proof class and assigning `composition_only`.
 - Produces internal `_payload_json(value) -> tuple[str, str]` and `metadata(value) -> dict[str, object]` helpers for the v2 validator; metadata contains only contract, state, digest, and fixed source kinds.
 
-- [ ] **Step 1: Write RED tests for identity and provenance.** Add tests that issue a synthetic bundle through the private issuer, assert exact class identity, immutable attributes, fixed source kinds, deterministic digest, no `source_group` property, and distinct `upstream_attested`/`synthetic_fixture`/`composition_only` metadata. Assert an unknown state, raw non-mapping, unsafe arbitrary confidential prose, wrong shape, oversized/cyclic input, and a forged duck-typed object raise fixed `ValueError`/`TypeError` without echoing input.
+- [ ] **Step 1: Write RED tests for identity and provenance.** Add tests that issue a synthetic bundle through the private issuer, assert exact class identity, immutable attributes, fixed source kinds, deterministic digest, no `source_group` property, and distinct `synthetic_fixture`/`composition_only` metadata. Assert `upstream_attested` and any other unknown state, raw non-mapping, unsafe arbitrary confidential prose, wrong shape, oversized/cyclic input, and a forged duck-typed object raise fixed `ValueError`/`TypeError` without echoing input.
 
 ```python
 bundle = source_bundle.issue_validated_private_first_interview_source_bundle(
@@ -60,7 +60,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest -v plugins.professional-growth-
 
 Expected: import or interface failures because the new schema/module do not exist.
 
-- [ ] **Step 3: Implement one-capture, private-payload issuance.** Reuse the existing bounded snapshot and safe-prose helpers. Validate the complete source shape and snapshot before storing canonical JSON in private slots. Permit only `upstream_attested` or `synthetic_fixture` for the private issuer and `composition_only` for the v1 adapter; never accept state from a caller-authored mapping. Expose a copied metadata dictionary and no raw-source property.
+- [ ] **Step 3: Implement one-capture, private-payload issuance.** Reuse the existing bounded snapshot and safe-prose helpers. Validate the complete source shape and snapshot before storing canonical JSON in private slots. Permit only `synthetic_fixture` for the private issuer and `composition_only` for the v1 adapter; reject `upstream_attested` until an external issuer/verifier is integrated. Expose a copied metadata dictionary and no raw-source property.
 
 - [ ] **Step 4: Run the source-bundle tests GREEN on both runtimes.**
 
@@ -180,7 +180,7 @@ git commit -m "feat: harden private interview v2 writer"
 
 **Interfaces:**
 - Produces `render_private_first_interview_conversion_board_v2(validated_board: object) -> str` and rejects every non-exact v2 proof object.
-- HTML has one `board-trust-strip` between decision and sequence; it shows “Fuente validada” for upstream-attested, “Fuente sintética de prueba” for fixture data, or “Procedencia por composición; revisar fuente” for composition-only, plus “Texto original no almacenado” and “Revisión manual requerida”.
+- HTML has one `board-trust-strip` between decision and sequence; it shows “Fuente sintética de prueba” for fixture data or “Procedencia por composición; revisar fuente” for composition-only, plus “Texto original no almacenado” and “Revisión manual requerida”.
 
 - [ ] **Step 1: Write RED renderer tests.** Assert ES/EN semantic structure, trust-strip order and text, presence in stop state, no digest/IDs/source prose, escaped values, one h1, focusable main, skip link, no forms/buttons/scripts/external URLs, CSP/noindex/no-referrer, and explicit `aria-labelledby`. Assert CSS contains mobile, intermediate-width, print, dark, forced-colors (including both boundary classes), reduced-motion, `main:focus-visible`, and mobile column reset hooks.
 
