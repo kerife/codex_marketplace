@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `0f9e3a342923393b88ba1c176a7c88a0dfcd4705`
+source_commit: `a90a4df91063f4ee26c4362e24cada11ce4587ab`
 
-source_tree: `b6950e14be1f62972e3bdc59ca8426aba5f17c09`
+source_tree: `3f59983b7f680ce34fb3ebe49d971c91b7317ec6`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826114920`
+installed_cache_version: `0.2.0+codex.20260826120222`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `e869ab44bb04e45f677d4b8a312d12ccd6e6f59bc2f34cb8b9b7e1b4b3e8919c`
+source_aggregate_sha256: `9c8349a8e93a0470a5ec39c13e3158b7afdb0d16b8556e9d4dbce151b943fb42`
 
-cache_aggregate_sha256: `e869ab44bb04e45f677d4b8a312d12ccd6e6f59bc2f34cb8b9b7e1b4b3e8919c`
+cache_aggregate_sha256: `9c8349a8e93a0470a5ec39c13e3158b7afdb0d16b8556e9d4dbce151b943fb42`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826114920`.
+- Cachebuster identifier: `20260826120222`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -101,6 +101,8 @@ external_action_state: `not_executed`
   localized private response recipe, Python 3.11 renderer compatibility,
   final-attempt revision, and terminal
   recruiter-practice-session surfaces.
+- The current print-atomicity increment added one renderer case; the exact installed cache
+  passed the resulting 51/51 focused handoff, feedback, conversion-board, and renderer tests.
 - The broader inherited suite remains bounded by the known legacy
   executive-dossier skill-size and pressure-binding checks; official validator
   checksum gates, package checks, and the expanded root privacy scan passed,
