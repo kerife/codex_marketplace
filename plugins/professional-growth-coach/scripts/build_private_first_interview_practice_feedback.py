@@ -26,6 +26,15 @@ _RESULT = re.compile(
     r"resultado|impacto|logro|reduj[eo]|aument[óo]|mejor[óo]|observé|observ[eé])\b",
     re.IGNORECASE,
 )
+_NEGATED_OR_ABSENT = re.compile(
+    r"\b(?:no|not|nothing|none|never|didn['’]?t|did not|without|sin|nada|ning[uú]n|ninguna|nunca|no observ[eé])\b",
+    re.IGNORECASE,
+)
+_UNCERTAIN = re.compile(
+    r"\b(?:think|thought|maybe|perhaps|might|could|not sure|unsure|uncertain|"
+    r"creo|cre[ií]a|quiz[aá]|tal vez|podr[ií]a|no estoy seguro|incierto)\b",
+    re.IGNORECASE,
+)
 
 
 def _load(name: str, module_name: str) -> Any:
@@ -65,12 +74,12 @@ ValidatedPrivateFirstInterviewPracticeFeedback = _identity.ValidatedPrivateFirst
 _STATEMENTS = {
     "es": {
         "solid": "La respuesta conecta una acción con un resultado observado dentro del alcance confirmado.",
-        "confirm": "La respuesta presenta una acción útil; confirma el resultado observado antes de ampliarla.",
+        "confirm": "La respuesta menciona una acción o un resultado; confirma la evidencia observada antes de ampliarla.",
         "do_not_assert": "Falta una base observable suficiente; reemplaza la afirmación por evidencia o una aclaración acotada.",
     },
     "en": {
         "solid": "The answer connects an action to an observed result within the confirmed scope.",
-        "confirm": "The answer presents a useful action; confirm the observed result before expanding it.",
+        "confirm": "The answer mentions an action or result; confirm the observed evidence before expanding it.",
         "do_not_assert": "There is not enough observable basis; replace the claim with evidence or a bounded clarification.",
     },
 }
@@ -79,6 +88,8 @@ _STATEMENTS = {
 def _classify(answer: str) -> str:
     normalized = unicodedata.normalize("NFKC", answer)
     if _ACTION.search(normalized) and _RESULT.search(normalized):
+        if _NEGATED_OR_ABSENT.search(normalized) or _UNCERTAIN.search(normalized):
+            return "confirm"
         return "solid"
     if _ACTION.search(normalized):
         return "confirm"
@@ -98,6 +109,7 @@ def build_private_first_interview_practice_feedback(
     handoff: object, answer: object
 ) -> ValidatedPrivateFirstInterviewPracticeFeedback:
     """Revalidate one awaiting-answer handoff and return ephemeral feedback."""
+    reserved = False
     try:
         if type(handoff) is not ValidatedPrivateFirstInterviewPracticeHandoff:
             raise ValueError(_FAILURE)
@@ -121,6 +133,8 @@ def build_private_first_interview_practice_feedback(
         if handoff_context.get("source_snapshot") != proof_binding:
             raise ValueError(_FAILURE)
 
+        _handoff_identity.reserve_for_feedback(handoff)
+        reserved = True
         projected = copy.deepcopy(dict(session))
         locale = projected.get("content_locale") or projected.get("locale")
         if locale not in _STATEMENTS:
@@ -145,9 +159,14 @@ def build_private_first_interview_practice_feedback(
         }
         if _session_validator.validate_session(projected):
             raise ValueError(_FAILURE)
-        return _identity.issue_validated_private_first_interview_practice_feedback(
+        feedback = _identity.issue_validated_private_first_interview_practice_feedback(
             json.dumps(projected, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
             proof_binding,
         )
+        _handoff_identity.commit_feedback(handoff)
+        reserved = False
+        return feedback
     except Exception:
+        if reserved:
+            _handoff_identity.release_feedback(handoff)
         raise ValueError(_FAILURE) from None

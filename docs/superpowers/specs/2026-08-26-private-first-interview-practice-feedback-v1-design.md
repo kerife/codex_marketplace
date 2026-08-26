@@ -24,6 +24,16 @@ and `RB-001`. The classifier is a deterministic shape cue, not semantic
 verification or an interview prediction. The renderer uses its existing fixed
 bilingual copy and never renders the answer, IDs, digest, or snapshot.
 
+When action and result cues are both present, bounded negation or uncertainty
+cues downgrade the label to `confirm`. A positive action-plus-result answer
+remains `solid`; action without a result remains `confirm`; and an answer
+without enough action evidence remains `do_not_assert`. This is a
+conservative diagnostic guard, not semantic verification.
+
+The exact handoff is reserved atomically for one successful feedback
+projection. Replay and concurrent reuse fail closed; invalid input releases
+the reservation and does not consume the handoff.
+
 ## Experience
 
 For sourced sessions, the reading order prioritizes the question and next safe

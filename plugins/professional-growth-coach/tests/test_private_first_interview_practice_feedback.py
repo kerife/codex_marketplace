@@ -1,4 +1,5 @@
 import copy
+from concurrent.futures import ThreadPoolExecutor
 import json
 import sys
 import unittest
@@ -24,6 +25,14 @@ import validate_recruiter_practice_session as session_validator
 
 def _source():
     return json.loads(FIXTURE.read_text(encoding="utf-8"))["source_group"]
+
+
+def _feedback_result(handoff, answer):
+    try:
+        feedback_builder.build_private_first_interview_practice_feedback(handoff, answer)
+    except ValueError:
+        return False
+    return True
 
 
 class PrivateFirstInterviewPracticeFeedbackTests(unittest.TestCase):
@@ -68,6 +77,34 @@ class PrivateFirstInterviewPracticeFeedbackTests(unittest.TestCase):
         self.assertEqual(["do_not_assert"], [row["label"] for row in observation])
         self.assertEqual("unknown", feedback.session["feedback"]["score"])
 
+    def test_negated_action_and_result_are_not_marked_solid(self):
+        for locale, answer in (
+            ("en", "I implemented nothing and observed no result."),
+            ("es", "No implementé nada y no observé ningún resultado."),
+        ):
+            with self.subTest(locale=locale):
+                feedback = feedback_builder.build_private_first_interview_practice_feedback(
+                    self._handoff(locale=locale), answer
+                )
+                self.assertEqual(
+                    ["confirm"],
+                    [row["label"] for row in feedback.session["feedback"]["observations"]],
+                )
+
+    def test_uncertain_action_and_result_are_not_marked_solid(self):
+        for locale, answer in (
+            ("en", "I think I implemented a change, but I am not sure of the result."),
+            ("es", "Creo que implementé un cambio, pero no estoy seguro del resultado."),
+        ):
+            with self.subTest(locale=locale):
+                feedback = feedback_builder.build_private_first_interview_practice_feedback(
+                    self._handoff(locale=locale), answer
+                )
+                self.assertEqual(
+                    ["confirm"],
+                    [row["label"] for row in feedback.session["feedback"]["observations"]],
+                )
+
     def test_only_exact_awaiting_handoff_is_accepted(self):
         with self.assertRaisesRegex(ValueError, "private first-interview practice feedback is unavailable"):
             feedback_builder.build_private_first_interview_practice_feedback({}, "A bounded answer.")
@@ -94,6 +131,41 @@ class PrivateFirstInterviewPracticeFeedbackTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "private first-interview practice feedback is unavailable"):
             feedback_builder.build_private_first_interview_practice_feedback(forged, "A bounded answer.")
+
+    def test_same_handoff_is_single_use(self):
+        handoff = self._handoff()
+        feedback_builder.build_private_first_interview_practice_feedback(
+            handoff, "I implemented a change and observed a result."
+        )
+        with self.assertRaisesRegex(ValueError, "private first-interview practice feedback is unavailable"):
+            feedback_builder.build_private_first_interview_practice_feedback(
+                handoff, "I implemented a different change and observed another result."
+            )
+
+    def test_invalid_answer_does_not_consume_handoff(self):
+        handoff = self._handoff()
+        with self.assertRaisesRegex(ValueError, "private first-interview practice feedback is unavailable"):
+            feedback_builder.build_private_first_interview_practice_feedback(handoff, "Contact me at candidate@example.com.")
+        feedback = feedback_builder.build_private_first_interview_practice_feedback(
+            handoff, "I implemented a change and observed a result."
+        )
+        self.assertEqual("feedback_available", feedback.session["state"])
+
+    def test_concurrent_calls_allow_exactly_one_feedback_projection(self):
+        handoff = self._handoff()
+        answers = (
+            "I implemented a change and observed a result.",
+            "I redesigned the process and improved the outcome.",
+        )
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(
+                executor.map(
+                    lambda answer: _feedback_result(handoff, answer),
+                    answers,
+                )
+            )
+        self.assertEqual([True], [result for result in results if result is True])
+        self.assertEqual(1, sum(result is False for result in results))
 
     def test_feedback_wrapper_schema_is_closed(self):
         feedback = feedback_builder.build_private_first_interview_practice_feedback(

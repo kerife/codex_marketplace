@@ -87,6 +87,11 @@ in memory only, the result exposes exactly one categorical signal (`solid`,
 `confirm`, or `do_not_assert`) with `score=unknown`, and the renderer never
 echoes the answer, internal IDs, or provenance snapshot. No external action is
 performed.
+The structural classifier downgrades action-plus-result wording to `confirm`
+when it contains bounded negation or uncertainty cues; this remains coaching
+diagnostic, not semantic verification.
+Each validated handoff is single-use for feedback; replay and concurrent reuse
+fail closed, while an invalid answer does not consume it.
 
 ## Installation
 

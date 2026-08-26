@@ -40,8 +40,13 @@ In feedback_available, visible feedback uses fixed bilingual guidance selected
 only by the validated question kind and supplied categorical label. The most
 cautious present label governs one separate next-private-rehearsal decision:
 do_not_assert > confirm > solid. This is evidence-bounded coaching, not semantic
-verification, readiness scoring, or an interview-outcome claim; the raw answer
-and feedback statement remain omitted from the artifact.
+verification, readiness scoring, or an interview-outcome claim. Action-plus-result
+wording containing bounded negation or uncertainty cues is conservatively
+downgraded to `confirm`; the raw answer and feedback statement remain omitted
+from the artifact.
+The exact handoff is consumed once when feedback succeeds; replay and
+concurrent reuse fail closed, while an invalid answer leaves the handoff
+available for one corrected attempt.
 
 The private first-interview handoff may be advanced only by the explicit
 `build_private_first_interview_practice_feedback` boundary. It accepts one

@@ -4,11 +4,15 @@
 from __future__ import annotations
 
 import json
+from threading import Lock
 
 
 _UNAVAILABLE = "private first-interview practice handoff is unavailable"
 _CONSTRUCTOR_TOKEN = object()
 _ISSUER_MARKER = object()
+_STATE_LOCK = Lock()
+_IN_FLIGHT: set[object] = set()
+_CONSUMED: set[object] = set()
 
 
 class ValidatedPrivateFirstInterviewPracticeHandoff:
@@ -62,3 +66,25 @@ def payload(value: object) -> tuple[str, str]:
     if marker is not _ISSUER_MARKER or not isinstance(session_json, str) or not isinstance(proof_binding, str):
         raise ValueError(_UNAVAILABLE)
     return session_json, proof_binding
+
+
+def reserve_for_feedback(value: object) -> None:
+    """Atomically reserve an exact handoff for one feedback projection."""
+    payload(value)
+    with _STATE_LOCK:
+        if value in _IN_FLIGHT or value in _CONSUMED:
+            raise ValueError(_UNAVAILABLE)
+        _IN_FLIGHT.add(value)
+
+
+def commit_feedback(value: object) -> None:
+    with _STATE_LOCK:
+        if value not in _IN_FLIGHT:
+            raise ValueError(_UNAVAILABLE)
+        _IN_FLIGHT.remove(value)
+        _CONSUMED.add(value)
+
+
+def release_feedback(value: object) -> None:
+    with _STATE_LOCK:
+        _IN_FLIGHT.discard(value)

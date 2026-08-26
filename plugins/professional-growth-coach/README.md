@@ -137,6 +137,11 @@ The answer is used only in memory and discarded after the cycle; the result
 keeps `score=unknown`, shows one categorical signal (`solid`, `confirm`, or
 `do_not_assert`), and cites only the ephemeral answer and rubric. HTML uses
 fixed localized feedback but never echoes the answer, internal IDs, or snapshot.
+The structural classifier conservatively downgrades action-plus-result wording
+to `confirm` when bounded negation or uncertainty cues are present; this is
+diagnostic coaching, not semantic verification.
+Each validated handoff is single-use for feedback; replay and concurrent reuse
+fail closed, while an invalid answer does not consume it.
 Unsafe answers, crossed sessions, and stale handoffs fail closed. No external
 action is performed.
 
