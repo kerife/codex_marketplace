@@ -12,27 +12,27 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `087e501db0e32b42f04bae31dc69d9ec5bf29e7d`
+source_commit: `a7339ea2e6a0abfc81cdbbe150321a086bdba5ad`
 
-source_tree: `e1ff8250e604103db5ed0b922f09153a787077a2`
+source_tree: `59004c323cdcf34804ac347ae8e0b26df55eca86`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826095403`
+installed_cache_version: `0.2.0+codex.20260826100144`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
-source_file_count: `211`
+source_file_count: `212`
 
-installed_file_count: `211`
+installed_file_count: `212`
 
 sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `7302c9aa15cfabf7ab9f33c67ff0db198f32860fa12e4852bc887e7d5e58dfc0`
+source_aggregate_sha256: `635f376a312b344637049265e24b2989a38d86cbddbcdf9d6a0df9ff8eec290a`
 
-cache_aggregate_sha256: `7302c9aa15cfabf7ab9f33c67ff0db198f32860fa12e4852bc887e7d5e58dfc0`
+cache_aggregate_sha256: `635f376a312b344637049265e24b2989a38d86cbddbcdf9d6a0df9ff8eec290a`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826095403`.
+- Cachebuster identifier: `20260826100144`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -86,12 +86,12 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- Focused source verification passed 41/41 tests across the private-first
+- Focused source verification passed 44/44 tests across the private-first
   interview handoff, ephemeral feedback continuation, proof-bound rendering,
   state-aware conversion-board rendering, recruiter-practice-session
   compatibility, and release checks; the prior cycle's 131/131 source matrix
   remains covered by the same package history.
-- Installed exact-cache package smokes passed 41/41 tests across the handoff,
+- Installed exact-cache package smokes passed 44/44 tests across the handoff,
   feedback, conversion-board, writer, and recruiter-practice-session surfaces.
 - The broader inherited suite remains bounded by the known legacy
   executive-dossier validation timeout; no full-suite green claim is made.
@@ -130,6 +130,10 @@ external_action_state: `not_executed`
   `awaiting_answer` state, with `unknown` score, ephemeral answer handling,
   and board-origin copy. Snapshot/digest/internal IDs stay out of HTML and no
   external action is available; non-ready board states fail closed.
+
+- Private first-interview practice revision installed smokes: one explicit
+  second-and-final handoff from an exact feedback proof, with no answer or
+  prior feedback reuse; replay and third-attempt requests fail closed.
 
 - Accepted groups: response mapping, recurrence routes, non-learning routes,
   provider lifecycle, the complete ES action matrix, closed EN copy, exact
