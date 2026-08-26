@@ -268,6 +268,22 @@ class PrivateFirstInterviewBoardV2RendererTests(unittest.TestCase):
         self.assertIn("outline:", css)
         self.assertNotIn("<script", output.lower())
 
+    def test_decision_ladder_exposes_measurement_and_script_boundaries(self):
+        expected = {
+            "en": ("supported signal", "Use a factual summary only", "open question", "Ask only a bounded question"),
+            "es": ("señal apoyada", "Resumen factual", "pregunta abierta", "Pregunta acotada"),
+        }
+        for locale, values in expected.items():
+            with self.subTest(locale=locale):
+                output = renderer.render_private_first_interview_conversion_board_v2(self._proof(locale))
+                for value in values:
+                    self.assertIn(value, output)
+        artifact = copy.deepcopy(self._proof("en").artifact)
+        artifact["decision_ladder"][0]["measurement_label"] = "<script>unsafe()</script>"
+        rendered = renderer._render_artifact(artifact)
+        self.assertNotIn("<script>unsafe", rendered)
+        self.assertIn("&lt;script&gt;unsafe()&lt;/script&gt;", rendered)
+
     def test_practice_gate_escapes_rehearsal_copy_and_stop_omits_it(self):
         proof = self._proof()
         artifact = proof.artifact

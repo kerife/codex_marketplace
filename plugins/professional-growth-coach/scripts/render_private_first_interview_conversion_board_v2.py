@@ -85,6 +85,7 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
         "reviews": "Plantillas de revisión diaria" if es else "Daily review templates", "private": "Límite privado" if es else "Private boundary",
         "footer": "No se realizó ninguna acción externa." if es else "No external action was taken.",
         "details": "Detalle" if es else "Detail", "day": "Día" if es else "Day", "trigger": "Disparador" if es else "Trigger",
+        "measurement": "Señal de medición" if es else "Measurement signal", "script_boundary": "Límite de guion" if es else "Script boundary",
         "trust": "Límite de procedencia" if es else "Provenance boundary",
         "synthetic": "Fuente sintética de prueba" if es else "Synthetic test source",
         "composition": "Procedencia por composición; revisar fuente" if es else "Composition provenance; review source",
@@ -206,7 +207,7 @@ def _render_artifact(artifact: Mapping[str, object]) -> str:
                 raise PrivateFirstInterviewConversionBoardV2RenderError("private board artifact is unavailable")
             return label
 
-        ladder = _list_rows(artifact.get("decision_ladder"), lambda row, i: f'<li class="board-branch"><h3>{_e(_branch_label(row))}</h3><dl>{_paragraph(labels["trigger"], row.get("trigger"))}{_paragraph("Requisito" if es else "Requirement", row.get("evidence_requirement"))}{_paragraph("Acción segura" if es else "Safe action", row.get("next_safe_action"))}{_paragraph("Acción bloqueada" if es else "Blocked action", row.get("blocked_action"))}{_paragraph("Pregunta" if es else "Review question", row.get("review_question"))}</dl></li>')
+        ladder = _list_rows(artifact.get("decision_ladder"), lambda row, i: f'<li class="board-branch"><h3>{_e(_branch_label(row))}</h3><dl>{_paragraph(labels["trigger"], row.get("trigger"))}{_paragraph("Requisito" if es else "Requirement", row.get("evidence_requirement"))}{_paragraph("Acción segura" if es else "Safe action", row.get("next_safe_action"))}{_paragraph("Acción bloqueada" if es else "Blocked action", row.get("blocked_action"))}{_paragraph(labels["measurement"], row.get("measurement_label"))}{_paragraph("Pregunta" if es else "Review question", row.get("review_question"))}{_paragraph(labels["script_boundary"], row.get("script_boundary"))}</dl></li>')
         sequence = _list_rows(artifact.get("sequence"), lambda row, i: f'<li><span class="board-number">{i}</span><h3>{_e(row.get("label"))}</h3><p>{_e(row.get("description"))}</p></li>')
         proof = _list_rows(artifact.get("proof_cards"), lambda row, i: f'<li class="board-proof-card"><h3>{_e(row.get("vacancy_signal"))}</h3><p>{_e(row.get("evidence_summary"))}</p><p><strong>{_e(labels["details"])}:</strong> {_e(row.get("caveat"))}</p></li>')
         risks = _list_rows(artifact.get("risk_checks"), lambda row, i: f'<li class="board-risk-card"><h3>{_e(_closed_label(row.get("topic"), labels["risk_topics"]))}</h3><dl>{_paragraph("Pregunta" if es else "Question", row.get("trigger_question"))}{_paragraph("Límite seguro" if es else "Safe boundary", row.get("safe_response_boundary"))}{_paragraph("Confirmación" if es else "Confirmation", row.get("confirmation_needed"))}{_paragraph("No afirmar" if es else "Do not claim", row.get("forbidden_claim"))}</dl></li>')
