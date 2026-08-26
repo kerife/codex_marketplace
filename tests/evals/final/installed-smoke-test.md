@@ -12,13 +12,13 @@ attestation_state: `vacancy_first_installed_green`
 
 plugin_identity: `professional-growth-coach@codex-marketplace-public`
 
-source_commit: `9dcd391e4a212b56d7fda7df4063a4353b3a3a92`
+source_commit: `087e501db0e32b42f04bae31dc69d9ec5bf29e7d`
 
-source_tree: `58040cf4291100eee776a8b1bec9f5c9d3a62f60`
+source_tree: `e1ff8250e604103db5ed0b922f09153a787077a2`
 
 installed_cache_family: `codex-marketplace-public/professional-growth-coach`
 
-installed_cache_version: `0.2.0+codex.20260826094127`
+installed_cache_version: `0.2.0+codex.20260826095403`
 
 installed_cache_resolution: `exact_enabled_reported_version_not_alias_or_glob`
 
@@ -30,9 +30,9 @@ sorted_relative_inventory_equal: `true`
 
 per_file_sha256_equal: `true`
 
-source_aggregate_sha256: `6f87ca342656c0cbae2b86d578e6b6937a226ce205d6fe806447186f9241bfa3`
+source_aggregate_sha256: `7302c9aa15cfabf7ab9f33c67ff0db198f32860fa12e4852bc887e7d5e58dfc0`
 
-cache_aggregate_sha256: `6f87ca342656c0cbae2b86d578e6b6937a226ce205d6fe806447186f9241bfa3`
+cache_aggregate_sha256: `7302c9aa15cfabf7ab9f33c67ff0db198f32860fa12e4852bc887e7d5e58dfc0`
 
 source_bytecode_count: `0`
 
@@ -74,7 +74,7 @@ external_action_state: `not_executed`
 
 ## Publication and resolution evidence
 
-- Cachebuster identifier: `20260826094127`.
+- Cachebuster identifier: `20260826095403`.
 - The release commits were pushed to remote `main` and verified by fetch plus a
   live remote-head lookup before installation.
 - The public marketplace source was re-resolved from the exact installed row,
@@ -86,12 +86,12 @@ external_action_state: `not_executed`
 
 ## Source verification evidence
 
-- Focused source verification passed 53/53 tests across the private-first
+- Focused source verification passed 41/41 tests across the private-first
   interview handoff, ephemeral feedback continuation, proof-bound rendering,
   state-aware conversion-board rendering, recruiter-practice-session
   compatibility, and release checks; the prior cycle's 131/131 source matrix
   remains covered by the same package history.
-- Installed exact-cache package smokes passed 53/53 tests across the handoff,
+- Installed exact-cache package smokes passed 41/41 tests across the handoff,
   feedback, conversion-board, writer, and recruiter-practice-session surfaces.
 - The broader inherited suite remains bounded by the known legacy
   executive-dossier validation timeout; no full-suite green claim is made.
