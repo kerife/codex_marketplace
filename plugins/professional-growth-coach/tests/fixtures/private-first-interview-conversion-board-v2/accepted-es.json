@@ -1,0 +1,320 @@
+{
+  "approval_boundary": {
+    "allowed_next_step": "manual_private_review",
+    "artifact_state": "private_draft",
+    "authorization_required": true,
+    "prohibited_actions": [
+      "message",
+      "connect",
+      "apply",
+      "schedule",
+      "calendar_create",
+      "publish",
+      "share",
+      "upload",
+      "submit",
+      "export",
+      "external_edit",
+      "purchase",
+      "enroll"
+    ]
+  },
+  "artifact_kind": "private_first_interview_conversion_board",
+  "as_of_date": "2026-08-26",
+  "daily_reviews": [
+    {
+      "coach_question": "¿Qué falta?",
+      "confounder_note": "Sin resultado externo",
+      "day": 1,
+      "decision": "advance",
+      "evidence_log": "Apoyo acotado",
+      "metric_label": "claridad",
+      "next_safe_action": "Continuar privado",
+      "observed_signal": "Apoyo acotado",
+      "signal_quality": "strong"
+    },
+    {
+      "coach_question": "¿Qué la apoya?",
+      "confounder_note": "No valida resultado",
+      "day": 2,
+      "decision": "advance",
+      "evidence_log": "Punto apoyado",
+      "metric_label": "evidencia",
+      "next_safe_action": "Ensayar",
+      "observed_signal": "Punto apoyado",
+      "signal_quality": "strong"
+    },
+    {
+      "coach_question": "¿Qué es seguro?",
+      "confounder_note": "No es entrevista",
+      "day": 3,
+      "decision": "clarify",
+      "evidence_log": "Estructura usable",
+      "metric_label": "claridad",
+      "next_safe_action": "Revisar límite",
+      "observed_signal": "Estructura usable",
+      "signal_quality": "mixed"
+    },
+    {
+      "coach_question": "¿Qué confirmar?",
+      "confounder_note": "Desconocido no es fallo",
+      "day": 4,
+      "decision": "clarify",
+      "evidence_log": "Hay confirmaciones",
+      "metric_label": "restricciones",
+      "next_safe_action": "Visibilizar pendientes",
+      "observed_signal": "Hay confirmaciones",
+      "signal_quality": "unknown"
+    },
+    {
+      "coach_question": "¿Es útil?",
+      "confounder_note": "No crea mensaje",
+      "day": 5,
+      "decision": "advance",
+      "evidence_log": "Pregunta acotada",
+      "metric_label": "pregunta",
+      "next_safe_action": "Revisar privado",
+      "observed_signal": "Pregunta acotada",
+      "signal_quality": "strong"
+    },
+    {
+      "coach_question": "¿Qué evidencia hay?",
+      "confounder_note": "Sin probabilidad",
+      "day": 6,
+      "decision": "pause",
+      "evidence_log": "No requiere movimiento",
+      "metric_label": "decisión",
+      "next_safe_action": "Esperar",
+      "observed_signal": "No requiere movimiento",
+      "signal_quality": "mixed"
+    },
+    {
+      "coach_question": "¿Límite intacto?",
+      "confounder_note": "No autoriza acción",
+      "day": 7,
+      "decision": "advance",
+      "evidence_log": "Límite intacto",
+      "metric_label": "integridad",
+      "next_safe_action": "Mantener acciones desactivadas",
+      "observed_signal": "Límite intacto",
+      "signal_quality": "strong"
+    }
+  ],
+  "decision": [
+    {
+      "boundary": "No envía, agenda, aplica ni garantiza resultados",
+      "current_state": "Preparación privada lista",
+      "next_safe_action": "Revisar y ensayar",
+      "objective": "Preparar una entrevista",
+      "signal": "Contexto y hechos presentes",
+      "state": "ready"
+    }
+  ],
+  "decision_ladder": [
+    {
+      "blocked_action": "Contacto externo",
+      "branch": "advance",
+      "evidence_requirement": "Una señal acotada",
+      "measurement_label": "señal apoyada",
+      "next_safe_action": "Continuar privado",
+      "review_question": "¿Qué cambió?",
+      "script_boundary": "Resumen factual",
+      "trigger": "Contexto confirmado"
+    },
+    {
+      "blocked_action": "Suponer contexto",
+      "branch": "clarify",
+      "evidence_requirement": "Pendiente nombrado",
+      "measurement_label": "pregunta abierta",
+      "next_safe_action": "Registrar aclaración",
+      "review_question": "¿Qué confirmar?",
+      "script_boundary": "Pregunta acotada",
+      "trigger": "Falta contexto"
+    },
+    {
+      "blocked_action": "Predecir",
+      "branch": "pause",
+      "evidence_requirement": "Sin cambio útil",
+      "measurement_label": "señal débil",
+      "next_safe_action": "Esperar revisión",
+      "review_question": "¿Es más seguro esperar?",
+      "script_boundary": "Sin urgencia artificial",
+      "trigger": "Señal débil"
+    },
+    {
+      "blocked_action": "Proceder externamente",
+      "branch": "stop",
+      "evidence_requirement": "Restricción registrada",
+      "measurement_label": "condición de parada",
+      "next_safe_action": "Cerrar revisión",
+      "review_question": "¿Qué límite falló?",
+      "script_boundary": "Sin acción externa",
+      "trigger": "Falla límite"
+    }
+  ],
+  "delivery": {
+    "candidate_review_required": true,
+    "draft_only": true,
+    "external_actions_authorized": false,
+    "local_save_mode": "disabled",
+    "no_calendar_action": true,
+    "no_message_action": true,
+    "raw_answer_retained": false,
+    "raw_event_retained": false,
+    "raw_reply_retained": false
+  },
+  "locale": "es",
+  "proof_cards": [
+    {
+      "caveat": "Revisar el alcance",
+      "evidence_summary": "Un hecho apoyado puede explicarse",
+      "vacancy_signal": "Responsabilidad operativa"
+    }
+  ],
+  "rehearsal": {
+    "pre_response_score": "unknown",
+    "purpose": "Revisar claridad",
+    "question": "¿Cómo explicarías una decisión apoyada?",
+    "response_structure": "Contexto, acción, resultado, límite",
+    "wait_boundary": "Esperar revisión humana"
+  },
+  "risk_checks": [
+    {
+      "confirmation_needed": "Confirmar alcance",
+      "forbidden_claim": "No afirmar responsabilidad no apoyada",
+      "safe_response_boundary": "Describir solo hechos",
+      "topic": "production",
+      "trigger_question": "¿Está claro el alcance?"
+    },
+    {
+      "confirmation_needed": "Confirmar antes de decidir",
+      "forbidden_claim": "No inferir compensación",
+      "safe_response_boundary": "Mantener valores desconocidos",
+      "topic": "compensation",
+      "trigger_question": "¿Se conoce compensación?"
+    },
+    {
+      "confirmation_needed": "Revisión humana",
+      "forbidden_claim": "No afirmar elegibilidad",
+      "safe_response_boundary": "Tratar lo desconocido como tal",
+      "topic": "eligibility",
+      "trigger_question": "¿Está confirmada elegibilidad?"
+    },
+    {
+      "confirmation_needed": "Confirmar horario",
+      "forbidden_claim": "No prometer disponibilidad",
+      "safe_response_boundary": "Indicar solo ventana revisada",
+      "topic": "availability",
+      "trigger_question": "¿Está confirmada disponibilidad?"
+    },
+    {
+      "confirmation_needed": "Revisar límite",
+      "forbidden_claim": "No divulgar texto fuente",
+      "safe_response_boundary": "Usar evidencia abstracta",
+      "topic": "confidentiality",
+      "trigger_question": "¿Expone material privado?"
+    }
+  ],
+  "schema_version": "private-first-interview-conversion-board-v2",
+  "sequence": [
+    {
+      "description": "Identificar lo conocido",
+      "label": "Estado actual",
+      "stage": "current_state"
+    },
+    {
+      "description": "Preparar evidencia",
+      "label": "Preparación privada",
+      "stage": "private_preparation"
+    },
+    {
+      "description": "Revisar señales",
+      "label": "Revisión humana",
+      "stage": "human_review"
+    },
+    {
+      "description": "Mantener acciones externas desactivadas",
+      "label": "Límite de autorización",
+      "stage": "authorization_gate"
+    }
+  ],
+  "source_provenance": {
+    "provenance_state": "synthetic_fixture",
+    "source_contract": "private-first-interview-source-bundle-v1",
+    "source_digest": "snap-private-first-interview-v1-sha256-5e8fc337154d8d3794daca183dcafbf581fd480cc316c49935649fbe4d6af302",
+    "source_kinds": [
+      "recruiter_outreach_lab",
+      "quality_gate",
+      "first_interview_7_day_plan",
+      "weekly_coach_plan",
+      "decision_ladder",
+      "plan_days",
+      "daily_review_logs"
+    ]
+  },
+  "week": [
+    {
+      "day": 1,
+      "evidence_boundary": "Solo hechos acotados",
+      "fallback": "Aclarar contexto",
+      "observable_signal": "Contexto claro",
+      "private_action": "Revisar contexto",
+      "review_checkpoint": "Nombrar un pendiente",
+      "stop_rule": "Detener ante fuente no apoyada"
+    },
+    {
+      "day": 2,
+      "evidence_boundary": "No ampliar el hecho",
+      "fallback": "Sin evidencia",
+      "observable_signal": "Límite claro",
+      "private_action": "Elegir evidencia",
+      "review_checkpoint": "Revisar alcance",
+      "stop_rule": "Detener sin apoyo"
+    },
+    {
+      "day": 3,
+      "evidence_boundary": "Respuesta ligada a fuente",
+      "fallback": "Acortar respuesta",
+      "observable_signal": "Respuesta estable",
+      "private_action": "Ensayar respuesta",
+      "review_checkpoint": "Revisar estructura",
+      "stop_rule": "Detener ante invención"
+    },
+    {
+      "day": 4,
+      "evidence_boundary": "Mantener pendientes",
+      "fallback": "Pausar",
+      "observable_signal": "Pendientes visibles",
+      "private_action": "Revisar límites",
+      "review_checkpoint": "Listar confirmaciones",
+      "stop_rule": "Detener ante restricción crítica"
+    },
+    {
+      "day": 5,
+      "evidence_boundary": "Sin texto privado",
+      "fallback": "Deferir pregunta",
+      "observable_signal": "Pregunta concreta",
+      "private_action": "Redactar pregunta",
+      "review_checkpoint": "Revisar utilidad",
+      "stop_rule": "Detener ante divulgación"
+    },
+    {
+      "day": 6,
+      "evidence_boundary": "Sin predicciones",
+      "fallback": "Pausar",
+      "observable_signal": "Rama basada en evidencia",
+      "private_action": "Revisar ramas",
+      "review_checkpoint": "Elegir rama segura",
+      "stop_rule": "Detener sin apoyo"
+    },
+    {
+      "day": 7,
+      "evidence_boundary": "Acciones externas desactivadas",
+      "fallback": "Mantener privado",
+      "observable_signal": "Límite explícito",
+      "private_action": "Revisión final",
+      "review_checkpoint": "Confirmar límite",
+      "stop_rule": "Detener antes de acción no autorizada"
+    }
+  ]
+}

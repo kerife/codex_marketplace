@@ -94,7 +94,22 @@ verified local artifact link, and approval boundary. The draft does not
 authorize an application, upload, export, message, publication, or other
 external action. No external action is performed.
 
-### Private first-interview conversion board v1
+### Private first-interview conversion board v2
+
+New private first-interview requests use
+`private-first-interview-conversion-board-v2`. The builder accepts only an
+opaque validated source bundle and persists a sanitized projection; callers do
+not provide a raw source group or artifact. The `board-trust-strip` distinguishes
+synthetic fixture data from the `composition-only` v1 adapter, states that
+original text is not stored, and requires manual review. `composition-only`
+does not claim external provenance. The board is local, draft-only, identity-free,
+and never performs an external action. It writes only a mode-600 private draft
+after exact proof revalidation.
+
+`private-first-interview-conversion-board-v1` is frozen legacy compatibility
+only. New requests must use v2.
+
+### Private first-interview conversion board v1 (frozen legacy compatibility)
 
 After an explicit recruiter triage or conversion observation, and before
 manual `prepare-role-interviews`, the root can create a private
@@ -139,6 +154,8 @@ This source tree is repo-local at `plugins/professional-growth-coach`. Source ed
 - “Prepare me for this interview using the supplied vacancy and my candidate fact matrix.”
 - “Build a first-interview recruiter screen brief, objection response map, and draft-only outreach funnel from my confirmed evidence; do not send anything.”
 - “Build a private first-interview conversion board from my confirmed recruiter triage and seven-day plan; do not perform external actions.”
+- “Crea un tablero privado v2 de primera entrevista desde una fuente validada; no realices acciones externas.”
+- “Build a private first-interview board v2 from a validated source bundle; do not perform external actions.”
 
 ## Self-service example
 

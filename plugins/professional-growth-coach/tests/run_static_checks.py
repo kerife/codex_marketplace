@@ -305,6 +305,22 @@ PRIVATE_FIRST_INTERVIEW_BOARD_PACKAGE_PATHS = (
     "tests/test_render_private_first_interview_conversion_board_v1.py",
     "tests/fixtures/private-first-interview-conversion-board-v1/accepted-es.json",
     "tests/fixtures/private-first-interview-conversion-board-v1/accepted-en.json",
+    "schemas/private-first-interview-source-bundle-v1.schema.json",
+    "schemas/private-first-interview-conversion-board-v2.schema.json",
+    "scripts/private_first_interview_source_bundle.py",
+    "scripts/private_first_interview_conversion_board_v2_identity.py",
+    "scripts/validate_private_first_interview_conversion_board_v2.py",
+    "scripts/build_private_first_interview_conversion_board_v2.py",
+    "scripts/write_private_first_interview_conversion_board_v2.py",
+    "scripts/render_private_first_interview_conversion_board_v2.py",
+    "assets/private-first-interview-conversion-board-v2.html",
+    "assets/private-first-interview-conversion-board-v2.css",
+    "tests/test_private_first_interview_source_bundle.py",
+    "tests/test_private_first_interview_conversion_board_v2.py",
+    "tests/test_write_private_first_interview_conversion_board_v2.py",
+    "tests/test_render_private_first_interview_conversion_board_v2.py",
+    "tests/fixtures/private-first-interview-conversion-board-v2/accepted-es.json",
+    "tests/fixtures/private-first-interview-conversion-board-v2/accepted-en.json",
 )
 MARKET_DOSSIER_PACKAGE_PATHS = (
     "schemas/candidate-market-alignment-v1.schema.json",
@@ -17393,6 +17409,99 @@ def validate_private_first_interview_board_package(plugin_root: Path) -> list[st
             errors.append("private first-interview renderer did not produce the package document")
     except Exception:
         errors.append("private first-interview runtime package import or fixture validation failed")
+    finally:
+        sys.path[:] = previous_path if "previous_path" in locals() else sys.path
+
+    v2_schema_relative = "schemas/private-first-interview-conversion-board-v2.schema.json"
+    if v2_schema_relative in safe_paths:
+        try:
+            v2_schema_text = (plugin_root / v2_schema_relative).read_text(encoding="utf-8")
+            v2_schema = json.loads(v2_schema_text)
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            errors.append(f"{v2_schema_relative}: invalid JSON")
+        else:
+            if not (
+                isinstance(v2_schema, dict)
+                and v2_schema.get("type") == "object"
+                and v2_schema.get("additionalProperties") is False
+                and "source_provenance" in v2_schema.get("required", ())
+                and "source_group" not in v2_schema_text
+            ):
+                errors.append(f"{v2_schema_relative}: invalid sanitized private board schema")
+
+    for relative_path in (
+        "assets/private-first-interview-conversion-board-v2.html",
+        "assets/private-first-interview-conversion-board-v2.css",
+    ):
+        if relative_path not in safe_paths:
+            continue
+        try:
+            asset = (plugin_root / relative_path).read_text(encoding="utf-8").casefold()
+        except (OSError, UnicodeError):
+            errors.append(f"{relative_path}: sanitized board asset is not readable UTF-8")
+            continue
+        if any(token in asset for token in EXECUTIVE_DOSSIER_OFFLINE_TOKENS):
+            errors.append(f"{relative_path}: sanitized board asset has remote or network token")
+        if re.search(r"</?(?:script|form|button)\\b", asset, re.I):
+            errors.append(f"{relative_path}: sanitized board asset has interactive markup")
+
+    v2_runtime_paths = (
+        "scripts/private_first_interview_source_bundle.py",
+        "scripts/validate_private_first_interview_conversion_board_v2.py",
+        "scripts/build_private_first_interview_conversion_board_v2.py",
+        "scripts/write_private_first_interview_conversion_board_v2.py",
+        "scripts/render_private_first_interview_conversion_board_v2.py",
+        "tests/fixtures/private-first-interview-conversion-board-v2/accepted-en.json",
+        "tests/fixtures/private-first-interview-conversion-board-v2/accepted-es.json",
+    )
+    if not all(name in safe_paths for name in v2_runtime_paths):
+        return sorted(set(errors))
+    try:
+        scripts_root = plugin_root / "scripts"
+        previous_path = list(sys.path)
+        if str(scripts_root) not in sys.path:
+            sys.path.insert(0, str(scripts_root))
+        import build_private_first_interview_conversion_board_v2 as v2_builder
+        import private_first_interview_source_bundle as v2_source_bundle
+        import render_private_first_interview_conversion_board_v2 as v2_renderer
+        import write_private_first_interview_conversion_board_v2 as v2_writer
+
+        source_fixture = plugin_root / "tests/fixtures/private-first-interview-conversion-board-v1/accepted-en.json"
+        source = json.loads(source_fixture.read_text(encoding="utf-8"))["source_group"]
+        bundle = v2_source_bundle.issue_validated_private_first_interview_source_bundle(
+            source, provenance_state="synthetic_fixture"
+        )
+        proof = v2_builder.build_private_first_interview_conversion_board_v2(
+            bundle, as_of_date="2026-08-26"
+        )
+        rendered = v2_renderer.render_private_first_interview_conversion_board_v2(proof)
+        if not isinstance(rendered, str) or "board-trust-strip" not in rendered:
+            errors.append("sanitized private first-interview renderer did not produce trust strip")
+        for locale in ("en", "es"):
+            fixture = plugin_root / f"tests/fixtures/private-first-interview-conversion-board-v2/accepted-{locale}.json"
+            artifact_text = fixture.read_text(encoding="utf-8")
+            artifact = json.loads(artifact_text)
+            provenance = artifact.get("source_provenance") if isinstance(artifact, dict) else None
+            if not (
+                isinstance(provenance, dict)
+                and provenance.get("provenance_state") == "synthetic_fixture"
+                and artifact.get("locale") == locale
+                and artifact.get("schema_version") == "private-first-interview-conversion-board-v2"
+                and all(token not in artifact_text for token in ("source_group", "record_id", "group_id"))
+            ):
+                errors.append(f"{fixture.name}: sanitized fixture contract is invalid")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output = Path(temporary_directory) / "board.json"
+            receipt = v2_writer.write_private_first_interview_conversion_board_v2(proof, output)
+            if not (
+                output.is_file()
+                and stat.S_IMODE(output.stat().st_mode) == 0o600
+                and receipt.private_draft is True
+                and receipt.external_action_authorized is False
+            ):
+                errors.append("sanitized private first-interview writer smoke failed")
+    except Exception:
+        errors.append("sanitized private first-interview runtime package import or fixture validation failed")
     finally:
         sys.path[:] = previous_path if "previous_path" in locals() else sys.path
     return sorted(set(errors))

@@ -71,6 +71,16 @@ Keep one `candidate_id` per case. Coach mode must split combined requests into s
 
 The plugin can prepare drafts, plans, rubrics, and analyses. It must ask again before editing LinkedIn, publishing content, sending messages, applying to jobs, uploading files, or sharing candidate work with a third party.
 
+### Private first-interview conversion board v2
+
+New private first-interview board requests route to
+`private-first-interview-conversion-board-v2`. It accepts only an opaque,
+validated source bundle and produces a sanitized, local draft. The visible
+`board-trust-strip` identifies a synthetic fixture or a composition-only
+boundary, states that original text is not stored, and requires manual review.
+`composition-only` never asserts external provenance. The v1 board is frozen
+legacy compatibility only; do not use it for new requests.
+
 ## Installation
 
 This source tree is repo-local at `plugins/professional-growth-coach`. Source edits do not update the installed plugin cache. A separate explicitly authorized installation is required to publish a source increment into the local marketplace cache; existing chats may continue using their loaded version, so verify the new installation from a fresh chat. Use the repo-local marketplace workflow only after the exact target and command are approved.
@@ -81,6 +91,8 @@ This source tree is repo-local at `plugins/professional-growth-coach`. Source ed
 - “Compare professional-growth options for a synthetic SQL/Airflow/dbt background, then tell me what market evidence is missing.”
 - “Prepare me for this interview using the supplied vacancy and my candidate fact matrix.”
 - “Build a first-interview recruiter screen brief, objection response map, and draft-only outreach funnel from my confirmed evidence; do not send anything.”
+- “Crea un tablero privado v2 de primera entrevista desde una fuente validada; no realices acciones externas.”
+- “Build a private first-interview board v2 from a validated source bundle; do not perform external actions.”
 
 ## Self-service example
 

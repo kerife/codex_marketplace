@@ -1011,6 +1011,32 @@ class FullPluginIntegrationTests(unittest.TestCase):
         self.assertIn("Source edits do not update the installed plugin cache", readme)
         self.assertIn("separate explicitly authorized installation", readme)
 
+    def test_private_first_interview_v2_release_surface_is_sanitized_and_static_checked(self) -> None:
+        checker = load_static_checker()
+        required = (
+            "schemas/private-first-interview-source-bundle-v1.schema.json",
+            "schemas/private-first-interview-conversion-board-v2.schema.json",
+            "scripts/private_first_interview_source_bundle.py",
+            "scripts/build_private_first_interview_conversion_board_v2.py",
+            "scripts/write_private_first_interview_conversion_board_v2.py",
+            "scripts/render_private_first_interview_conversion_board_v2.py",
+            "assets/private-first-interview-conversion-board-v2.html",
+            "assets/private-first-interview-conversion-board-v2.css",
+            "tests/fixtures/private-first-interview-conversion-board-v2/accepted-en.json",
+            "tests/fixtures/private-first-interview-conversion-board-v2/accepted-es.json",
+        )
+        for relative in required:
+            with self.subTest(relative=relative):
+                self.assertIn(relative, checker.PRIVATE_FIRST_INTERVIEW_BOARD_PACKAGE_PATHS)
+                self.assertTrue((PLUGIN_ROOT / relative).is_file())
+        self.assertEqual([], checker.validate_private_first_interview_board_package(PLUGIN_ROOT))
+        for locale in ("en", "es"):
+            artifact = json.loads(
+                (PLUGIN_ROOT / f"tests/fixtures/private-first-interview-conversion-board-v2/accepted-{locale}.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual("synthetic_fixture", artifact["source_provenance"]["provenance_state"])
+            self.assertNotIn("source_group", artifact)
+
     def test_static_checker_exists_and_passes(self) -> None:
         checker = PLUGIN_ROOT / "tests" / "run_static_checks.py"
 

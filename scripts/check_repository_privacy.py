@@ -58,6 +58,29 @@ PRIVATE_FIRST_INTERVIEW_BOARD_SOURCE_INVENTORY_PATHS = (
     Path("plugins/professional-growth-coach/tests/test_render_private_first_interview_conversion_board_v1.py"),
     Path("plugins/professional-growth-coach/tests/fixtures/private-first-interview-conversion-board-v1/accepted-es.json"),
     Path("plugins/professional-growth-coach/tests/fixtures/private-first-interview-conversion-board-v1/accepted-en.json"),
+    Path("plugins/professional-growth-coach/schemas/private-first-interview-source-bundle-v1.schema.json"),
+    Path("plugins/professional-growth-coach/schemas/private-first-interview-conversion-board-v2.schema.json"),
+    Path("plugins/professional-growth-coach/scripts/private_first_interview_source_bundle.py"),
+    Path("plugins/professional-growth-coach/scripts/private_first_interview_conversion_board_v2_identity.py"),
+    Path("plugins/professional-growth-coach/scripts/validate_private_first_interview_conversion_board_v2.py"),
+    Path("plugins/professional-growth-coach/scripts/build_private_first_interview_conversion_board_v2.py"),
+    Path("plugins/professional-growth-coach/scripts/write_private_first_interview_conversion_board_v2.py"),
+    Path("plugins/professional-growth-coach/scripts/render_private_first_interview_conversion_board_v2.py"),
+    Path("plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v2.html"),
+    Path("plugins/professional-growth-coach/assets/private-first-interview-conversion-board-v2.css"),
+    Path("plugins/professional-growth-coach/tests/test_private_first_interview_source_bundle.py"),
+    Path("plugins/professional-growth-coach/tests/test_private_first_interview_conversion_board_v2.py"),
+    Path("plugins/professional-growth-coach/tests/test_write_private_first_interview_conversion_board_v2.py"),
+    Path("plugins/professional-growth-coach/tests/test_render_private_first_interview_conversion_board_v2.py"),
+    Path("plugins/professional-growth-coach/tests/fixtures/private-first-interview-conversion-board-v2/accepted-es.json"),
+    Path("plugins/professional-growth-coach/tests/fixtures/private-first-interview-conversion-board-v2/accepted-en.json"),
+)
+PRIVATE_FIRST_INTERVIEW_BOARD_V2_ARTIFACT_PATHS = frozenset(
+    {
+        Path("plugins/professional-growth-coach/schemas/private-first-interview-conversion-board-v2.schema.json"),
+        Path("plugins/professional-growth-coach/tests/fixtures/private-first-interview-conversion-board-v2/accepted-es.json"),
+        Path("plugins/professional-growth-coach/tests/fixtures/private-first-interview-conversion-board-v2/accepted-en.json"),
+    }
 )
 DOSSIER_SOURCE_INVENTORY_PATHS = (
     Path("plugins/professional-growth-coach/schemas/executive-career-dossier-v1.schema.json"),
@@ -1590,6 +1613,31 @@ def scan_text(path: Path, text: str) -> Counter[str]:
     return violations
 
 
+def validate_private_first_interview_v2_artifact(path: Path, text: str) -> Counter[str]:
+    """Keep v2 persisted contracts free of the raw v1 source container."""
+
+    violations: Counter[str] = Counter()
+    if "source_group" in text or "source_group_json" in text:
+        violations["PRIVATE_INTERVIEW_V2_RAW_SOURCE_FIELD"] += 1
+        return violations
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError:
+        violations["PRIVATE_INTERVIEW_V2_INVALID_JSON"] += 1
+        return violations
+    if path.name.startswith("accepted-"):
+        provenance = value.get("source_provenance") if isinstance(value, dict) else None
+        if not (
+            isinstance(value, dict)
+            and value.get("schema_version") == "private-first-interview-conversion-board-v2"
+            and isinstance(provenance, dict)
+            and provenance.get("provenance_state") == "synthetic_fixture"
+            and value.get("delivery", {}).get("external_actions_authorized") is False
+        ):
+            violations["PRIVATE_INTERVIEW_V2_FIXTURE_CONTRACT"] += 1
+    return violations
+
+
 def scan_repository_source_text(path: Path, text: str) -> Counter[str]:
     """Scan code/schema/assets with high-confidence rules that avoid test syntax."""
 
@@ -1773,6 +1821,7 @@ def scan_paths(
             set(tracked_eval_paths(repo_root))
             | set(INVENTORY_PATHS)
             | set(DOSSIER_SOURCE_INVENTORY_PATHS)
+            | set(PRIVATE_FIRST_INTERVIEW_BOARD_SOURCE_INVENTORY_PATHS)
             | staged_snapshot
         )
     )
@@ -1824,6 +1873,8 @@ def main(argv: list[str] | None = None) -> int:
             if path in DOSSIER_SOURCE_INVENTORY_PATHS
             else scan_text(path, text)
         )
+        if path in PRIVATE_FIRST_INTERVIEW_BOARD_V2_ARTIFACT_PATHS:
+            violations.update(validate_private_first_interview_v2_artifact(path, text))
         for rule_id, count in violations.items():
             failures[(path, rule_id)] += count
         if path == Path("tests/evals/with-skill/linkedin.md"):

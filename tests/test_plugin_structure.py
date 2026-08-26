@@ -123,6 +123,22 @@ PRIVATE_FIRST_INTERVIEW_BOARD_RELEASE_PATHS = (
     "tests/test_render_private_first_interview_conversion_board_v1.py",
     "tests/fixtures/private-first-interview-conversion-board-v1/accepted-es.json",
     "tests/fixtures/private-first-interview-conversion-board-v1/accepted-en.json",
+    "schemas/private-first-interview-source-bundle-v1.schema.json",
+    "schemas/private-first-interview-conversion-board-v2.schema.json",
+    "scripts/private_first_interview_source_bundle.py",
+    "scripts/private_first_interview_conversion_board_v2_identity.py",
+    "scripts/validate_private_first_interview_conversion_board_v2.py",
+    "scripts/build_private_first_interview_conversion_board_v2.py",
+    "scripts/write_private_first_interview_conversion_board_v2.py",
+    "scripts/render_private_first_interview_conversion_board_v2.py",
+    "assets/private-first-interview-conversion-board-v2.html",
+    "assets/private-first-interview-conversion-board-v2.css",
+    "tests/test_private_first_interview_source_bundle.py",
+    "tests/test_private_first_interview_conversion_board_v2.py",
+    "tests/test_write_private_first_interview_conversion_board_v2.py",
+    "tests/test_render_private_first_interview_conversion_board_v2.py",
+    "tests/fixtures/private-first-interview-conversion-board-v2/accepted-es.json",
+    "tests/fixtures/private-first-interview-conversion-board-v2/accepted-en.json",
 )
 
 
@@ -165,6 +181,27 @@ class JobSearchCoachPluginStructureTests(unittest.TestCase):
         self.assertEqual(
             [], checker.validate_private_first_interview_board_package(PLUGIN_ROOT)
         )
+
+    def test_private_first_interview_v2_docs_route_new_requests_to_the_sanitized_boundary(self) -> None:
+        """Break caught: new routes expose v1 source-bearing or action-bearing guidance."""
+
+        root_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        plugin_readme = (PLUGIN_ROOT / "README.md").read_text(encoding="utf-8")
+        root_skill = (
+            PLUGIN_ROOT / "skills" / "professional-growth-coach" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        combined = "\n".join((root_readme, plugin_readme, root_skill))
+        for prompt in (
+            "Crea un tablero privado v2 de primera entrevista desde una fuente validada; no realices acciones externas.",
+            "Build a private first-interview board v2 from a validated source bundle; do not perform external actions.",
+        ):
+            self.assertIn(prompt, combined)
+        self.assertIn("frozen legacy compatibility only", combined)
+        self.assertIn("composition-only", combined)
+        self.assertIn("private-first-interview-conversion-board-v2", combined)
+        self.assertIn("board-trust-strip", combined)
+        for forbidden in ("source_digest", "source_group_json", "upstream_attested"):
+            self.assertNotIn(forbidden, combined)
 
     def test_private_packet_skill_routing_surface_is_regular_and_versioned(self) -> None:
         """Break caught: routing points to a missing, linked, or unversioned contract."""

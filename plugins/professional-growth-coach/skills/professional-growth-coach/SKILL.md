@@ -47,6 +47,15 @@ Except for explicit private recruiter-practice or private recruiter-reply triage
 
 After recruiter routes, execute `prepare_private_vacancy_packet` only via `routing.md`: capture one composite as one opaque snapshot for both private writers; no caller packet JSON, router/module packet, or external action.
 
+For a new explicit private first-interview board request, route to
+`private-first-interview-conversion-board-v2` before the frozen v1 compatibility
+surface. Accept only a validated source bundle; never request, echo, persist,
+or render raw source text, source IDs, or a caller-authored board. Describe the
+visible `board-trust-strip` as either synthetic fixture data or a
+`composition-only` boundary; composition-only does not assert upstream
+provenance. Keep the output draft-only, require manual review, and perform no
+external action. Treat v1 as frozen legacy compatibility only.
+
 When a request needs more than one domain skill, keep `selected_module` as the first safe module to execute and then provide an `ordered plan` labelled `multi-module`. Each later step must name the module, required evidence, and whether action-time authorization will be needed.
 
 ## Execute ready modules

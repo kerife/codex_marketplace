@@ -1,0 +1,325 @@
+{
+  "approval_boundary": {
+    "allowed_next_step": "manual_private_review",
+    "artifact_state": "private_draft",
+    "authorization_required": true,
+    "prohibited_actions": [
+      "message",
+      "connect",
+      "apply",
+      "schedule",
+      "calendar_create",
+      "publish",
+      "share",
+      "upload",
+      "submit",
+      "export",
+      "external_edit",
+      "purchase",
+      "enroll"
+    ]
+  },
+  "artifact_kind": "private_first_interview_conversion_board",
+  "as_of_date": "2026-08-26",
+  "daily_reviews": [
+    {
+      "coach_question": "What remains unknown?",
+      "confounder_note": "No external outcome is measured",
+      "day": 1,
+      "decision": "advance",
+      "evidence_log": "Context has bounded support",
+      "metric_label": "context clarity",
+      "next_safe_action": "Continue privately",
+      "observed_signal": "Context has bounded support",
+      "signal_quality": "strong"
+    },
+    {
+      "coach_question": "What supports this point?",
+      "confounder_note": "Selection is not validation of outcome",
+      "day": 2,
+      "decision": "advance",
+      "evidence_log": "One supportable point is selected",
+      "metric_label": "evidence clarity",
+      "next_safe_action": "Rehearse privately",
+      "observed_signal": "One supportable point is selected",
+      "signal_quality": "strong"
+    },
+    {
+      "coach_question": "What can be stated safely?",
+      "confounder_note": "Rehearsal is not an interview result",
+      "day": 3,
+      "decision": "clarify",
+      "evidence_log": "Structure is usable",
+      "metric_label": "answer clarity",
+      "next_safe_action": "Review the boundary",
+      "observed_signal": "Structure is usable",
+      "signal_quality": "mixed"
+    },
+    {
+      "coach_question": "Which item needs confirmation?",
+      "confounder_note": "Unknowns are not failures",
+      "day": 4,
+      "decision": "clarify",
+      "evidence_log": "Confirmation items remain",
+      "metric_label": "constraint clarity",
+      "next_safe_action": "Keep unknowns visible",
+      "observed_signal": "Confirmation items remain",
+      "signal_quality": "unknown"
+    },
+    {
+      "coach_question": "Does it seek useful context?",
+      "confounder_note": "No message is created",
+      "day": 5,
+      "decision": "advance",
+      "evidence_log": "Question is bounded",
+      "metric_label": "question quality",
+      "next_safe_action": "Review privately",
+      "observed_signal": "Question is bounded",
+      "signal_quality": "strong"
+    },
+    {
+      "coach_question": "Which branch fits the evidence?",
+      "confounder_note": "No probability is inferred",
+      "day": 6,
+      "decision": "pause",
+      "evidence_log": "Evidence does not require movement",
+      "metric_label": "decision clarity",
+      "next_safe_action": "Wait for review",
+      "observed_signal": "Evidence does not require movement",
+      "signal_quality": "mixed"
+    },
+    {
+      "coach_question": "Is the private boundary intact?",
+      "confounder_note": "Completion does not authorize action",
+      "day": 7,
+      "decision": "advance",
+      "evidence_log": "Private boundary is intact",
+      "metric_label": "boundary integrity",
+      "next_safe_action": "Keep external action disabled",
+      "observed_signal": "Private boundary is intact",
+      "signal_quality": "strong"
+    }
+  ],
+  "decision": [
+    {
+      "boundary": "This board does not message, schedule, apply, or guarantee an outcome",
+      "current_state": "Private preparation is ready for review",
+      "next_safe_action": "Review the bounded evidence and rehearse",
+      "objective": "Prepare for a first interview",
+      "signal": "Role context and supported facts are present",
+      "state": "ready"
+    }
+  ],
+  "decision_ladder": [
+    {
+      "blocked_action": "External outreach",
+      "branch": "advance",
+      "evidence_requirement": "One bounded signal",
+      "measurement_label": "supported signal",
+      "next_safe_action": "Continue private preparation",
+      "review_question": "What changed in the evidence?",
+      "script_boundary": "Use a factual summary only",
+      "trigger": "Supported context is confirmed"
+    },
+    {
+      "blocked_action": "Assume the missing context",
+      "branch": "clarify",
+      "evidence_requirement": "Named unknown",
+      "measurement_label": "open question",
+      "next_safe_action": "Record the clarification need",
+      "review_question": "What must be confirmed?",
+      "script_boundary": "Ask only a bounded question",
+      "trigger": "A material context is missing"
+    },
+    {
+      "blocked_action": "Escalate or predict",
+      "branch": "pause",
+      "evidence_requirement": "No useful change",
+      "measurement_label": "weak signal",
+      "next_safe_action": "Wait for private review",
+      "review_question": "Is waiting safer?",
+      "script_boundary": "Do not manufacture urgency",
+      "trigger": "The signal is too weak"
+    },
+    {
+      "blocked_action": "Proceed externally",
+      "branch": "stop",
+      "evidence_requirement": "Recorded constraint",
+      "measurement_label": "stop condition",
+      "next_safe_action": "End the board review",
+      "review_question": "What boundary failed?",
+      "script_boundary": "Do not draft an external action",
+      "trigger": "A safety boundary fails"
+    }
+  ],
+  "delivery": {
+    "candidate_review_required": true,
+    "draft_only": true,
+    "external_actions_authorized": false,
+    "local_save_mode": "disabled",
+    "no_calendar_action": true,
+    "no_message_action": true,
+    "raw_answer_retained": false,
+    "raw_event_retained": false,
+    "raw_reply_retained": false
+  },
+  "locale": "en",
+  "proof_cards": [
+    {
+      "caveat": "Review the exact scope before using it",
+      "evidence_summary": "A supported experience fact can be explained in context",
+      "vacancy_signal": "Operational ownership"
+    },
+    {
+      "caveat": "Do not add unsupported impact",
+      "evidence_summary": "A bounded example can show how a decision was made",
+      "vacancy_signal": "Incident reasoning"
+    }
+  ],
+  "rehearsal": {
+    "pre_response_score": "unknown",
+    "purpose": "Check clarity without adding claims",
+    "question": "How would you explain one supported operational decision?",
+    "response_structure": "Context, action, observable result, boundary",
+    "wait_boundary": "Pause for human review before any external use"
+  },
+  "risk_checks": [
+    {
+      "confirmation_needed": "Confirm scope privately",
+      "forbidden_claim": "Do not claim unsupported ownership",
+      "safe_response_boundary": "Describe only supported scope",
+      "topic": "production",
+      "trigger_question": "Is the operational scope clear?"
+    },
+    {
+      "confirmation_needed": "Confirm before any decision",
+      "forbidden_claim": "Do not infer compensation",
+      "safe_response_boundary": "Leave unknown values open",
+      "topic": "compensation",
+      "trigger_question": "Is compensation context known?"
+    },
+    {
+      "confirmation_needed": "Request human confirmation",
+      "forbidden_claim": "Do not claim eligibility",
+      "safe_response_boundary": "Treat unknown eligibility as unknown",
+      "topic": "eligibility",
+      "trigger_question": "Is eligibility confirmed?"
+    },
+    {
+      "confirmation_needed": "Confirm timing privately",
+      "forbidden_claim": "Do not promise availability",
+      "safe_response_boundary": "State only the reviewed window",
+      "topic": "availability",
+      "trigger_question": "Is availability confirmed?"
+    },
+    {
+      "confirmation_needed": "Review the boundary",
+      "forbidden_claim": "Do not disclose private source text",
+      "safe_response_boundary": "Use abstracted evidence only",
+      "topic": "confidentiality",
+      "trigger_question": "Could this expose private material?"
+    }
+  ],
+  "schema_version": "private-first-interview-conversion-board-v2",
+  "sequence": [
+    {
+      "description": "Identify what is known and what remains unknown",
+      "label": "Current state",
+      "stage": "current_state"
+    },
+    {
+      "description": "Prepare bounded evidence and a rehearsal",
+      "label": "Private preparation",
+      "stage": "private_preparation"
+    },
+    {
+      "description": "Review the signal and the stop conditions",
+      "label": "Human review",
+      "stage": "human_review"
+    },
+    {
+      "description": "Keep external action disabled until separately authorized",
+      "label": "Authorization gate",
+      "stage": "authorization_gate"
+    }
+  ],
+  "source_provenance": {
+    "provenance_state": "synthetic_fixture",
+    "source_contract": "private-first-interview-source-bundle-v1",
+    "source_digest": "snap-private-first-interview-v1-sha256-5e8fc337154d8d3794daca183dcafbf581fd480cc316c49935649fbe4d6af302",
+    "source_kinds": [
+      "recruiter_outreach_lab",
+      "quality_gate",
+      "first_interview_7_day_plan",
+      "weekly_coach_plan",
+      "decision_ladder",
+      "plan_days",
+      "daily_review_logs"
+    ]
+  },
+  "week": [
+    {
+      "day": 1,
+      "evidence_boundary": "Use only bounded source facts",
+      "fallback": "Clarify the missing context",
+      "observable_signal": "Context is specific",
+      "private_action": "Review role context privately",
+      "review_checkpoint": "Name one unknown",
+      "stop_rule": "Stop if the source is unsupported"
+    },
+    {
+      "day": 2,
+      "evidence_boundary": "Do not expand the fact",
+      "fallback": "Use no proof point",
+      "observable_signal": "Evidence has a boundary",
+      "private_action": "Select one supported proof point",
+      "review_checkpoint": "Check its scope",
+      "stop_rule": "Stop if support cannot be shown"
+    },
+    {
+      "day": 3,
+      "evidence_boundary": "Keep the answer source-bound",
+      "fallback": "Shorten the answer",
+      "observable_signal": "Answer is stable",
+      "private_action": "Rehearse one concise answer",
+      "review_checkpoint": "Check the structure",
+      "stop_rule": "Stop if it requires invention"
+    },
+    {
+      "day": 4,
+      "evidence_boundary": "Keep unknowns explicit",
+      "fallback": "Pause for clarification",
+      "observable_signal": "Unknowns are visible",
+      "private_action": "Check critical constraints",
+      "review_checkpoint": "List confirmation needs",
+      "stop_rule": "Stop on an unresolved critical constraint"
+    },
+    {
+      "day": 5,
+      "evidence_boundary": "Question contains no private source text",
+      "fallback": "Defer the question",
+      "observable_signal": "Question is specific",
+      "private_action": "Draft a private question",
+      "review_checkpoint": "Check usefulness",
+      "stop_rule": "Stop if it would disclose confidential material"
+    },
+    {
+      "day": 6,
+      "evidence_boundary": "Use no outcome prediction",
+      "fallback": "Pause",
+      "observable_signal": "Branch is evidence-led",
+      "private_action": "Review the decision ladder",
+      "review_checkpoint": "Select a safe branch",
+      "stop_rule": "Stop if the branch cannot be supported"
+    },
+    {
+      "day": 7,
+      "evidence_boundary": "Keep all external actions disabled",
+      "fallback": "Keep the board private",
+      "observable_signal": "Boundary remains explicit",
+      "private_action": "Run a final private review",
+      "review_checkpoint": "Confirm the boundary",
+      "stop_rule": "Stop before any unauthorized action"
+    }
+  ]
+}
